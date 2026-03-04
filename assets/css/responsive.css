@@ -792,8 +792,31 @@
     }
 }
 
-@media (min-width: 2000px) {
-    .tf-card-box .card-media img {
-        width: 100% !important;
+
+/* Samsung Galaxy Z Fold 7 Specific (Unfolded) */
+/* Unfolded aspect ratio is near-square (~5:4/4:3) with high resolution */
+@media screen and (min-width: 1025px) and (max-width: 1800px) and (min-aspect-ratio: 1/1) {
+    .themesflat-container {
+        max-width: 95% !important;
+    }
+    .swiper-3d-7 .swiper-slide {
+        width: 70vw !important;
+    }
+    .flat-pages-title .content h1 {
+        font-size: 60px;
+        line-height: normal;
+    }
+}
+
+/* Expanded PC Layout (high resolution displays) */
+@media screen and (min-width: 1921px) {
+    .themesflat-container {
+        max-width: 1800px !important;
+    }
+    .header_1 #main-nav {
+        left: 25% !important;
+    }
+    .flat-pages-title .content h1 {
+        font-size: 80px;
     }
 }

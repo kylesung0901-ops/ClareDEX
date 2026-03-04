@@ -1,0 +1,13 @@
+{
+    "version": 2,
+    "framework": "vite",
+    "name": "claredex",
+    "buildCommand": "vite build",
+    "outputDirectory": "dist",
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
