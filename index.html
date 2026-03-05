@@ -26,8 +26,8 @@
     <link rel="stylesheet" type="text/css" href="assets/css/responsive.css">
 
     <!-- Favicon and Touch Icons  -->
-    <link rel="shortcut icon" type="image/png" href="/photo_2026-03-02_16-35-59-removebg-preview.png">
-    <link rel="apple-touch-icon" href="/photo_2026-03-02_16-35-59-removebg-preview.png">
+    <link rel="shortcut icon" href="public/photo_2026-03-02_16-35-59-removebg-preview.png">
+    <link rel="apple-touch-icon" href="public/photo_2026-03-02_16-35-59-removebg-preview.png">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -79,14 +79,13 @@
                                         <div id="site-logo-inner">
                                             <a href="index.html" rel="home" class="main-logo">
                                                 <img id="logo_header"
-                                                    src="/photo_2026-03-02_16-35-59-removebg-preview.png"
-                                                    style="height: 90px; width: auto;" alt="Clare DEX Logo">
+                                                    src="public/photo_2026-03-02_16-35-59-removebg-preview.png"
+                                                    style="height: 60px; width: auto;" alt="Clare DEX Logo">
                                             </a>
                                         </div>
                                     </div><!-- logo -->
-                                    <div class="mobile-button">
-                                        <span></span>
-                                    </div><!-- /.mobile-button -->
+
+                                    <!-- Desktop Horizontal Navigation -->
                                     <nav id="main-nav" class="main-nav">
                                         <ul id="menu-primary-menu" class="menu">
                                             <li class="menu-item current-menu-item">
@@ -126,339 +125,311 @@
                                             </li>
                                         </ul>
                                     </nav><!-- /#main-nav -->
-                                    <div class="flat-wallet flex" style="align-items: center; gap: 0;">
-                                        <div class="language-switcher" style="display: flex; align-items: center;">
-                                            <style>
-                                                /* ── Language Dropdown ── */
-                                                .lang-drop-wrap {
-                                                    position: relative;
-                                                    margin-right: 14px;
-                                                }
 
-                                                .lang-drop-btn {
-                                                    display: inline-flex;
-                                                    align-items: center;
-                                                    gap: 6px;
-                                                    background: rgba(255, 255, 255, 0.09);
-                                                    border: 1px solid rgba(255, 255, 255, 0.18);
-                                                    border-radius: 30px;
-                                                    color: #fff;
-                                                    font-weight: 700;
-                                                    font-size: 13px;
-                                                    letter-spacing: 0.4px;
-                                                    padding: 6px 14px;
-                                                    cursor: pointer;
-                                                    white-space: nowrap;
-                                                    transition: background 0.2s;
-                                                    user-select: none;
-                                                }
-
-                                                .lang-drop-btn:hover {
-                                                    background: rgba(55, 114, 255, 0.25);
-                                                    border-color: #3772ff;
-                                                }
-
-                                                .lang-caret {
-                                                    width: 0;
-                                                    height: 0;
-                                                    border-left: 4px solid transparent;
-                                                    border-right: 4px solid transparent;
-                                                    border-top: 5px solid rgba(255, 255, 255, 0.6);
-                                                    transition: transform 0.2s;
-                                                    flex-shrink: 0;
-                                                }
-
-                                                .lang-drop-wrap.open .lang-caret {
-                                                    transform: rotate(180deg);
-                                                }
-
-                                                .lang-dropdown {
-                                                    display: none;
-                                                    position: absolute;
-                                                    top: calc(100% + 8px);
-                                                    right: 0;
-                                                    background: #1a1a2e;
-                                                    border: 1px solid rgba(255, 255, 255, 0.15);
-                                                    border-radius: 12px;
-                                                    overflow: hidden;
-                                                    min-width: 148px;
-                                                    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
-                                                    z-index: 9998;
-                                                }
-
-                                                .lang-drop-wrap.open .lang-dropdown {
-                                                    display: block;
-                                                }
-
-                                                .lang-option {
-                                                    display: flex;
-                                                    align-items: center;
-                                                    gap: 9px;
-                                                    padding: 11px 16px;
-                                                    color: rgba(255, 255, 255, 0.75);
-                                                    font-size: 13px;
-                                                    font-weight: 600;
-                                                    cursor: pointer;
-                                                    transition: background 0.18s, color 0.18s;
-                                                }
-
-                                                .lang-option:hover {
-                                                    background: rgba(55, 114, 255, 0.2);
-                                                    color: #fff;
-                                                }
-
-                                                .lang-option.selected {
-                                                    background: #3772ff;
-                                                    color: #fff;
-                                                }
-
-                                                .lang-flag {
-                                                    font-size: 16px;
-                                                    line-height: 1;
-                                                }
-
-                                                /* Hide Google Translate toolbar */
-                                                .goog-te-banner-frame.skiptranslate {
-                                                    display: none !important;
-                                                }
-
-                                                body {
-                                                    top: 0px !important;
-                                                }
-
-                                                @media only screen and (min-width: 1200px) {
-                                                    .header_1 #main-nav {
-                                                        left: 17% !important;
-                                                    }
-
-                                                    .flat-wallet {
-                                                        gap: 0 !important;
-                                                    }
-
-                                                    #main-nav>ul>li {
-                                                        padding-left: 12px !important;
-                                                        padding-right: 12px !important;
-                                                    }
-                                                }
-
-                                                @media (max-width: 767px) {
+                                    <div class="header-right-actions flex"
+                                        style="align-items: center; margin-left: auto;">
+                                        <div class="flat-wallet flex" style="align-items: center; gap: 0;">
+                                            <div class="language-switcher" style="display: flex; align-items: center;">
+                                                <style>
+                                                    /* ── Language Dropdown ── */
                                                     .lang-drop-wrap {
-                                                        margin-right: 8px;
+                                                        position: relative;
+                                                        margin-right: 14px;
                                                     }
 
                                                     .lang-drop-btn {
-                                                        padding: 5px 10px;
-                                                        font-size: 12px;
+                                                        display: inline-flex;
+                                                        align-items: center;
+                                                        gap: 6px;
+                                                        background: rgba(255, 255, 255, 0.09);
+                                                        border: 1px solid rgba(255, 255, 255, 0.18);
+                                                        border-radius: 30px;
+                                                        color: #fff;
+                                                        font-weight: 700;
+                                                        font-size: 13px;
+                                                        letter-spacing: 0.4px;
+                                                        padding: 6px 14px;
+                                                        cursor: pointer;
+                                                        white-space: nowrap;
+                                                        transition: background 0.2s;
+                                                        user-select: none;
+                                                    }
+
+                                                    .lang-drop-btn:hover {
+                                                        background: rgba(55, 114, 255, 0.25);
+                                                        border-color: #3772ff;
+                                                    }
+
+                                                    .lang-caret {
+                                                        width: 0;
+                                                        height: 0;
+                                                        border-left: 4px solid transparent;
+                                                        border-right: 4px solid transparent;
+                                                        border-top: 5px solid rgba(255, 255, 255, 0.6);
+                                                        transition: transform 0.2s;
+                                                        flex-shrink: 0;
+                                                    }
+
+                                                    .lang-drop-wrap.open .lang-caret {
+                                                        transform: rotate(180deg);
                                                     }
 
                                                     .lang-dropdown {
-                                                        min-width: 130px;
+                                                        display: none;
+                                                        position: absolute;
+                                                        top: calc(100% + 8px);
+                                                        right: 0;
+                                                        background: #1a1a2e;
+                                                        border: 1px solid rgba(255, 255, 255, 0.15);
+                                                        border-radius: 12px;
+                                                        overflow: hidden;
+                                                        min-width: 148px;
+                                                        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+                                                        z-index: 9998;
+                                                    }
+
+                                                    .lang-drop-wrap.open .lang-dropdown {
+                                                        display: block;
+                                                    }
+
+                                                    .lang-option {
+                                                        display: flex;
+                                                        align-items: center;
+                                                        gap: 9px;
+                                                        padding: 11px 16px;
+                                                        color: rgba(255, 255, 255, 0.75);
+                                                        font-size: 13px;
+                                                        font-weight: 600;
+                                                        cursor: pointer;
+                                                        transition: background 0.18s, color 0.18s;
+                                                    }
+
+                                                    .lang-option:hover {
+                                                        background: rgba(55, 114, 255, 0.2);
+                                                        color: #fff;
+                                                    }
+
+                                                    .lang-option.selected {
+                                                        background: #3772ff;
+                                                        color: #fff;
+                                                    }
+
+                                                    .lang-flag {
+                                                        font-size: 16px;
+                                                        line-height: 1;
+                                                    }
+
+                                                    /* Hide Google Translate toolbar */
+                                                    .goog-te-banner-frame.skiptranslate {
+                                                        display: none !important;
+                                                    }
+
+                                                    body {
+                                                        top: 0px !important;
+                                                    }
+
+                                                    @media only screen and (min-width: 992px) {
+                                                        .header_1 #main-nav {
+                                                            left: unset !important;
+                                                            position: relative !important;
+                                                        }
+
+                                                        .flat-wallet {
+                                                            gap: 0 !important;
+                                                        }
+
+                                                        #main-nav>ul>li {
+                                                            padding-left: 18px !important;
+                                                            padding-right: 18px !important;
+                                                            white-space: nowrap;
+                                                        }
+                                                    }
+
+                                                    @media (max-width: 767px) {
+                                                        .lang-drop-wrap {
+                                                            margin-right: 8px;
+                                                        }
+
+                                                        .lang-drop-btn {
+                                                            padding: 5px 10px;
+                                                            font-size: 12px;
+                                                        }
+
+                                                        .lang-dropdown {
+                                                            min-width: 130px;
+                                                        }
+                                                    }
+                                                </style>
+                                                <!-- Language Dropdown Button -->
+                                                <div class="lang-drop-wrap" id="langDropWrap">
+                                                    <div class="lang-drop-btn" id="langDropBtn"
+                                                        onclick="toggleLangDrop()">
+                                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                                            width="15" height="15" fill="#fff">
+                                                            <path
+                                                                d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.07 16zm2.95-8H5.07a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.02 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z" />
+                                                        </svg>
+                                                        <span id="langLabel">English</span>
+                                                        <div class="lang-caret"></div>
+                                                    </div>
+                                                    <div class="lang-dropdown" id="langDropMenu">
+                                                        <div class="lang-option selected" id="opt-en"
+                                                            onclick="selectLang('en','English')">
+                                                            <span class="lang-flag">🇺🇸</span> English
+                                                        </div>
+                                                        <div class="lang-option" id="opt-ko"
+                                                            onclick="selectLang('ko','한국어')">
+                                                            <span class="lang-flag">🇰🇷</span> 한국어
+                                                        </div>
+                                                        <div class="lang-option" id="opt-zh"
+                                                            onclick="selectLang('zh-CN','中文')">
+                                                            <span class="lang-flag">🇨🇳</span> 中文
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div id="google_translate_element" style="display:none;"></div>
+                                                <script type="text/javascript">
+                                                    /* ── Google Translate Init ── */
+                                                    function googleTranslateElementInit() {
+                                                        new google.translate.TranslateElement({
+                                                            pageLanguage: 'en',
+                                                            includedLanguages: 'en,ko,zh-CN',
+                                                            autoDisplay: false
+                                                        }, 'google_translate_element');
+                                                    }
+
+                                                    /* ── Dropdown Toggle ── */
+                                                    function toggleLangDrop() {
+                                                        document.getElementById('langDropWrap').classList.toggle('open');
+                                                    }
+
+                                                    /* Close dropdown when clicking outside */
+                                                    document.addEventListener('click', function (e) {
+                                                        var wrap = document.getElementById('langDropWrap');
+                                                        if (wrap && !wrap.contains(e.target)) {
+                                                            wrap.classList.remove('open');
+                                                        }
+                                                    });
+
+                                                    /* ── Select Language ── */
+                                                    function selectLang(code, label) {
+                                                        document.getElementById('langLabel').textContent = label;
+                                                        ['opt-en', 'opt-ko', 'opt-zh'].forEach(function (id) {
+                                                            document.getElementById(id).classList.remove('selected');
+                                                        });
+                                                        var map = { 'en': 'opt-en', 'ko': 'opt-ko', 'zh-CN': 'opt-zh' };
+                                                        if (map[code]) document.getElementById(map[code]).classList.add('selected');
+                                                        document.getElementById('langDropWrap').classList.remove('open');
+                                                        var sel = document.querySelector('select.goog-te-combo');
+                                                        if (sel) {
+                                                            sel.value = code;
+                                                            sel.dispatchEvent(new Event('change'));
+                                                        }
+                                                        document.body.setAttribute('data-lang', code);
+                                                    }
+                                                    document.addEventListener('DOMContentLoaded', function () {
+                                                        // Set default language to English if not set
+                                                        if (!document.body.getAttribute('data-lang')) {
+                                                            document.body.setAttribute('data-lang', 'en');
+                                                        }
+                                                    });
+                                                </script>
+                                                <script type="text/javascript"
+                                                    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+                                            </div>
+
+
+
+                                            <style>
+                                                /* ── Header layout ── */
+                                                #site-header-inner .wrap-box {
+                                                    display: flex;
+                                                    align-items: center;
+                                                    justify-content: space-between;
+                                                    width: 100%;
+                                                    gap: 0;
+                                                }
+
+                                                #site-logo {
+                                                    flex: 1;
+                                                    display: flex;
+                                                    align-items: center;
+                                                }
+
+                                                .header-right-actions {
+                                                    flex: 1;
+                                                    display: flex;
+                                                    align-items: center;
+                                                    justify-content: flex-end;
+                                                    gap: 10px;
+                                                }
+
+                                                #main-nav {
+                                                    flex: 1;
+                                                    display: flex;
+                                                    justify-content: center;
+                                                    align-items: center;
+                                                    position: relative !important;
+                                                    left: unset !important;
+                                                    top: unset !important;
+                                                    transform: none !important;
+                                                }
+
+                                                #main-nav ul,
+                                                #main-nav>#menu-primary-menu {
+                                                    display: flex !important;
+                                                    flex-direction: row !important;
+                                                    align-items: center !important;
+                                                    flex-wrap: nowrap !important;
+                                                    gap: 0 !important;
+                                                    list-style: none;
+                                                    padding: 0;
+                                                    margin: 0;
+                                                }
+
+                                                #main-nav ul li,
+                                                #main-nav>#menu-primary-menu>li {
+                                                    padding: 0 20px !important;
+                                                    white-space: nowrap;
+                                                    display: flex;
+                                                    align-items: center;
+                                                }
+
+                                                #main-nav ul li a {
+                                                    color: rgba(255, 255, 255, 0.85);
+                                                    font-size: 16px;
+                                                    font-weight: 600;
+                                                    text-decoration: none;
+                                                    transition: color 0.2s;
+                                                    display: block;
+                                                    padding: 8px 0;
+                                                }
+
+                                                #main-nav ul li a:hover,
+                                                #main-nav ul li.current-menu-item a {
+                                                    color: #e4ff1a;
+                                                }
+
+
+
+                                                @media (max-width: 991px) {
+                                                    #main-nav {
+                                                        display: none !important;
+                                                    }
+
+                                                    .header-right-actions {
+                                                        margin-left: auto !important;
                                                     }
                                                 }
                                             </style>
-                                            <!-- Language Dropdown Button -->
-                                            <div class="lang-drop-wrap" id="langDropWrap">
-                                                <div class="lang-drop-btn" id="langDropBtn" onclick="toggleLangDrop()">
-                                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
-                                                        width="15" height="15" fill="#fff">
-                                                        <path
-                                                            d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.07 16zm2.95-8H5.07a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.02 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z" />
-                                                    </svg>
-                                                    <span id="langLabel">English</span>
-                                                    <div class="lang-caret"></div>
-                                                </div>
-                                                <div class="lang-dropdown" id="langDropMenu">
-                                                    <div class="lang-option selected" id="opt-en"
-                                                        onclick="selectLang('en','English')">
-                                                        <span class="lang-flag">🇺🇸</span> English
-                                                    </div>
-                                                    <div class="lang-option" id="opt-ko"
-                                                        onclick="selectLang('ko','한국어')">
-                                                        <span class="lang-flag">🇰🇷</span> 한국어
-                                                    </div>
-                                                    <div class="lang-option" id="opt-zh"
-                                                        onclick="selectLang('zh-CN','中文')">
-                                                        <span class="lang-flag">🇨🇳</span> 中文
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div id="google_translate_element" style="display:none;"></div>
-                                            <script type="text/javascript">
-                                                /* ── Google Translate Init ── */
-                                                function googleTranslateElementInit() {
-                                                    new google.translate.TranslateElement({
-                                                        pageLanguage: 'en',
-                                                        includedLanguages: 'en,ko,zh-CN',
-                                                        autoDisplay: false
-                                                    }, 'google_translate_element');
-                                                }
-
-                                                /* ── Dropdown Toggle ── */
-                                                function toggleLangDrop() {
-                                                    document.getElementById('langDropWrap').classList.toggle('open');
-                                                }
-
-                                                /* Close dropdown when clicking outside */
-                                                document.addEventListener('click', function (e) {
-                                                    var wrap = document.getElementById('langDropWrap');
-                                                    if (wrap && !wrap.contains(e.target)) {
-                                                        wrap.classList.remove('open');
-                                                    }
-                                                });
-
-                                                /* ── Select Language ── */
-                                                function selectLang(code, label) {
-                                                    document.getElementById('langLabel').textContent = label;
-                                                    ['opt-en', 'opt-ko', 'opt-zh'].forEach(function (id) {
-                                                        document.getElementById(id).classList.remove('selected');
-                                                    });
-                                                    var map = { 'en': 'opt-en', 'ko': 'opt-ko', 'zh-CN': 'opt-zh' };
-                                                    if (map[code]) document.getElementById(map[code]).classList.add('selected');
-                                                    document.getElementById('langDropWrap').classList.remove('open');
-                                                    var sel = document.querySelector('select.goog-te-combo');
-                                                    if (sel) {
-                                                        sel.value = code;
-                                                        sel.dispatchEvent(new Event('change'));
-                                                    }
-                                                    document.body.setAttribute('data-lang', code);
-                                                }
-                                                document.addEventListener('DOMContentLoaded', function () {
-                                                    // Set default language to English if not set
-                                                    if (!document.body.getAttribute('data-lang')) {
-                                                        document.body.setAttribute('data-lang', 'en');
-                                                    }
-                                                });
-                                            </script>
-                                            <script type="text/javascript"
-                                                src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
                                         </div>
-                                        <div class="canvas">
-                                            <span></span>
-                                        </div>
+
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="canvas-nav-wrap">
-                    <div class="overlay-canvas-nav"></div>
-                    <div class="inner-canvas-nav">
-                        <div class="side-bar">
-                            <a href="index.html" rel="home" class="main-logo">
-                                <img id="logo_header" src="assets/images/logo/custom-logo.jpg"
-                                    style="height: 80px; width: auto;" alt="Logo">
-                            </a>
-                            <div class="canvas-nav-close">
-                                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                                    fill="white" x="0px" y="0px" width="20px" height="20px" viewBox="0 0 122.878 122.88"
-                                    enable-background="new 0 0 122.878 122.88" xml:space="preserve">
-                                    <g>
-                                        <path
-                                            d="M1.426,8.313c-1.901-1.901-1.901-4.984,0-6.886c1.901-1.902,4.984-1.902,6.886,0l53.127,53.127l53.127-53.127 c1.901-1.902,4.984-1.902,6.887,0c1.901,1.901,1.901,4.985,0,6.886L68.324,61.439l53.128,53.128c1.901,1.901,1.901,4.984,0,6.886 c-1.902,1.902-4.985,1.902-6.887,0L61.438,68.326L8.312,121.453c-1.901,1.902-4.984,1.902-6.886,0 c-1.901-1.901-1.901-4.984,0-6.886l53.127-53.128L1.426,8.313L1.426,8.313z" />
-                                    </g>
-                                </svg>
-                            </div>
-                            <div class="widget-search mt-30">
-                                <form action="#" method="get" role="search" class="search-form relative">
-                                    <input type="search" id="search" class="search-field style-1"
-                                        placeholder="Search..." value="" name="s" title="Search for" required="">
-                                    <button class="search search-submit" type="submit" title="Search">
-                                        <i class="icon-search"></i>
-                                    </button>
-                                </form>
-                            </div>
-                            <div class="widget widget-categories">
-                                <h5 class="title-widget">Categories</h5>
-                                <ul>
-                                    <li>
-                                        <div class="cate-item"><a href="#">NFTs</a></div>
-                                        <div class="number">(1.483)</div>
-                                    </li>
-                                    <li>
-                                        <div class="cate-item"><a href="#">Digital Art</a></div>
-                                        <div class="number">(97)</div>
-                                    </li>
-                                    <li>
-                                        <div class="cate-item"><a href="#">Crypto</a></div>
-                                        <div class="number">(45)</div>
-                                    </li>
-                                    <li>
-                                        <div class="cate-item"><a href="#">Technology</a></div>
-                                        <div class="number">(728)</div>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="widget widget-menu style-4">
-                                <h5 class="title-widget">Company</h5>
-                                <ul>
-                                    <li><a href="#">Help center</a></li>
-                                    <li><a href="#">Platform status</a></li>
-                                </ul>
-                            </div>
-                            <div class="widget">
-                                <h5 class="title-widget">Join the community</h5>
-                                <div class="widget-social">
-                                    <ul class="flex">
-                                        <li><a href="#" class="icon-facebook"></a></li>
-                                        <li><a href="#" class="icon-twitter"></a></li>
-                                        <li><a href="#" class="icon-vt"></a></li>
-                                        <li><a href="#" class="icon-tiktok"></a></li>
-                                        <li><a href="#" class="icon-youtube"></a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mobile-nav-wrap">
-                    <div class="overlay-mobile-nav"></div>
-                    <div class="inner-mobile-nav">
-                        <a href="index.html" rel="home" class="main-logo">
-                            <img id="mobile-logo_header" src="/photo_2026-03-02_16-35-59-removebg-preview.png"
-                                style="height: 70px; width: auto;" alt="Clare DEX Logo">
-                        </a>
-                        <div class="mobile-nav-close">
-                            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                                fill="white" x="0px" y="0px" width="20px" height="20px" viewBox="0 0 122.878 122.88"
-                                enable-background="new 0 0 122.878 122.88" xml:space="preserve">
-                                <g>
-                                    <path
-                                        d="M1.426,8.313c-1.901-1.901-1.901-4.984,0-6.886c1.901-1.902,4.984-1.902,6.886,0l53.127,53.127l53.127-53.127 c1.901-1.902,4.984-1.902,6.887,0c1.901,1.901,1.901,4.985,0,6.886L68.324,61.439l53.128,53.128c1.901,1.901,1.901,4.984,0,6.886 c-1.902,1.902-4.985,1.902-6.887,0L61.438,68.326L8.312,121.453c-1.901,1.902-4.984,1.902-6.886,0 c-1.901-1.901-1.901-4.984,0-6.886l53.127-53.128L1.426,8.313L1.426,8.313z" />
-                                </g>
-                            </svg>
-                        </div>
-                        <nav id="mobile-main-nav" class="mobile-main-nav">
-                            <ul id="menu-mobile-menu" class="menu">
-                                <li class="menu-item current-menu-item">
-                                    <a class="item-menu-mobile" href="#about">About</a>
-                                </li>
-                                <li class="menu-item">
-                                    <a class="item-menu-mobile" href="#partners">Partner Exchanges</a>
-                                </li>
-                                <li class="menu-item">
-                                    <a class="item-menu-mobile" href="#events">Events</a>
-                                </li>
-                                <li class="menu-item">
-                                    <a class="item-menu-mobile" href="#faq">FAQ</a>
-                                </li>
-                                <li class="menu-item">
-                                    <a class="item-menu-mobile" href="#contact">Contact Us</a>
-                                </li>
-                            </ul>
-                        </nav>
-                        <div class="widget-search mt-30">
-                            <form action="#" method="get" role="search" class="search-form relative">
-                                <input type="search" class="search-field style-1" placeholder="Search..." value=""
-                                    name="s" title="Search for" required="">
-                                <button class="search search-submit" type="submit" title="Search">
-                                    <i class="icon-search"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
             </header>
 
 
@@ -710,52 +681,25 @@
                                     <tr>
                                         <td>
                                             <div class="exchange-name">
-                                                <img class="exchange-logo"
-                                                    src="https://s2.coinmarketcap.com/static/img/exchanges/64x64/1517.png"
-                                                    alt="OrangeX">
-                                                OrangeX
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="payback-rate"><span class="lang-en"><strong>30%</strong> fee
-                                                    payback + <em>ADD 50%</em> payback</span><span
-                                                    class="lang-ko"><strong>30%</strong> 수수료 페이백 + <em>추가 50%</em>
-                                                    페이백</span><span class="lang-zh"><strong>30%</strong> 手续费返现 + <em>额外
-                                                        50%</em> 返现</span></div>
-                                            <div class="boost-info">?뵦 Boost benefits 쨌 02.25~03.25</div>
-                                        </td>
-                                        <td>
-                                            <div class="exchange-action-btns">
-                                                <a href="#" class="btn-signup"><span class="lang-en">Sign Up</span><span
-                                                        class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
-                                                <a href="#" class="btn-referral"><span class="lang-en">Referral
-                                                        Change</span><span class="lang-ko">레퍼럴 변경</span><span
-                                                        class="lang-zh">更改推荐人</span></a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="exchange-name">
-                                                <img class="exchange-logo"
-                                                    src="https://s2.coinmarketcap.com/static/img/exchanges/64x64/1149.png"
+                                                <img class="exchange-logo" src="public/image_2026-03-05_11-28-46.jpg"
                                                     alt="LBANK">
                                                 LBANK
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="payback-rate"><span class="lang-en"><strong>30%</strong> fee
-                                                    payback + <em>ADD 50%</em> payback</span><span
-                                                    class="lang-ko"><strong>30%</strong> 수수료 페이백 + <em>추가 50%</em>
-                                                    페이백</span><span class="lang-zh"><strong>30%</strong> 手续费返现 + <em>额外
-                                                        50%</em> 返现</span></div>
-                                            <div class="boost-info">?뵦 Boost benefits 쨌 02.20~03.20</div>
+                                            <div class="payback-rate">
+                                                <span class="lang-en"><strong>30%</strong> fee payback</span>
+                                                <span class="lang-ko"><strong>30%</strong> 수수료 페이백</span>
+                                                <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
+                                            </div>
                                         </td>
                                         <td>
                                             <div class="exchange-action-btns">
-                                                <a href="#" class="btn-signup"><span class="lang-en">Sign Up</span><span
+                                                <a href="https://lbank.com/ref/4G10B" target="_blank"
+                                                    class="btn-signup"><span class="lang-en">Sign Up</span><span
                                                         class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
-                                                <a href="#" class="btn-referral"><span class="lang-en">Referral
+                                                <a href="https://t.me/claredex_kr" target="_blank"
+                                                    class="btn-referral"><span class="lang-en">Referral
                                                         Change</span><span class="lang-ko">레퍼럴 변경</span><span
                                                         class="lang-zh">更改推荐人</span></a>
                                             </div>
@@ -764,102 +708,25 @@
                                     <tr>
                                         <td>
                                             <div class="exchange-name">
-                                                <img class="exchange-logo"
-                                                    src="https://s2.coinmarketcap.com/static/img/exchanges/64x64/294.png"
-                                                    alt="OKX">
-                                                OKX
+                                                <img class="exchange-logo" src="public/image-removebg-preview (1).png"
+                                                    alt="BitMex">
+                                                BitMex
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="payback-rate"><span class="lang-en"><strong>20%</strong> fee
-                                                    payback + <em>ADD 40%</em> payback</span><span
-                                                    class="lang-ko"><strong>20%</strong> 수수료 페이백 + <em>추가 40%</em>
-                                                    페이백</span><span class="lang-zh"><strong>20%</strong> 手续费返现 + <em>额外
-                                                        40%</em> 返现</span></div>
+                                            <div class="payback-rate">
+                                                <span class="lang-en"><strong>30%</strong> fee payback</span>
+                                                <span class="lang-ko"><strong>30%</strong> 수수료 페이백</span>
+                                                <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
+                                            </div>
                                         </td>
                                         <td>
                                             <div class="exchange-action-btns">
-                                                <a href="#" class="btn-signup"><span class="lang-en">Sign Up</span><span
+                                                <a href="https://www.bitmex.com/app/register/X7-mMx" target="_blank"
+                                                    class="btn-signup"><span class="lang-en">Sign Up</span><span
                                                         class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
-                                                <a href="okx-guide.html" class="btn-referral"><span
-                                                        class="lang-en">Referral Change</span><span class="lang-ko">레퍼럴
-                                                        변경</span><span class="lang-zh">更改推荐人</span></a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="exchange-name">
-                                                <img class="exchange-logo"
-                                                    src="https://s2.coinmarketcap.com/static/img/exchanges/64x64/521.png"
-                                                    alt="Bybit">
-                                                Bybit
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="payback-rate"><span class="lang-en"><strong>20%</strong> fee
-                                                    payback + <em>ADD 40%</em> payback</span><span
-                                                    class="lang-ko"><strong>20%</strong> 수수료 페이백 + <em>추가 40%</em>
-                                                    페이백</span><span class="lang-zh"><strong>20%</strong> 手续费返现 + <em>额外
-                                                        40%</em> 返现</span></div>
-                                        </td>
-                                        <td>
-                                            <div class="exchange-action-btns">
-                                                <a href="#" class="btn-signup"><span class="lang-en">Sign Up</span><span
-                                                        class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
-                                                <a href="#" class="btn-referral"><span class="lang-en">Referral
-                                                        Change</span><span class="lang-ko">레퍼럴 변경</span><span
-                                                        class="lang-zh">更改推荐人</span></a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="exchange-name">
-                                                <img class="exchange-logo"
-                                                    src="https://s2.coinmarketcap.com/static/img/exchanges/64x64/513.png"
-                                                    alt="Bitget">
-                                                Bitget
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="payback-rate"><span class="lang-en"><strong>20%</strong> fee
-                                                    payback + <em>ADD 40%</em> payback</span><span
-                                                    class="lang-ko"><strong>20%</strong> 수수료 페이백 + <em>추가 40%</em>
-                                                    페이백</span><span class="lang-zh"><strong>20%</strong> 手续费返现 + <em>额外
-                                                        40%</em> 返现</span></div>
-                                        </td>
-                                        <td>
-                                            <div class="exchange-action-btns">
-                                                <a href="#" class="btn-signup"><span class="lang-en">Sign Up</span><span
-                                                        class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
-                                                <a href="#" class="btn-referral"><span class="lang-en">Referral
-                                                        Change</span><span class="lang-ko">레퍼럴 변경</span><span
-                                                        class="lang-zh">更改推荐人</span></a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="exchange-name">
-                                                <img class="exchange-logo"
-                                                    src="https://s2.coinmarketcap.com/static/img/exchanges/64x64/1094.png"
-                                                    alt="BingX">
-                                                BingX
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="payback-rate"><span class="lang-en"><strong>20%</strong> fee
-                                                    payback + <em>ADD 40%</em> payback</span><span
-                                                    class="lang-ko"><strong>20%</strong> 수수료 페이백 + <em>추가 40%</em>
-                                                    페이백</span><span class="lang-zh"><strong>20%</strong> 手续费返现 + <em>额外
-                                                        40%</em> 返现</span></div>
-                                        </td>
-                                        <td>
-                                            <div class="exchange-action-btns">
-                                                <a href="#" class="btn-signup"><span class="lang-en">Sign Up</span><span
-                                                        class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
-                                                <a href="#" class="btn-referral"><span class="lang-en">Referral
+                                                <a href="https://t.me/claredex_kr" target="_blank"
+                                                    class="btn-referral"><span class="lang-en">Referral
                                                         Change</span><span class="lang-ko">레퍼럴 변경</span><span
                                                         class="lang-zh">更改推荐人</span></a>
                                             </div>
@@ -904,11 +771,29 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td colspan="3"
-                                            style="text-align: center; color: rgba(255,255,255,0.7); font-style: italic; padding: 40px 0;">
-                                            <span class="lang-en">DEX exchanges are in preparation.</span>
-                                            <span class="lang-ko">DEX 거래소가 준비 중입니다.</span>
-                                            <span class="lang-zh">DEX交易所正在准备中。</span>
+                                        <td>
+                                            <div class="exchange-name">
+                                                <img class="exchange-logo" src="public/logo.png" alt="ApeX">
+                                                ApeX
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="payback-rate">
+                                                <span class="lang-en"><strong>30%</strong> fee payback</span>
+                                                <span class="lang-ko"><strong>30%</strong> 수수료 페이백</span>
+                                                <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="exchange-action-btns">
+                                                <a href="https://join.omni.apex.exchange/AFF-7590" target="_blank"
+                                                    class="btn-signup"><span class="lang-en">Sign Up</span><span
+                                                        class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
+                                                <a href="https://t.me/claredex_kr" target="_blank"
+                                                    class="btn-referral"><span class="lang-en">Referral
+                                                        Change</span><span class="lang-ko">레퍼럴 변경</span><span
+                                                        class="lang-zh">更改推荐人</span></a>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1021,7 +906,10 @@
                                     <div class="swiper-wrapper">
                                         <!-- 슬라이드 사진 계속 추가 (아래 구조 복사) -->
                                         <div class="swiper-slide">
-                                            <img src="public/photo_2026-03-03_17-19-31.jpg" alt="Event Banner 1">
+                                            <a href="https://lbank.com/ref/4G10B" target="_blank"
+                                                style="display: block;">
+                                                <img src="public/photo_2026-03-03_17-19-31.jpg" alt="Event Banner 1">
+                                            </a>
                                         </div>
                                         <!-- 추가 사진 예시 -->
                                         <!--
@@ -1277,7 +1165,7 @@
                                     <span class="lang-ko">문의사항이 있으시면 텔레그램으로 연락주세요.</span>
                                     <span class="lang-zh">如果您有任何问题，请用Telegram联系我们。</span>
                                 </p>
-                                <a href="https://t.me/" target="_blank"
+                                <a href="https://t.me/claredex_kr" target="_blank"
                                     style="display: inline-flex; align-items: center; gap: 12px; padding: 16px 36px; background: #0088cc; color: #fff; border-radius: 14px; font-weight: 700; text-decoration: none; transition: all 0.3s; font-size: 17px;">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -1302,35 +1190,32 @@
                     bottom: 30px;
                     right: 24px;
                     z-index: 9999;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 60px;
-                    height: 60px;
+                    display: block;
+                    width: 70px;
+                    height: 70px;
                     border-radius: 50%;
-                    background: #0088cc;
-                    box-shadow: 0 4px 24px rgba(0, 136, 204, 0.5);
+                    background: transparent;
+                    box-shadow: 0 4px 24px rgba(0, 136, 204, 0.4);
                     transition: transform 0.25s, box-shadow 0.25s;
                     text-decoration: none;
                 }
 
                 .float-telegram:hover {
                     transform: scale(1.12);
-                    box-shadow: 0 6px 30px rgba(0, 136, 204, 0.7);
+                    box-shadow: 0 6px 30px rgba(0, 136, 204, 0.6);
                 }
 
-                .float-telegram svg {
-                    width: 30px;
-                    height: 30px;
-                    fill: #fff;
+                .float-telegram img {
+                    width: 70px;
+                    height: 70px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                    display: block;
                 }
             </style>
             <!-- Telegram 텔레그램 문의 -->
-            <a href="https://t.me/" target="_blank" class="float-telegram" title="Telegram 문의">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path
-                        d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-                </svg>
+            <a href="https://t.me/claredex_kr" target="_blank" class="float-telegram" title="Telegram 문의">
+                <img src="public/photo_2026-03-03_18-28-37.jpg" alt="Telegram 문의">
             </a>
 
 
@@ -1340,24 +1225,10 @@
                     <div class="row">
                         <div class="col-12 text-center">
                             <div style="margin-bottom: 20px;">
-                                <img src="/photo_2026-03-02_16-35-59-removebg-preview.png" alt="Clare DEX"
-                                    style="height: 80px; width: auto;">
+                                <img src="public/photo_2026-03-02_16-35-59-removebg-preview.png" alt="Clare DEX"
+                                    style="height: 60px; width: auto;">
                             </div>
-                            <p style="color: #888; font-size: 14px;">짤 2024 Clare DEX. All rights reserved.</p>
-                            <div style="margin-top: 15px; display: flex; gap: 20px; justify-content: center;">
-                                <a href="#"
-                                    style="color: #888; text-decoration: none; font-size: 14px; transition: color 0.3s;">
-                                    <span class="lang-en">Privacy Policy</span>
-                                    <span class="lang-ko">개인정보처리방침</span>
-                                    <span class="lang-zh">隐私政策</span>
-                                </a>
-                                <a href="#"
-                                    style="color: #888; text-decoration: none; font-size: 14px; transition: color 0.3s;">
-                                    <span class="lang-en">Terms of Service</span>
-                                    <span class="lang-ko">이용약관</span>
-                                    <span class="lang-zh">服务条款</span>
-                                </a>
-                            </div>
+                            <p style="color: #888; font-size: 14px;">© 2026 Clare DEx. All rights reserved.</p>
                         </div>
                     </div>
                 </div>
@@ -1440,8 +1311,152 @@
     <script src="assets/js/main.js"></script>
     <script type="module" src="assets/js/firebase-init.js"></script>
 
+    <!-- ===== CUSTOM MOBILE NAV DRAWER ===== -->
+    <div id="custom-mobile-nav" class="mobile-nav-wrap">
+        <div class="overlay-mobile-nav"></div>
+        <div class="mobile-nav-inner">
+            <div class="mobile-nav-header">
+                <img src="public/photo_2026-03-02_16-35-59-removebg-preview.png" alt="Clare DEX"
+                    style="height:70px;width:auto;">
+                <span class="mobile-nav-close">✕</span>
+            </div>
+            <ul class="mobile-nav-menu">
+                <li><a href="#about" class="mobile-nav-link">
+                        <span class="lang-en">About</span>
+                        <span class="lang-ko">소개</span>
+                        <span class="lang-zh">关于我们</span>
+                    </a></li>
+                <li><a href="#partners" class="mobile-nav-link">
+                        <span class="lang-en">Partner Exchanges</span>
+                        <span class="lang-ko">파트너 거래소</span>
+                        <span class="lang-zh">合作交易所</span>
+                    </a></li>
+                <li><a href="#events" class="mobile-nav-link">
+                        <span class="lang-en">Events</span>
+                        <span class="lang-ko">이벤트</span>
+                        <span class="lang-zh">活动</span>
+                    </a></li>
+                <li><a href="#faq" class="mobile-nav-link">
+                        <span class="lang-en">FAQ</span>
+                        <span class="lang-ko">자주 묻는 질문</span>
+                        <span class="lang-zh">常见问题</span>
+                    </a></li>
+                <li><a href="#contact" class="mobile-nav-link">
+                        <span class="lang-en">Contact Us</span>
+                        <span class="lang-ko">문의하기</span>
+                        <span class="lang-zh">联系我们</span>
+                    </a></li>
+            </ul>
+        </div>
+    </div>
+
+    <style>
+        .mobile-nav-wrap {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+        }
+
+        .mobile-nav-wrap.active {
+            display: block;
+        }
+
+        .overlay-mobile-nav {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 0;
+        }
+
+        .mobile-nav-inner {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100%;
+            background: #1e2044;
+            border-left: 2px solid rgba(55, 114, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -10px 0 60px rgba(0, 0, 0, 0.9);
+            z-index: 10;
+            animation: slideInRightCustom 0.3s ease-out;
+        }
+
+        @keyframes slideInRightCustom {
+            from {
+                transform: translateX(100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .mobile-nav-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mobile-nav-close {
+            font-size: 24px;
+            color: #fff;
+            cursor: pointer;
+            padding: 10px;
+            z-index: 20;
+            position: relative;
+        }
+
+        .mobile-nav-menu {
+            list-style: none;
+            padding: 20px 0;
+            margin: 0;
+        }
+
+        .mobile-nav-link {
+            display: block;
+            padding: 20px 30px;
+            color: #ffffff !important;
+            font-size: 17px;
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            transition: background 0.2s, color 0.2s;
+            position: relative;
+            z-index: 20;
+        }
+
+        .mobile-nav-link:hover {
+            background: rgba(55, 114, 255, 0.15);
+            color: #3772ff;
+        }
+    </style>
+
     <script>
-        // Force-hide preloader after 3 seconds as a safety fallback
+        document.addEventListener('DOMContentLoaded', function () {
+            const nav = document.getElementById('custom-mobile-nav');
+            if (!nav) return;
+            const overlay = nav.querySelector('.overlay-mobile-nav');
+            const links = nav.querySelectorAll('.mobile-nav-link');
+            const closeBtn = nav.querySelector('.mobile-nav-close');
+
+            const closeNav = () => {
+                nav.classList.remove('active');
+            };
+            const openNav = (e) => {
+                if (e) e.preventDefault();
+                nav.classList.add('active');
+            };
+
+            if (overlay) overlay.addEventListener('click', closeNav);
+            if (closeBtn) closeBtn.addEventListener('click', closeNav);
+            links.forEach(link => link.addEventListener('click', closeNav));
+        });
+
         window.addEventListener('load', function () {
             setTimeout(function () {
                 var preloader = document.querySelector('.preload-container');
@@ -1449,7 +1464,7 @@
                     preloader.style.opacity = '0';
                     setTimeout(function () { preloader.remove(); }, 500);
                 }
-            }, 2000);
+            }, 1000);
         });
     </script>
 </body>
