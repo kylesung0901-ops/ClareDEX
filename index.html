@@ -256,9 +256,28 @@
                                                             background: rgba(255, 255, 255, 0.12);
                                                         }
 
-                                                        /* Mobile header: logo LEFT, lang button RIGHT */
+                                                        /* Mobile header: logo LEFT, lang button RIGHT — same vertical center */
+                                                        #header_main {
+                                                            height: 64px !important;
+                                                        }
+
+                                                        #site-header-inner {
+                                                            height: 64px !important;
+                                                            display: flex !important;
+                                                            align-items: center !important;
+                                                        }
+
+                                                        #site-header-inner .themesflat-container,
+                                                        #site-header-inner .row,
+                                                        #site-header-inner .col-md-12 {
+                                                            height: 100% !important;
+                                                            display: flex !important;
+                                                            align-items: center !important;
+                                                        }
+
                                                         #site-header-inner .wrap-box {
-                                                            padding: 10px 16px !important;
+                                                            height: 64px !important;
+                                                            padding: 0 16px !important;
                                                             display: flex !important;
                                                             flex-direction: row !important;
                                                             align-items: center !important;
@@ -273,14 +292,28 @@
                                                             transform: none !important;
                                                             flex: none !important;
                                                             display: flex !important;
+                                                            align-items: center !important;
+                                                            height: 64px !important;
                                                             order: 1;
                                                         }
 
                                                         .header-right-actions {
                                                             flex: none !important;
                                                             display: flex !important;
-                                                            margin-left: auto !important;
+                                                            align-items: center !important;
+                                                            height: 64px !important;
                                                             order: 2;
+                                                        }
+
+                                                        .flat-wallet {
+                                                            align-items: center !important;
+                                                            height: 64px !important;
+                                                        }
+
+                                                        .language-switcher {
+                                                            display: flex !important;
+                                                            align-items: center !important;
+                                                            height: 64px !important;
                                                         }
 
                                                         /* Hide main nav on mobile */
@@ -288,15 +321,20 @@
                                                             display: none !important;
                                                         }
 
-                                                        /* Hide the trident/hamburger button */
+                                                        /* Hide hamburger / trident button completely */
                                                         .mobile-button,
                                                         .btn-menu,
                                                         .icon-menu,
                                                         #menu_mobile,
-                                                        .canvas {
+                                                        .canvas,
+                                                        a.canvas,
+                                                        a[href="#canvas"] {
                                                             display: none !important;
                                                             visibility: hidden !important;
                                                             pointer-events: none !important;
+                                                            width: 0 !important;
+                                                            height: 0 !important;
+                                                            overflow: hidden !important;
                                                         }
                                                     }
                                                 </style>
