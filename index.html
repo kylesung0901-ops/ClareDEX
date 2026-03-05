@@ -425,12 +425,23 @@
                                                         var map = { 'en': 'opt-en', 'ko': 'opt-ko', 'zh-CN': 'opt-zh' };
                                                         if (map[code]) document.getElementById(map[code]).classList.add('selected');
                                                         document.getElementById('langDropWrap').classList.remove('open');
-                                                        var sel = document.querySelector('select.goog-te-combo');
-                                                        if (sel) {
-                                                            sel.value = code;
-                                                            sel.dispatchEvent(new Event('change'));
-                                                        }
                                                         document.body.setAttribute('data-lang', code);
+                                                        /* On mobile: use manual translations only (skip Google Translate) */
+                                                        /* On PC: also trigger Google Translate */
+                                                        if (window.innerWidth > 767) {
+                                                            var sel = document.querySelector('select.goog-te-combo');
+                                                            if (sel) {
+                                                                sel.value = code;
+                                                                sel.dispatchEvent(new Event('change'));
+                                                            }
+                                                        } else {
+                                                            /* Mobile: reset Google Translate to original if it was active */
+                                                            var sel = document.querySelector('select.goog-te-combo');
+                                                            if (sel && sel.value !== 'en') {
+                                                                sel.value = 'en';
+                                                                sel.dispatchEvent(new Event('change'));
+                                                            }
+                                                        }
                                                     }
                                                     document.addEventListener('DOMContentLoaded', function () {
                                                         // Set default language to English if not set
