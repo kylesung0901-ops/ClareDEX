@@ -283,6 +283,7 @@
                                                             align-items: center !important;
                                                             justify-content: space-between !important;
                                                             width: 100% !important;
+                                                            position: relative !important;
                                                         }
 
                                                         #site-logo {
@@ -298,11 +299,12 @@
                                                         }
 
                                                         .header-right-actions {
-                                                            flex: none !important;
+                                                            position: absolute !important;
+                                                            right: 30px !important;
+                                                            top: 50% !important;
+                                                            transform: translateY(-50%) !important;
                                                             display: flex !important;
                                                             align-items: center !important;
-                                                            height: 64px !important;
-                                                            order: 2;
                                                         }
 
                                                         .flat-wallet {
@@ -853,8 +855,8 @@
                                     <tr>
                                         <td>
                                             <div class="exchange-name">
-                                                <img class="exchange-logo" src="public/logo.png" alt="ApeX"
-                                                    style="object-fit: contain; background: transparent; border-radius: 8px;">
+                                                <img class="exchange-logo" src="./public/logo.png" alt="ApeX"
+                                                    style="object-fit: contain; background: #FFB800; border-radius: 50%; padding: 2px;">
                                                 ApeX
                                             </div>
                                         </td>
