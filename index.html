@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--[if IE 8 ]><html class="ie" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US"> <![endif]-->
 <!--[if (gte IE 9)|!(IE)]><!-->
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
@@ -91,6 +91,13 @@
                                                     <span class="lang-en">About</span>
                                                     <span class="lang-ko">소개</span>
                                                     <span class="lang-zh">关于我们</span>
+                                                </a>
+                                            </li>
+                                            <li class="menu-item menu-item-highlight">
+                                                <a href="#highlights" class="btn-highlights">
+                                                    <span class="lang-en">Highlights</span>
+                                                    <span class="lang-ko">하이라이트</span>
+                                                    <span class="lang-zh">亮点</span>
                                                 </a>
                                             </li>
                                             <li class="menu-item">
@@ -224,6 +231,312 @@
 
                                                     body {
                                                         top: 0px !important;
+                                                    }
+
+                                                    /* ── Highlights Button Style ── */
+                                                    .menu-item-highlight a {
+                                                        background: linear-gradient(90deg, #ddf247 0%, #fff 100%);
+                                                        -webkit-background-clip: text;
+                                                        background-clip: text;
+                                                        -webkit-text-fill-color: transparent;
+                                                        position: relative;
+                                                        font-weight: 800 !important;
+                                                        text-transform: uppercase;
+                                                        letter-spacing: 0.5px;
+                                                    }
+
+                                                    .menu-item-highlight a::after {
+                                                        content: '';
+                                                        position: absolute;
+                                                        bottom: 4px;
+                                                        left: 0;
+                                                        width: 100%;
+                                                        height: 2px;
+                                                        background: #ddf247;
+                                                        transform: scaleX(0);
+                                                        transition: transform 0.3s ease;
+                                                        transform-origin: right;
+                                                    }
+
+                                                    .menu-item-highlight a:hover::after {
+                                                        transform: scaleX(1);
+                                                        transform-origin: left;
+                                                    }
+
+                                                    /* ── Highlights Section Styles ── */
+                                                    #highlights {
+                                                        padding: 100px 0;
+                                                        background: #000;
+                                                        color: #fff;
+                                                        overflow: hidden;
+                                                    }
+
+                                                    .highlights-content {
+                                                        display: flex;
+                                                        align-items: stretch;
+                                                        gap: 80px;
+                                                        flex-wrap: wrap;
+                                                    }
+
+                                                    .highlights-text {
+                                                        flex: 1;
+                                                        min-width: 400px;
+                                                    }
+
+                                                    .highlights-text h2 {
+                                                        font-size: 45px !important;
+                                                        font-weight: 800;
+                                                        color: #ffffff;
+                                                        margin-bottom: 35px;
+                                                        line-height: 1.3;
+                                                    }
+
+                                                    .highlights-text p {
+                                                        font-size: 22px !important;
+                                                        color: rgba(255, 255, 255, 0.7);
+                                                        margin-bottom: 30px;
+                                                        line-height: 1.6;
+                                                    }
+
+                                                    .highlights-platforms {
+                                                        font-size: 20px !important;
+                                                        font-weight: 700;
+                                                        color: #ddf247 !important;
+                                                        margin-bottom: 20px !important;
+                                                    }
+
+                                                    .highlights-manage {
+                                                        font-size: 24px !important;
+                                                        font-weight: 600;
+                                                        margin-bottom: 50px !important;
+                                                    }
+
+                                                    .btn-telegram-login {
+                                                        display: inline-flex;
+                                                        align-items: center;
+                                                        gap: 12px;
+                                                        padding: 16px 32px;
+                                                        border: 2px solid #3772ff;
+                                                        border-radius: 50px;
+                                                        color: #3772ff;
+                                                        font-weight: 700;
+                                                        font-size: 18px;
+                                                        transition: all 0.3s ease;
+                                                        text-decoration: none;
+                                                        margin-bottom: 30px;
+                                                    }
+
+                                                    .btn-telegram-login:hover {
+                                                        background: #3772ff;
+                                                        color: #fff;
+                                                        box-shadow: 0 0 20px rgba(55, 114, 255, 0.4);
+                                                    }
+
+                                                    .btn-telegram-login i {
+                                                        font-size: 24px;
+                                                    }
+
+                                                    .highlights-consent {
+                                                        font-size: 14px !important;
+                                                        color: rgba(255, 255, 255, 0.4) !important;
+                                                        line-height: 1.6 !important;
+                                                        margin-top: 15px;
+                                                    }
+                                                    
+                                                    .highlights-consent a {
+                                                        color: #3897f0 !important;
+                                                        text-decoration: underline !important;
+                                                        transition: opacity 0.2s;
+                                                        cursor: pointer;
+                                                        font-weight: 600;
+                                                    }
+                                                    
+                                                    .highlights-consent a:hover {
+                                                        opacity: 0.8;
+                                                        color: #3897f0 !important;
+                                                    }
+
+                                                    /* ── Modal System ── */
+                                                    .cd-modal-overlay {
+                                                        position: fixed;
+                                                        top: 0;
+                                                        left: 0;
+                                                        width: 100%;
+                                                        height: 100%;
+                                                        background: rgba(0, 0, 0, 0.85);
+                                                        backdrop-filter: blur(8px);
+                                                        display: none;
+                                                        justify-content: center;
+                                                        align-items: center;
+                                                        z-index: 10000;
+                                                        padding: 20px;
+                                                    }
+
+                                                    .cd-modal-container {
+                                                        background: #1a1a2e;
+                                                        border: 1px solid rgba(255, 255, 255, 0.1);
+                                                        border-radius: 20px;
+                                                        width: 100%;
+                                                        max-width: 800px;
+                                                        max-height: 85vh;
+                                                        position: relative;
+                                                        display: flex;
+                                                        flex-direction: column;
+                                                        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+                                                        animation: cdModalFadeIn 0.3s ease-out;
+                                                    }
+
+                                                    @keyframes cdModalFadeIn {
+                                                        from { opacity: 0; transform: translateY(20px); }
+                                                        to { opacity: 1; transform: translateY(0); }
+                                                    }
+
+                                                    .cd-modal-header {
+                                                        padding: 25px 30px;
+                                                        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                                                        display: flex;
+                                                        justify-content: space-between;
+                                                        align-items: center;
+                                                    }
+
+                                                    .cd-modal-header h3 {
+                                                        margin: 0;
+                                                        font-size: 22px;
+                                                        font-weight: 800;
+                                                        color: #fff;
+                                                    }
+
+                                                    .cd-modal-close {
+                                                        background: none;
+                                                        border: none;
+                                                        color: rgba(255, 255, 255, 0.5);
+                                                        font-size: 28px;
+                                                        cursor: pointer;
+                                                        padding: 0;
+                                                        line-height: 1;
+                                                        transition: color 0.2s;
+                                                        height: auto;
+                                                    }
+
+                                                    .cd-modal-close:hover {
+                                                        color: #fff;
+                                                        background: none;
+                                                    }
+
+                                                    .cd-modal-body {
+                                                        padding: 30px;
+                                                        overflow-y: auto;
+                                                        color: rgba(255, 255, 255, 0.8);
+                                                        font-size: 15px;
+                                                        line-height: 1.7;
+                                                    }
+
+                                                    .cd-modal-body h4 {
+                                                        color: #ddf247;
+                                                        margin: 25px 0 12px;
+                                                        font-size: 18px;
+                                                        font-weight: 700;
+                                                    }
+                                                    
+                                                    .cd-modal-body h4:first-child { margin-top: 0; }
+
+                                                    .cd-modal-body p {
+                                                        margin-bottom: 15px;
+                                                        color: rgba(255, 255, 255, 0.7);
+                                                    }
+
+                                                    .cd-modal-body ul {
+                                                        list-style: disc;
+                                                        margin-left: 20px;
+                                                        margin-bottom: 15px;
+                                                    }
+
+                                                    .cd-modal-body li {
+                                                        margin-bottom: 8px;
+                                                        list-style: disc;
+                                                    }
+
+                                                    .cd-modal-table {
+                                                        width: 100%;
+                                                        border-collapse: collapse;
+                                                        margin-top: 15px;
+                                                        margin-bottom: 25px;
+                                                        background: rgba(255, 255, 255, 0.03);
+                                                        border-radius: 8px;
+                                                        overflow: hidden;
+                                                    }
+
+                                                    .cd-modal-table th, .cd-modal-table td {
+                                                        padding: 12px 15px;
+                                                        border: 1px solid rgba(255, 255, 255, 0.1);
+                                                        text-align: left;
+                                                        font-size: 14px;
+                                                    }
+
+                                                    .cd-modal-table th {
+                                                        background: rgba(255, 255, 255, 0.07);
+                                                        color: #fff;
+                                                        font-weight: 700;
+                                                    }
+                                                    
+                                                    body.modal-open {
+                                                        overflow: hidden;
+                                                    }
+
+                                                    .highlights-images {
+                                                        flex: 1.2;
+                                                        display: flex;
+                                                        flex-direction: column;
+                                                        justify-content: space-between;
+                                                        gap: 30px;
+                                                        min-width: 450px;
+                                                    }
+
+                                                    .highlights-image-card {
+                                                        flex: 1;
+                                                        display: flex;
+                                                        flex-direction: column;
+                                                        gap: 15px;
+                                                    }
+
+                                                    .highlights-image-card span {
+                                                        font-size: 20px;
+                                                        font-weight: 800;
+                                                        color: #ddf247;
+                                                        text-align: center;
+                                                        margin-bottom: 5px;
+                                                    }
+
+                                                    .highlights-image-card img {
+                                                        width: 100%;
+                                                        height: auto;
+                                                        border-radius: 12px;
+                                                        border: 2px solid rgba(255, 255, 255, 0.1);
+                                                        transition: all 0.3s ease;
+                                                    }
+
+                                                    .highlights-image-card img:hover {
+                                                        transform: translateY(-5px);
+                                                    }
+
+                                                    @media (max-width: 991px) {
+                                                        .highlights-content {
+                                                            flex-direction: column;
+                                                            text-align: center;
+                                                        }
+                                                        .highlights-images {
+                                                            width: 100%;
+                                                            min-width: unset;
+                                                        }
+                                                        .btn-telegram-login {
+                                                            justify-content: center;
+                                                        }
+                                                    }
+
+                                                    @media (max-width: 575px) {
+                                                        .highlights-images {
+                                                            flex-direction: column;
+                                                        }
                                                     }
 
                                                     @media only screen and (min-width: 992px) {
@@ -443,6 +756,29 @@
                                                             }
                                                         }
                                                     }
+                                                    
+                                                    /* ── Modal Control ── */
+                                                    function openModal(modalId) {
+                                                        const modal = document.getElementById(modalId);
+                                                        if (modal) {
+                                                            modal.style.display = 'flex';
+                                                            document.body.classList.add('modal-open');
+                                                        }
+                                                    }
+                                                    
+                                                    function closeModal() {
+                                                        const overlays = document.querySelectorAll('.cd-modal-overlay');
+                                                        overlays.forEach(overlay => overlay.style.display = 'none');
+                                                        document.body.classList.remove('modal-open');
+                                                    }
+                                                    
+                                                    // Close modal on outside click
+                                                    window.addEventListener('click', function(e) {
+                                                        if (e.target.classList.contains('cd-modal-overlay')) {
+                                                            closeModal();
+                                                        }
+                                                    });
+
                                                     document.addEventListener('DOMContentLoaded', function () {
                                                         // Set default language to English if not set
                                                         if (!document.body.getAttribute('data-lang')) {
@@ -618,21 +954,53 @@
                 </div>
             </section>
 
-            <!-- ========== SUPPORTED EXCHANGES SECTION ========== -->
-            <section id="partners" style="padding: 60px 0;">
+            <!-- ========== HIGHLIGHTS SECTION ========== -->
+            <section id="highlights">
                 <div class="themesflat-container">
-                    <div class="row">
-                        <div class="col-12 text-center" style="margin-bottom: 40px;">
-                            <a href="https://t.me/Clare_PerpDEX" target="_blank"
-                                style="display: inline-block; transition: transform 0.3s;"
-                                onmouseover="this.style.transform='scale(1.02)'"
-                                onmouseout="this.style.transform='scale(1)'">
-                                <img src="public/6154364716000677891_121.jpg" alt="Partner Feature"
-                                    style="width: 100%; max-width: 1200px; border-radius: 16px; object-fit: cover;">
+                    <div class="highlights-content">
+                        <div class="highlights-text wow fadeInLeft">
+                            <h2>TradingView Indicator <br>Auto-Distribution System</h2>
+                            <p>Receive your ATH indicators instantly upon successful exchange referral verification.</p>
+                            <p class="highlights-platforms">Supported platforms : L-bank, BitMEX, ApeX</p>
+                            <p class="highlights-manage">Manage Profile / Register Indicators</p>
+                            
+                            <a href="https://t.me/Clare_PerpDEX" target="_blank" class="btn-telegram-login">
+                                <img src="assets/images/logo/telegram.png" alt="" style="width: 24px; height: 24px; margin-right: 8px;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg'">
+                                <span class="lang-en notranslate" translate="no">Log in using Telegram</span>
+                                <span class="lang-ko notranslate" translate="no">텔레그램 통해서 로그인 및 문의</span>
+                                <span class="lang-zh notranslate" translate="no">通过 Telegram 登录及咨询</span>
                             </a>
+                            
+                            <p class="highlights-consent">
+                                <span class="lang-en notranslate" translate="no">By signing in, you consent to our <br> 
+                                <a onclick="openModal('modal_tos')">Terms of Service</a> and <a onclick="openModal('modal_privacy')">Privacy Policy</a>. <br>
+                                Your Telegram ID, name, and username will be <br> 
+                                gathered to facilitate this service.</span>
+                                <span class="lang-ko notranslate" translate="no">로그인함으로써 귀하는 당사의 <a onclick="openModal('modal_tos')">서비스 약관</a> 및 <a onclick="openModal('modal_privacy')">개인정보 보호정책</a>에 동의하게 됩니다. <br>
+                                이 서비스를 원활하게 제공하기 위해 귀하의 텔레그램 ID, 이름 및 사용자 이름이 수집됩니다.</span>
+                                <span class="lang-zh notranslate" translate="no">登录即表示您同意我们的 <a onclick="openModal('modal_tos')">服务条款</a> 和 <a onclick="openModal('modal_privacy')">隐私政策</a>。<br>
+                                我们将收集您的 Telegram ID、姓名和用户名，以方便提供此服务。</span>
+                            </p>
+                        </div>
+                        
+                        <div class="highlights-images wow fadeInRight">
+                            <div class="highlights-image-card">
+                                <span>[ 문의 후, 지표 바로 받기 ]</span>
+                                <img src="public/6163230456212557147_121.jpg" alt="Indicator Access">
+                            </div>
+                            <div class="highlights-image-card">
+                                <span>[ 코인스터디 전자책 받기 ]</span>
+                                <img src="public/6154364716000677891_121.jpg" alt="E-book Access">
+                            </div>
                         </div>
                     </div>
-                    <div class="row">
+                </div>
+            </section>
+
+            <!-- ========== SUPPORTED EXCHANGES SECTION ========== -->
+            <section style="padding: 60px 0;">
+                <div class="themesflat-container">
+                    <div class="row" id="partners">
                         <div class="col-12">
                             <h2 class="wow fadeInUp"
                                 style="font-size: 36px; font-weight: 800; color: #ffffff; margin-bottom: 40px;">
@@ -1387,6 +1755,309 @@
 
         </div>
         <!-- /#page -->
+
+        <!-- ========== MODALS ========== -->
+        
+        <!-- Terms of Service Modal -->
+        <div id="modal_tos" class="cd-modal-overlay">
+            <div class="cd-modal-container">
+                <div class="cd-modal-header">
+                    <h3>
+                        <span class="lang-en">Terms of Service</span>
+                        <span class="lang-ko">이용약관</span>
+                        <span class="lang-zh">服务条款</span>
+                    </h3>
+                    <button class="cd-modal-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="cd-modal-body">
+                    <!-- Korean Content -->
+                    <div class="lang-ko notranslate" translate="no">
+                        <p style="text-align: right; font-size: 13px;">마지막 수정일자 : 2026년 03월 11일</p>
+                        <h4>제1조 (목적)</h4>
+                        <p>본 약관은 Clare DEX(이하 "서비스")가 제공하는 트레이딩뷰 지표 발급 서비스의 이용 조건 및 절차, 회원과 서비스 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+                        <h4>제2조 (용어의 정의)</h4>
+                        <ul>
+                            <li><strong>서비스:</strong> Clare DEX가 제공하는 트레이딩뷰 지표 발급 및 관련 서비스</li>
+                            <li><strong>회원:</strong> 본 약관에 동의하고 서비스를 이용하는 자</li>
+                            <li><strong>지표:</strong> 트레이딩뷰 플랫폼에서 사용할 수 있는 기술적 분석 도구</li>
+                            <li><strong>레퍼럴:</strong> 제휴 거래소를 통한 가입 및 거래 활동</li>
+                        </ul>
+                        <h4>제3조 (약관의 효력 및 변경)</h4>
+                        <p>본 약관은 서비스 화면에 게시하거나 기타의 방법으로 회원에게 공지함으로써 효력이 발생합니다.</p>
+                        <p>서비스는 필요한 경우 관련 법령을 위반하지 않는 범위에서 본 약관을 변경할 수 있습니다. 약관이 변경되는 경우 서비스는 변경 내용을 시행일자 7일 전부터 공지합니다.</p>
+                        <h4>제4조 (회원가입 및 이용계약)</h4>
+                        <p>회원가입은 텔레그램 계정을 통한 로그인으로 이루어집니다. 타인의 정보를 도용하거나 허위 정보를 기재한 경우 서비스 이용이 제한될 수 있습니다.</p>
+                        <h4>제5조 (서비스의 제공)</h4>
+                        <p>서비스는 회원에게 트레이딩뷰 지표 발급, 지표 사용 관련 안내 및 지원, 텔레그램 알림 서비스 등을 제공합니다.</p>
+                        <h4>제6조 (서비스 이용 조건)</h4>
+                        <p>지표 발급을 위해서는 제휴 거래소를 통한 레퍼럴 가입이 필요합니다. 발급된 지표는 35일 동안 유효하며, 레퍼럴 조건 유지 시 갱신할 수 있습니다.</p>
+                        <h4>제7조 (회원의 의무)</h4>
+                        <p>회원은 지표의 무단 배포, 복제, 수정 또는 역컴파일을 해서는 안 되며, 서비스의 운영을 방해하거나 지적재산권을 침해해서는 안 됩니다.</p>
+                        <h4>제8조 (면책조항)</h4>
+                        <p>지표를 이용한 투자 결과에 대한 책임은 전적으로 회원에게 있으며, 서비스는 지표 사용으로 인한 어떠한 손실에 대해서도 책임을 지지 않습니다. 모든 투자 결정은 회원 본인의 판단 하에 이루어져야 합니다.</p>
+                    </div>
+
+                    <!-- English Content -->
+                    <div class="lang-en">
+                        <p style="text-align: right; font-size: 13px;">Last updated: March 11, 2026</p>
+                        <h4>Article 1 (Purpose)</h4>
+                        <p>The purpose of these Terms of Service is to define the conditions, procedures, and responsibilities between Clare DEX (hereinafter referred to as "the Service") and its members regarding the TradingView indicator issuance service.</p>
+                        <h4>Article 2 (Definitions)</h4>
+                        <ul>
+                            <li><strong>Service:</strong> TradingView indicator issuance and related services provided by Clare DEX.</li>
+                            <li><strong>Member:</strong> An individual who agrees to these terms and uses the Service.</li>
+                            <li><strong>Indicator:</strong> Technical analysis tools available on the TradingView platform.</li>
+                            <li><strong>Referral:</strong> Registration and trading activities through partner exchanges.</li>
+                        </ul>
+                        <h4>Article 3 (Effect and Modification)</h4>
+                        <p>These terms take effect upon being posted on the service screen or announced to members through other means.</p>
+                        <p>The Service may modify these terms as needed. Changes will be announced at least 7 days before their effective date.</p>
+                        <h4>Article 4 (Registration and Contract)</h4>
+                        <p>Registration occurs via Telegram login. Use of the service may be restricted if third-party information is misappropriated or false information is provided.</p>
+                        <h4>Article 5 (Provided Services)</h4>
+                        <p>The Service provides TradingView indicator issuance, usage support, and Telegram notification services.</p>
+                        <h4>Article 6 (Terms of Use)</h4>
+                        <p>Referral registration via a partner exchange is required for indicator issuance. Issued indicators are valid for 35 days and can be renewed if referral conditions are maintained.</p>
+                        <h4>Article 7 (Member Obligations)</h4>
+                        <p>Members must not distribute, duplicate, modify, or decompile indicators without authorization, nor interfere with service operations or infringe on intellectual property rights.</p>
+                        <h4>Article 8 (Disclaimer)</h4>
+                        <p>Responsibility for investment results using the indicators lies entirely with the member. The Service is not liable for any losses resulting from indicator use. All investment decisions must be made independently by the member.</p>
+                    </div>
+
+                    <!-- Chinese Content -->
+                    <div class="lang-zh">
+                        <p style="text-align: right; font-size: 13px;">最后修改日期：2026年3月11일</p>
+                        <h4>第1条 (目的)</h4>
+                        <p>本条款旨在规定 Clare DEX（以下简称“本服务”）提供的 TradingView 指标发放服务的使用条件、程序，以及会员与本服务之间的权利、义务和责任事项。</p>
+                        <h4>第2条 (术语定义)</h4>
+                        <ul>
+                            <li><strong>服务：</strong> Clare DEX 提供的 TradingView 指标发放及相关服务。</li>
+                            <li><strong>会员：</strong> 同意本条款并使用本服务的个人。</li>
+                            <li><strong>指标：</strong> 可在 TradingView 平台上使用的技术分析工具。</li>
+                            <li><strong>推荐：</strong> 通过合作交易所进行的注册和交易活动。</li>
+                        </ul>
+                        <h4>第3条 (条款效力及变更)</h4>
+                        <p>本条款自发布在服务界面或以其他方式告知会员之日起生效。本服务可根据需要修改条款，变更内容将提前 7 天公示。</p>
+                        <h4>第4条 (会员注册及合同)</h4>
+                        <p>会员注册通过 Telegram 账号登录完成。盗用他人信息或填写虚假信息可能会被限制使用本服务。</p>
+                        <h4>第5条 (提供服务)</h4>
+                        <p>本服务向会员提供 TradingView 指标发放、指标使用指南及支持、Telegram 通知服务等。</p>
+                        <h4>第6条 (使用条件)</h4>
+                        <p>发放指标需通过合作交易所进行推荐人注册。发放的指标有效期为 35 天，维持推荐条件时可续期。</p>
+                        <h4>第7条 (会员义务)</h4>
+                        <p>会员不得擅自发布、复制、修改或反编译指标，不得干扰服务运营或侵犯知识产权。</p>
+                        <h4>第8条 (免责条款)</h4>
+                        <p>使用指标产生的投资结果由会员全权负责。本服务对因使用指标而产生的任何损失不承担责任。所有投资决策应由会员本人独立做出。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacy Policy Modal -->
+        <div id="modal_privacy" class="cd-modal-overlay">
+            <div class="cd-modal-container">
+                <div class="cd-modal-header">
+                    <h3>
+                        <span class="lang-en">Privacy Policy</span>
+                        <span class="lang-ko">개인정보처리방침</span>
+                        <span class="lang-zh">隐私政策</span>
+                    </h3>
+                    <button class="cd-modal-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="cd-modal-body">
+                    <!-- Korean Content -->
+                    <div class="lang-ko notranslate" translate="no">
+                        <p style="text-align: right; font-size: 13px;">마지막 수정일자 : 2026년 03월 11일</p>
+                        <h4>1. 개인정보의 수집 및 이용 목적</h4>
+                        <p>Clare DEX는 회원 식별, 서비스 운영(레퍼럴 인증, 지표 발급), 고객 지원 및 서비스 개선을 위해 개인정보를 처리합니다.</p>
+                        
+                        <h4>2. 수집하는 개인정보의 항목</h4>
+                        <table class="cd-modal-table">
+                            <thead>
+                                <tr>
+                                    <th>수집 항목</th>
+                                    <th>수집 목적</th>
+                                    <th>보유 기간</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>텔레그램 ID (고유번호)</td>
+                                    <td>회원 식별, 서비스 제공</td>
+                                    <td>회원 탈퇴 시까지</td>
+                                </tr>
+                                <tr>
+                                    <td>텔레그램 이름/사용자명</td>
+                                    <td>서비스 내 표시, 관리 목적</td>
+                                    <td>회원 탈퇴 시까지</td>
+                                </tr>
+                                <tr>
+                                    <td>거래소 UID</td>
+                                    <td>레퍼럴 인증</td>
+                                    <td>회원 탈퇴 시까지</td>
+                                </tr>
+                                <tr>
+                                    <td>트레이딩뷰 닉네임/ID</td>
+                                    <td>지표 발급</td>
+                                    <td>회원 탈퇴 시까지</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4>3. 개인정보처리의 위탁</h4>
+                        <table class="cd-modal-table">
+                            <thead>
+                                <tr>
+                                    <th>수탁업체</th>
+                                    <th>위탁업무</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>텔레그램 (Telegram)</td>
+                                    <td>로그인 인증, 메시지 발송</td>
+                                </tr>
+                                <tr>
+                                    <td>AWS (Amazon Web Services)</td>
+                                    <td>클라우드 서버 호스팅, 데이터 저장</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4>4. 개인정보의 파기</h4>
+                        <p>회원 탈퇴 또는 목적 달성 시 개인정보를 지체 없이 파기하며, 전자적 파일은 복구 불가능한 방법으로 삭제합니다.</p>
+                        <h4>5. 보안 대책</h4>
+                        <p>접근 권한 관리, 중요 정보 암호화, SSL/TLS 보안 통신 등을 통해 안전하게 보호하고 있습니다.</p>
+                    </div>
+
+                    <!-- English Content -->
+                    <div class="lang-en">
+                        <p style="text-align: right; font-size: 13px;">Last updated: March 11, 2026</p>
+                        <h4>1. Purpose of Collection</h4>
+                        <p>Clare DEX processes personal information for member identification, service operation (referral verification, indicator issuance), and customer support.</p>
+                        
+                        <h4>2. Collected Items</h4>
+                        <table class="cd-modal-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Purpose</th>
+                                    <th>Retention Period</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Telegram ID</td>
+                                    <td>Identification, Service Provision</td>
+                                    <td>Until withdrawal</td>
+                                </tr>
+                                <tr>
+                                    <td>Telegram Name/Username</td>
+                                    <td>Display, Administration</td>
+                                    <td>Until withdrawal</td>
+                                </tr>
+                                <tr>
+                                    <td>Exchange UID</td>
+                                    <td>Referral Verification</td>
+                                    <td>Until withdrawal</td>
+                                </tr>
+                                <tr>
+                                    <td>TradingView ID</td>
+                                    <td>Indicator Issuance</td>
+                                    <td>Until withdrawal</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4>3. Delegation of Data Processing</h4>
+                        <table class="cd-modal-table">
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Delegated Task</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Telegram</td>
+                                    <td>Login authentication, Messaging</td>
+                                </tr>
+                                <tr>
+                                    <td>AWS</td>
+                                    <td>Cloud hosting, Data storage</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4>4. Destruction of Data</h4>
+                        <p>Personal information is destroyed immediately upon membership withdrawal or achievement of purpose. Electronic files are deleted permanently.</p>
+                    </div>
+
+                    <!-- Chinese Content -->
+                    <div class="lang-zh">
+                        <p style="text-align: right; font-size: 13px;">最后修改日期：2026年3月11일</p>
+                        <h4>1. 收集目的</h4>
+                        <p>Clare DEX 处理个人信息用于会员识别、服务运营（推荐验证、指标发放）及客户支持。</p>
+                        
+                        <h4>2. 收集项目</h4>
+                        <table class="cd-modal-table">
+                            <thead>
+                                <tr>
+                                    <th>收集项目</th>
+                                    <th>收集目的</th>
+                                    <th>保留期限</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Telegram ID (固定编号)</td>
+                                    <td>会员识别、服务提供</td>
+                                    <td>直至注销</td>
+                                </tr>
+                                <tr>
+                                    <td>Telegram 姓名/用户名</td>
+                                    <td>显示、管理目的</td>
+                                    <td>直至注销</td>
+                                </tr>
+                                <tr>
+                                    <td>交易所 UID</td>
+                                    <td>推荐人验证</td>
+                                    <td>直至注销</td>
+                                </tr>
+                                <tr>
+                                    <td>TradingView ID</td>
+                                    <td>指标发放</td>
+                                    <td>直至注销</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4>3. 个人信息处理委托</h4>
+                        <table class="cd-modal-table">
+                            <thead>
+                                <tr>
+                                    <th>受托单位</th>
+                                    <th>委托业务</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Telegram</td>
+                                    <td>登录验证、消息发送</td>
+                                </tr>
+                                <tr>
+                                    <td>AWS</td>
+                                    <td>云服务器托管、数据存储</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4>4. 信息销毁</h4>
+                        <p>会员注销或目的达成时，将立即销毁个人信息。电子文件将以不可恢复的方式删除。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Modal Popup Bid -->
         <div class="modal fade popup" id="popup_bid" tabindex="-1" role="dialog" aria-hidden="true">
