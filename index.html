@@ -1027,11 +1027,35 @@
                                 color: #ddf247;
                                 text-align: center;
                             }
-                            .hcard-img img {
+                            .hcard-img > img {
                                 width: 100%;
                                 height: auto;
                                 border-radius: 12px;
                                 border: 1px solid rgba(255,255,255,0.12);
+                            }
+                            /* ── Image Slider ── */
+                            .hcard-slider {
+                                width: 100%;
+                                overflow: hidden;
+                                border-radius: 12px;
+                                border: 1px solid rgba(255,255,255,0.12);
+                            }
+                            .hcard-slider-track {
+                                display: flex;
+                                width: 300%;
+                                animation: hcard-slide 9s infinite ease-in-out;
+                            }
+                            .hcard-slider-track img {
+                                width: 33.3333%;
+                                height: auto;
+                                border-radius: 0;
+                                border: none;
+                            }
+                            @keyframes hcard-slide {
+                                0%, 25% { transform: translateX(0%); }
+                                33%, 58% { transform: translateX(-33.3333%); }
+                                66%, 91% { transform: translateX(-66.6666%); }
+                                100% { transform: translateX(0%); }
                             }
                             .hcard-pin {
                                 font-size: 13px;
@@ -1177,7 +1201,13 @@
                                 <!-- RIGHT: 이미지 (확대) -->
                                 <div class="hcard-img">
                                     <span>[ 문의 후, 지표 바로 받기 ]</span>
-                                    <img src="public/6163230456212557147_121.jpg" alt="Indicator Access">
+                                    <div class="hcard-slider">
+                                        <div class="hcard-slider-track">
+                                            <img src="public/6163230456212557147_121.jpg" alt="Indicator Access 1">
+                                            <img src="public/photo_2026-03-12_20-34-20.jpg" alt="Indicator Access 2">
+                                            <img src="public/photo_2026-03-12_20-34-27.jpg" alt="Indicator Access 3">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
