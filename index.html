@@ -702,17 +702,17 @@
                                                             <path
                                                                 d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.07 16zm2.95-8H5.07a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.02 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z" />
                                                         </svg>
-                                                        <span id="langLabel">English</span>
+                                                        <span id="langLabel">한국어</span>
                                                         <div class="lang-caret"></div>
                                                     </div>
                                                     <div class="lang-dropdown" id="langDropMenu">
-                                                        <div class="lang-option selected" id="opt-en"
-                                                            onclick="selectLang('en','English')">
-                                                            <span class="lang-flag">🇺🇸</span> English
-                                                        </div>
-                                                        <div class="lang-option" id="opt-ko"
+                                                        <div class="lang-option selected" id="opt-ko"
                                                             onclick="selectLang('ko','한국어')">
                                                             <span class="lang-flag">🇰🇷</span> 한국어
+                                                        </div>
+                                                        <div class="lang-option" id="opt-en"
+                                                            onclick="selectLang('en','English')">
+                                                            <span class="lang-flag">🇺🇸</span> English
                                                         </div>
                                                         <div class="lang-option" id="opt-zh"
                                                             onclick="selectLang('zh-CN','中文')">
@@ -795,9 +795,9 @@
                                                     });
 
                                                     document.addEventListener('DOMContentLoaded', function () {
-                                                        // Set default language to English if not set
+                                                        // Set default language to Korean if not set
                                                         if (!document.body.getAttribute('data-lang')) {
-                                                            document.body.setAttribute('data-lang', 'en');
+                                                            document.body.setAttribute('data-lang', 'ko');
                                                         }
                                                     });
                                                 </script>
@@ -931,7 +931,7 @@
                                     display: inline;
                                 }
 
-                                body:not([data-lang]) .lang-en {
+                                body:not([data-lang]) .lang-ko {
                                     display: inline;
                                 }
                             </style>
@@ -972,43 +972,277 @@
             <!-- ========== HIGHLIGHTS SECTION ========== -->
             <section id="highlights">
                 <div class="themesflat-container">
-                    <div class="highlights-content">
-                        <div class="highlights-text wow fadeInLeft">
-                            <h2>TradingView Indicator <br>Auto-Distribution System</h2>
-                            <p>Receive your ATH indicators instantly upon successful exchange referral verification.</p>
-                            <p class="highlights-platforms">Supported platforms : L-bank, BitMEX, ApeX</p>
-                            <p class="highlights-manage">Manage Profile / Register Indicators</p>
-                            
-                            <a href="https://t.me/Clare_PerpDEX" target="_blank" class="btn-telegram-login">
-                                <img src="assets/images/logo/telegram.png" alt="" style="width: 24px; height: 24px; margin-right: 8px;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg'">
-                                <span class="lang-en notranslate" translate="no">Log in using Telegram</span>
-                                <span class="lang-ko notranslate" translate="no">텔레그램 통해서 로그인 및 문의</span>
-                                <span class="lang-zh notranslate" translate="no">通过 Telegram 登录及咨询</span>
-                            </a>
-                            
-                            <p class="highlights-consent">
-                                <span class="lang-en notranslate" translate="no">By signing in, you consent to our <br> 
-                                <a onclick="openModal('modal_tos')">Terms of Service</a> and <a onclick="openModal('modal_privacy')">Privacy Policy</a>. <br>
-                                Your Telegram ID, name, and username will be <br> 
-                                gathered to facilitate this service.</span>
-                                <span class="lang-ko notranslate" translate="no">로그인함으로써 귀하는 당사의 <a onclick="openModal('modal_tos')">서비스 약관</a> 및 <a onclick="openModal('modal_privacy')">개인정보 보호정책</a>에 동의하게 됩니다. <br>
-                                이 서비스를 원활하게 제공하기 위해 귀하의 텔레그램 ID, 이름 및 사용자 이름이 수집됩니다.</span>
-                                <span class="lang-zh notranslate" translate="no">登录即表示您同意我们的 <a onclick="openModal('modal_tos')">服务条款</a> 和 <a onclick="openModal('modal_privacy')">隐私政策</a>。<br>
-                                我们将收集您的 Telegram ID、姓名和用户名，以方便提供此服务。</span>
-                            </p>
-                        </div>
-                        
-                        <div class="highlights-images wow fadeInRight">
-                            <div class="highlights-image-card">
-                                <span>[ 문의 후, 지표 바로 받기 ]</span>
-                                <img src="public/6163230456212557147_121.jpg" alt="Indicator Access">
+                    <div class="highlights-content" style="display:block; width:100%;">
+
+                        <!-- ── Highlights Cards CSS ── -->
+                        <style>
+                            .highlights-images {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 28px;
+                                width: 100%;
+                                min-width: unset !important;
+                                flex: unset !important;
+                            }
+                            /* Card: INFO(left) + IMAGE(right) */
+                            .hcard {
+                                display: flex;
+                                flex-direction: row;
+                                align-items: flex-start;
+                                gap: 32px;
+                                background: rgba(255,255,255,0.04);
+                                border: 1px solid rgba(255,255,255,0.09);
+                                border-radius: 18px;
+                                padding: 28px;
+                                width: 100%;
+                                box-sizing: border-box;
+                            }
+                            /* LEFT: text */
+                            .hcard-info {
+                                flex: 1;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 12px;
+                                min-width: 0;
+                            }
+                            /* RIGHT: image enlarged */
+                            .hcard-img {
+                                flex: 0 0 340px;
+                                width: 340px;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                gap: 10px;
+                            }
+                            .hcard-img span {
+                                font-size: 14px;
+                                font-weight: 800;
+                                color: #ddf247;
+                                text-align: center;
+                            }
+                            .hcard-img img {
+                                width: 100%;
+                                height: auto;
+                                border-radius: 12px;
+                                border: 1px solid rgba(255,255,255,0.12);
+                            }
+                            .hcard-pin {
+                                font-size: 13px;
+                                color: rgba(255,255,255,0.55);
+                                margin: 0;
+                                line-height: 1.6;
+                            }
+                            .hcard-title {
+                                font-size: 16px;
+                                font-weight: 800;
+                                color: #ddf247;
+                                margin: 0;
+                                line-height: 1.5;
+                            }
+                            .hcard-divider {
+                                border: none;
+                                border-top: 1px solid rgba(255,255,255,0.08);
+                                margin: 2px 0;
+                            }
+                            .hcard-step { display: flex; flex-direction: column; gap: 3px; }
+                            .hcard-step-main {
+                                font-size: 13px;
+                                font-weight: 700;
+                                color: rgba(255,255,255,0.9);
+                                margin: 0;
+                            }
+                            .hcard-step-sub {
+                                font-size: 12px;
+                                color: rgba(255,255,255,0.45);
+                                margin: 0;
+                                line-height: 1.5;
+                            }
+                            .hcard-btn-primary {
+                                display: block;
+                                width: 100%;
+                                max-width: 420px;
+                                padding: 12px 20px;
+                                background: #3772ff;
+                                color: #fff !important;
+                                border-radius: 10px;
+                                font-weight: 700;
+                                font-size: 13px;
+                                text-decoration: none;
+                                text-align: center;
+                                transition: background 0.2s, transform 0.15s;
+                            }
+                            .hcard-btn-primary:hover {
+                                background: #2960e0;
+                                transform: translateY(-2px);
+                                color: #fff !important;
+                            }
+                            .hcard-btn-secondary {
+                                display: block;
+                                width: 100%;
+                                max-width: 420px;
+                                padding: 12px 20px;
+                                background: #3772ff;
+                                border: none;
+                                color: #fff !important;
+                                border-radius: 10px;
+                                font-weight: 700;
+                                font-size: 13px;
+                                text-decoration: none;
+                                text-align: center;
+                                transition: background 0.2s, transform 0.15s;
+                            }
+                            .hcard-btn-secondary:hover {
+                                background: #2960e0;
+                                transform: translateY(-2px);
+                                color: #fff !important;
+                            }
+                            /* ── Default Desktop ── */
+                            .hcard-img { flex: 0 0 450px; width: 450px; }
+                            /* ── Wide PC (≥1200px) ── */
+                            @media (min-width: 1200px) {
+                                .hcard-img { flex: 0 0 540px; width: 540px; }
+                            }
+                            /* ── Tablet (768px ~ 1199px) ── */
+                            @media (min-width: 768px) and (max-width: 1199px) {
+                                .hcard-img { flex: 0 0 320px; width: 320px; }
+                                .hcard { gap: 24px; padding: 22px; }
+                                .hcard-title { font-size: 15px; }
+                            }
+                            /* ── Mobile (≤767px) ── */
+                            @media (max-width: 767px) {
+                                .highlights-images { gap: 20px; }
+                                .hcard {
+                                    flex-direction: column;
+                                    gap: 18px;
+                                    padding: 18px 16px;
+                                }
+                                /* 모바일: 이미지 상단, 텍스트 하단 */
+                                .hcard-img {
+                                    order: -1;
+                                    width: 100%;
+                                    flex: unset;
+                                    max-width: none;
+                                }
+                                .hcard-info { width: 100%; }
+                                .hcard-btn-primary, .hcard-btn-secondary { max-width: 100%; }
+                                .hcard-title { font-size: 14px; }
+                                .hcard-pin { font-size: 12px; }
+                                .hcard-step-main { font-size: 12px; }
+                                .hcard-step-sub { font-size: 11px; }
+                            }
+                            /* ── Samsung Galaxy Fold / 초소형 (≤360px) ── */
+                            @media (max-width: 360px) {
+                                .hcard { padding: 14px 12px; gap: 14px; border-radius: 14px; }
+                                .hcard-title { font-size: 13px; }
+                                .hcard-step-main { font-size: 11px; }
+                                .hcard-step-sub { font-size: 10px; }
+                                .hcard-btn-primary,
+                                .hcard-btn-secondary { font-size: 12px; padding: 9px 14px; }
+                            }
+                        </style>
+
+                        <div class="highlights-images wow fadeInUp">
+
+                            <!-- ── Card 1 : 지표 받기 ── -->
+                            <div class="hcard">
+                                <!-- LEFT: 설명 -->
+                                <div class="hcard-info">
+                                    <p class="hcard-pin">📌 All of these benefits are available once you join the Clare DEX Telegram group.</p>
+                                    <p class="hcard-title">🔑 5-Minute Scalping Indicator<br>
+                                        <span style="font-size:12px;color:rgba(255,255,255,0.5);font-weight:500;">(5분봉 지표 스캘핑용)</span>
+                                    </p>
+                                    <hr class="hcard-divider">
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ Join the Clare DEX Telegram group.</p>
+                                        <p class="hcard-step-sub">* Clare DEX 텔레그램방에 입장해주세요.</p>
+                                    </div>
+                                    <a href="https://t.me/Clare_PerpDEX" target="_blank" class="hcard-btn-primary">Clare DEX 텔레그램방 입장</a>
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ Send your TradingView ID through the 1:1 Telegram link below.</p>
+                                        <p class="hcard-step-sub">* 본인 TradingView 아이디를 텔레그램으로 보내주세요.</p>
+                                    </div>
+                                    <a href="https://t.me/claredex_kr" target="_blank" class="hcard-btn-secondary">Clare DEX 1:1 문의</a>
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ Access will be granted after confirmation.</p>
+                                        <p class="hcard-step-sub">* 확인 후, 지표 접근 권한이 지급됩니다.</p>
+                                    </div>
+                                </div>
+                                <!-- RIGHT: 이미지 (확대) -->
+                                <div class="hcard-img">
+                                    <span>[ 문의 후, 지표 바로 받기 ]</span>
+                                    <img src="public/6163230456212557147_121.jpg" alt="Indicator Access">
+                                </div>
                             </div>
-                            <div class="highlights-image-card">
-                                <span>[ 코인스터디 전자책 받기 ]</span>
-                                <img src="public/6154364716000677891_121.jpg" alt="E-book Access">
+
+                            <!-- ── Card 2 : 전자책 받기 ── -->
+                            <div class="hcard">
+                                <!-- LEFT: 설명 -->
+                                <div class="hcard-info">
+                                    <p class="hcard-title">🔑 Claim your free 'Crypto Study' E-book<br>
+                                        <span style="font-size:12px;color:rgba(255,255,255,0.5);font-weight:500;">(무료 코인스터디 전자책 받기)</span>
+                                    </p>
+                                    <hr class="hcard-divider">
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ Join the Clare DEX Telegram group.</p>
+                                        <p class="hcard-step-sub">* Clare DEX 텔레그램방에 입장해주세요.</p>
+                                    </div>
+                                    <a href="https://t.me/Clare_PerpDEX" target="_blank" class="hcard-btn-primary">Clare DEX 텔레그램방 입장</a>
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ Please send your email address through the 1:1 Telegram link below and we'll email it to you.</p>
+                                        <p class="hcard-step-sub">* 텔레그램으로 이메일 주소 보내주시면, 전자책을 이메일로 보내드립니다.</p>
+                                    </div>
+                                    <a href="https://t.me/claredex_kr" target="_blank" class="hcard-btn-secondary">Clare DEX 1:1 문의</a>
+                                </div>
+                                <!-- RIGHT: 이미지 (확대) -->
+                                <div class="hcard-img">
+                                    <span>[ 코인스터디 전자책 받기 ]</span>
+                                    <img src="public/6154364716000677891_121.jpg" alt="E-book Access">
+                                </div>
                             </div>
+
                         </div>
                     </div>
+
+                    <!-- ── Consent Bar ── -->
+                    <style>
+                        .telegram-bar {
+                            padding: 24px 0 36px;
+                            border-top: 1px solid rgba(255, 255, 255, 0.08);
+                            margin-top: 30px;
+                        }
+                        .telegram-consent-bar {
+                            font-size: 14px;
+                            color: rgba(255, 255, 255, 0.4);
+                            line-height: 1.6;
+                            margin: 0;
+                        }
+                        .telegram-consent-bar a {
+                            color: #3897f0 !important;
+                            text-decoration: underline !important;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: opacity 0.2s;
+                        }
+                        .telegram-consent-bar a:hover {
+                            opacity: 0.8;
+                        }
+                        @media (max-width: 767px) {
+                            .telegram-bar {
+                                padding: 18px 0 28px;
+                            }
+                            .telegram-consent-bar {
+                                font-size: 13px;
+                            }
+                        }
+                    </style>
+                    <div class="telegram-bar">
+                        <p class="telegram-consent-bar">
+                            <span class="lang-en notranslate" translate="no">By signing in, you consent to our <a onclick="openModal('modal_tos')">Terms of Service</a> and <a onclick="openModal('modal_privacy')">Privacy Policy</a>. Your Telegram ID, name, and username will be gathered to facilitate this service.</span>
+                            <span class="lang-ko notranslate" translate="no">로그인함으로써 귀하는 당사의 <a onclick="openModal('modal_tos')">서비스 약관</a> 및 <a onclick="openModal('modal_privacy')">개인정보 보호정책</a>에 동의하게 됩니다. 이 서비스를 원활하게 제공하기 위해 귀하의 텔레그램 ID, 이름 및 사용자 이름이 수집됩니다.</span>
+                            <span class="lang-zh notranslate" translate="no">登录即表示您同意我们的 <a onclick="openModal('modal_tos')">服务条款</a> 和 <a onclick="openModal('modal_privacy')">隐私政策</a>。我们将收集您的 Telegram ID、姓名和用户名，以方便提供此服务。</span>
+                        </p>
+                    </div>
+
                 </div>
             </section>
 
