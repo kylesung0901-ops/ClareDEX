@@ -2508,41 +2508,41 @@
     <script type="module" src="assets/js/firebase-init.js"></script>
 
     <!-- ===== CUSTOM MOBILE NAV DRAWER ===== -->
-    <div id="custom-mobile-nav" class="mobile-nav-wrap">
-        <div class="overlay-mobile-nav"></div>
-        <div class="mobile-nav-inner">
-            <div class="mobile-nav-header">
+    <div id="custom-mobile-nav" class="custom-drawer-wrap">
+        <div class="custom-drawer-overlay"></div>
+        <div class="custom-drawer-inner">
+            <div class="custom-drawer-header">
                 <img src="public/photo_2026-03-02_16-35-59-removebg-preview.png" alt="Clare DEX"
                     style="height:70px;width:auto;">
-                <span class="mobile-nav-close">✕</span>
+                <span class="custom-drawer-close">✕</span>
             </div>
-            <ul class="mobile-nav-menu">
-                <li><a href="#about" class="mobile-nav-link">
+            <ul class="custom-drawer-menu">
+                <li><a href="#about" class="custom-drawer-link">
                         <span class="lang-en">About</span>
                         <span class="lang-ko">소개</span>
                         <span class="lang-zh">关于我们</span>
                     </a></li>
-                <li><a href="#highlights" class="mobile-nav-link">
+                <li><a href="#highlights" class="custom-drawer-link">
                         <span class="lang-en">Free Benefits</span>
                         <span class="lang-ko">Clare DEX 무료 혜택</span>
                         <span class="lang-zh">免费福利</span>
                     </a></li>
-                <li><a href="#partners" class="mobile-nav-link">
+                <li><a href="#partners" class="custom-drawer-link">
                         <span class="lang-en">Partner Exchanges</span>
                         <span class="lang-ko">파트너 거래소</span>
                         <span class="lang-zh">合作交易所</span>
                     </a></li>
-                <li><a href="#events" class="mobile-nav-link">
+                <li><a href="#events" class="custom-drawer-link">
                         <span class="lang-en">Events</span>
                         <span class="lang-ko">이벤트</span>
                         <span class="lang-zh">活动</span>
                     </a></li>
-                <li><a href="#faq" class="mobile-nav-link">
+                <li><a href="#faq" class="custom-drawer-link">
                         <span class="lang-en">FAQ</span>
                         <span class="lang-ko">자주 묻는 질문</span>
                         <span class="lang-zh">常见问题</span>
                     </a></li>
-                <li><a href="#contact" class="mobile-nav-link">
+                <li><a href="#contact" class="custom-drawer-link">
                         <span class="lang-en">Contact Us</span>
                         <span class="lang-ko">문의하기</span>
                         <span class="lang-zh">联系我们</span>
@@ -2552,25 +2552,27 @@
     </div>
 
     <style>
-        .mobile-nav-wrap {
+        .custom-drawer-wrap {
             display: none;
             position: fixed;
             inset: 0;
             z-index: 999999;
+            pointer-events: auto; /* 명시적으로 활성화 */
         }
 
-        .mobile-nav-wrap.active {
+        .custom-drawer-wrap.active {
             display: block;
         }
 
-        .overlay-mobile-nav {
+        .custom-drawer-overlay {
             position: absolute;
             inset: 0;
             background: rgba(0, 0, 0, 0.75);
             z-index: 0;
+            pointer-events: auto;
         }
 
-        .mobile-nav-inner {
+        .custom-drawer-inner {
             position: absolute;
             top: 0;
             right: 0;
@@ -2583,6 +2585,7 @@
             box-shadow: -10px 0 60px rgba(0, 0, 0, 0.9);
             z-index: 10;
             animation: slideInRightCustom 0.3s ease-out;
+            pointer-events: auto; /* 클릭 가능하도록 강제 설정 */
         }
 
         @keyframes slideInRightCustom {
@@ -2595,7 +2598,7 @@
             }
         }
 
-        .mobile-nav-header {
+        .custom-drawer-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -2603,7 +2606,7 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .mobile-nav-close {
+        .custom-drawer-close {
             font-size: 24px;
             color: #fff;
             cursor: pointer;
@@ -2612,13 +2615,13 @@
             position: relative;
         }
 
-        .mobile-nav-menu {
+        .custom-drawer-menu {
             list-style: none;
             padding: 20px 0;
             margin: 0;
         }
 
-        .mobile-nav-link {
+        .custom-drawer-link {
             display: block;
             padding: 20px 30px;
             color: #ffffff !important;
@@ -2629,11 +2632,12 @@
             transition: background 0.2s, color 0.2s;
             position: relative;
             z-index: 20;
+            pointer-events: auto; /* 강제 클릭 허용 */
         }
 
-        .mobile-nav-link:hover {
+        .custom-drawer-link:hover {
             background: rgba(55, 114, 255, 0.15);
-            color: #3772ff;
+            color: #3772ff !important;
         }
     </style>
 
@@ -2641,9 +2645,9 @@
         document.addEventListener('DOMContentLoaded', function () {
             const nav = document.getElementById('custom-mobile-nav');
             if (!nav) return;
-            const overlay = nav.querySelector('.overlay-mobile-nav');
-            const links = nav.querySelectorAll('.mobile-nav-link');
-            const closeBtn = nav.querySelector('.mobile-nav-close');
+            const overlay = nav.querySelector('.custom-drawer-overlay');
+            const links = nav.querySelectorAll('.custom-drawer-link');
+            const closeBtn = nav.querySelector('.custom-drawer-close');
             const hamburgerBtn = document.getElementById('mobileHamburgerBtn');
 
             const closeNav = () => {
