@@ -935,11 +935,44 @@
                                     display: inline;
                                 }
                                 .mobile-break { display: none; }
+                                .mobile-2line { display: none; }
                                 @media (max-width: 767px) {
                                     .mobile-break { display: block; }
                                     .pc-only { display: none; }
-                                    .payback-highlight { font-size: 1.25em !important; margin-right: 4px; }
-                                    .exchange-table .payback-rate .lang-ko { white-space: nowrap; }
+                                    /* 모바일: 페이백 2줄 표시 */
+                                    .mobile-2line { display: block !important; }
+                                    .payback-highlight {
+                                        font-size: 1.15em !important;
+                                        font-weight: 800 !important;
+                                        display: block;
+                                    }
+                                    .payback-text {
+                                        font-size: 11px !important;
+                                        display: block;
+                                        white-space: nowrap;
+                                        line-height: 1.4;
+                                        color: rgba(255,255,255,0.85);
+                                    }
+                                    /* 페이백 혜택 열 너비 축소 */
+                                    .exchange-table th:nth-child(2),
+                                    .exchange-table td:nth-child(2) {
+                                        width: 70px;
+                                        min-width: 70px;
+                                        max-width: 70px;
+                                        padding: 10px 6px !important;
+                                        font-size: 12px;
+                                        text-align: center;
+                                    }
+                                    /* 거래소 열 너비 */
+                                    .exchange-table th:nth-child(1),
+                                    .exchange-table td:nth-child(1) {
+                                        padding: 10px 8px !important;
+                                    }
+                                    /* 바로가기 열 */
+                                    .exchange-table th:nth-child(3),
+                                    .exchange-table td:nth-child(3) {
+                                        padding: 10px 6px !important;
+                                    }
                                 }
                             </style>
                             <div class="content">
@@ -1439,7 +1472,7 @@
                                         <td>
                                             <div class="payback-rate">
                                                 <span class="lang-en"><strong>30%</strong> fee payback</span>
-                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="pc-only"> <span class="payback-text">수수료 페이백</span></span>
+                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="mobile-2line"><span class="payback-text">수수료 페이백</span></span>
                                                 <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
                                             </div>
                                         </td>
@@ -1466,7 +1499,7 @@
                                         <td>
                                             <div class="payback-rate">
                                                 <span class="lang-en"><strong>30%</strong> fee payback</span>
-                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="pc-only"> <span class="payback-text">수수료 페이백</span></span>
+                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="mobile-2line"><span class="payback-text">수수료 페이백</span></span>
                                                 <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
                                             </div>
                                         </td>
@@ -1531,7 +1564,7 @@
                                         <td>
                                             <div class="payback-rate">
                                                 <span class="lang-en"><strong>30%</strong> fee payback</span>
-                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="pc-only"> <span class="payback-text">수수료 페이백</span></span>
+                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="mobile-2line"><span class="payback-text">수수료 페이백</span></span>
                                                 <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
                                             </div>
                                         </td>
