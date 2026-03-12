@@ -934,11 +934,18 @@
                                 body:not([data-lang]) .lang-ko {
                                     display: inline;
                                 }
+                                .mobile-break { display: none; }
+                                @media (max-width: 767px) {
+                                    .mobile-break { display: block; }
+                                    .pc-only { display: none; }
+                                    .payback-highlight { font-size: 1.25em !important; margin-right: 4px; }
+                                    .exchange-table .payback-rate .lang-ko { white-space: nowrap; }
+                                }
                             </style>
                             <div class="content">
                                 <h1 id="hero-title" data-wow-delay="0s" class="wow fadeInUp notranslate"
                                     style="font-size: 32px; line-height: 1.4;">
-                                    <span class="lang-ko">검증된 파트너 거래소, 안전한 트레이딩의 시작</span>
+                                    <span class="lang-ko">검증된 파트너 거래소, <br class="mobile-break">안전한 트레이딩의 시작</span>
                                     <span class="lang-en">Verified Partner Exchanges, The Start of Secure Trading</span>
                                     <span class="lang-zh">经过验证的合作交易所，安全交易的起点</span>
                                 </h1>
@@ -1435,7 +1442,7 @@
                                         <td>
                                             <div class="payback-rate">
                                                 <span class="lang-en"><strong>30%</strong> fee payback</span>
-                                                <span class="lang-ko"><strong>30%</strong><br>수수료 페이백</span>
+                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="pc-only"> <span class="payback-text">수수료 페이백</span></span>
                                                 <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
                                             </div>
                                         </td>
@@ -1462,7 +1469,7 @@
                                         <td>
                                             <div class="payback-rate">
                                                 <span class="lang-en"><strong>30%</strong> fee payback</span>
-                                                <span class="lang-ko"><strong>30%</strong><br>수수료 페이백</span>
+                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="pc-only"> <span class="payback-text">수수료 페이백</span></span>
                                                 <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
                                             </div>
                                         </td>
@@ -1527,7 +1534,7 @@
                                         <td>
                                             <div class="payback-rate">
                                                 <span class="lang-en"><strong>30%</strong> fee payback</span>
-                                                <span class="lang-ko"><strong>30%</strong><br>수수료 페이백</span>
+                                                <span class="lang-ko"><strong class="payback-highlight">30%</strong><br class="pc-only"> <span class="payback-text">수수료 페이백</span></span>
                                                 <span class="lang-zh"><strong>30%</strong> 手续费返现</span>
                                             </div>
                                         </td>
@@ -1909,8 +1916,7 @@
                                 <p style="font-size: 18px; margin-bottom: 30px; color: #aaa;">
                                     <span class="lang-en notranslate" translate="no">We welcome all inquiries,
                                         so please feel free to contact us.</span>
-                                    <span class="lang-ko notranslate" translate="no">모든 문의사항 받으니, 편하게
-                                        연락주세요.</span>
+                                    <span class="lang-ko notranslate" translate="no">모든 문의사항 받으니, <br class="mobile-break">편하게 연락주세요.</span>
                                     <span class="lang-zh notranslate" translate="no">我们接受所有咨询，请随时与我们联系。</span>
                                 </p>
                                 <a href="https://t.me/claredex_kr" target="_blank"
