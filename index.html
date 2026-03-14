@@ -45,6 +45,20 @@
         content="Welcome to the world of rare digital art. Explore the best art from hand-picked digital artist out there and find the hidden gem.">
     <meta property="twitter:image" content="https://clare-dex-8upp.vercel.app/photo_2026-03-02_15-24-44.jpg">
 
+    <!-- KakaoTalk Link Fix Script -->
+    <script>
+        function safeOpen(url) {
+            var isKakao = /Kakaotalk/i.test(navigator.userAgent);
+            if (isKakao) {
+                // In KakaoTalk in-app browser, direct redirect works better than window.open
+                location.href = url;
+            } else {
+                // Regular browser: open in new tab
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        }
+    </script>
+
 </head>
 
 <body class="body">
@@ -1739,7 +1753,8 @@
                                         </td>
                                         <td>
                                             <div class="exchange-action-btns">
-                                                <a href="https://www.lbank.com/signup?icode=4G10B" target="_blank" rel="noopener noreferrer"
+                                                <a href="javascript:void(0)" 
+                                                    onclick="safeOpen('https://www.lbank.com/signup?icode=4G10B')"
                                                     class="btn-signup"><span class="lang-en">Sign Up</span><span
                                                         class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
                                                 <a href="https://t.me/claredex_kr" target="_blank"
@@ -1951,7 +1966,8 @@
                                     <div class="swiper-wrapper">
                                         <!-- 슬라이드 사진 계속 추가 (아래 구조 복사) -->
                                         <div class="swiper-slide">
-                                            <a href="https://www.lbank.com/signup?icode=4G10B" target="_blank" rel="noopener noreferrer"
+                                            <a href="javascript:void(0)"
+                                                onclick="safeOpen('https://www.lbank.com/signup?icode=4G10B')"
                                                 style="display: block;">
                                                 <img src="benefit/photo_2026-03-15_01-26-36.jpg" alt="Event Banner 1">
                                             </a>
