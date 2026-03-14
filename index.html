@@ -47,16 +47,17 @@
 
     <!-- KakaoTalk Link Fix Script -->
     <script>
-        function safeOpen(url) {
+        document.addEventListener('DOMContentLoaded', function() {
             var isKakao = /Kakaotalk/i.test(navigator.userAgent);
             if (isKakao) {
-                // In KakaoTalk in-app browser, direct redirect works better than window.open
-                location.href = url;
-            } else {
-                // Regular browser: open in new tab
-                window.open(url, '_blank', 'noopener,noreferrer');
+                // Remove target="_blank" for KakaoTalk to prevent security warnings and black screen popups
+                var links = document.querySelectorAll('.kakaotalk-safe-link');
+                links.forEach(function(link) {
+                    link.removeAttribute('target');
+                    link.removeAttribute('rel');
+                });
             }
-        }
+        });
     </script>
 
 </head>
@@ -1753,9 +1754,9 @@
                                         </td>
                                         <td>
                                             <div class="exchange-action-btns">
-                                                <a href="javascript:void(0)" 
-                                                    onclick="safeOpen('https://www.lbank.com/signup?icode=4G10B')"
-                                                    class="btn-signup"><span class="lang-en">Sign Up</span><span
+                                                <a href="https://www.lbank.com/signup?icode=4G10B" 
+                                                    target="_blank" rel="noopener noreferrer"
+                                                    class="btn-signup kakaotalk-safe-link"><span class="lang-en">Sign Up</span><span
                                                         class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
                                                 <a href="https://t.me/claredex_kr" target="_blank"
                                                     class="btn-referral"><span class="lang-en">Referral
@@ -1964,10 +1965,9 @@
                             <div class="events-swiper">
                                 <div class="swiper-container events-swiper-container">
                                     <div class="swiper-wrapper">
-                                        <!-- 슬라이드 사진 계속 추가 (아래 구조 복사) -->
-                                        <div class="swiper-slide">
-                                            <a href="javascript:void(0)"
-                                                onclick="safeOpen('https://www.lbank.com/signup?icode=4G10B')"
+                                            <a href="https://www.lbank.com/signup?icode=4G10B"
+                                                target="_blank" rel="noopener noreferrer"
+                                                class="kakaotalk-safe-link"
                                                 style="display: block;">
                                                 <img src="benefit/photo_2026-03-15_01-26-36.jpg" alt="Event Banner 1">
                                             </a>
