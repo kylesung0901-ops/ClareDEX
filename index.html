@@ -941,7 +941,7 @@
 
 
             <!-- ========== HERO / ABOUT SECTION ========== -->
-            <section id="about" class="flat-pages-title" style="padding: 100px 0 60px;">
+            <section id="about" class="flat-pages-title" style="padding: 20px 0 10px;">
                 <div class="widget-bg-line">
                     <div class="wraper">
                         <div class="bg-grid-line y bottom">
@@ -1017,20 +1017,20 @@
                             </style>
                             <div class="content">
                                 <h1 id="hero-title" data-wow-delay="0s" class="wow fadeInUp notranslate"
-                                    style="font-size: 32px; line-height: 1.4;">
+                                    style="font-size: 32px; line-height: 1.4; margin-bottom: 15px;">
                                     <span class="lang-ko">검증된 파트너 거래소, <br class="mobile-break">안전한 트레이딩의 시작</span>
                                     <span class="lang-en">Verified Partner Exchanges, The Start of Secure Trading</span>
                                     <span class="lang-zh">经过验证的合作交易所，安全交易的起点</span>
                                 </h1>
                                 <p class="wow fadeInUp" data-wow-delay="0.1s"
-                                    style="margin-top: 30px; font-size: 16px; line-height: 1.6;">
+                                    style="margin-top: 15px; font-size: 16px; line-height: 1.6;">
                                     <span class="lang-ko">업계 최대 수수료 할인 및 페이백 혜택을 투명하게 제공합니다.</span>
                                     <span class="lang-en">We transparently provide the industry's highest fee discounts
                                         and payback benefits.</span>
                                     <span class="lang-zh">我们透明地提供业内最高的手续费折扣和返现福利。</span>
                                 </p>
                                 <p class="wow fadeInUp notranslate" data-wow-delay="0.2s"
-                                    style="color: #ffffff; font-weight: 700; font-size: 18px; margin-top: 40px; line-height: 1.6;">
+                                    style="color: #ffffff; font-weight: 700; font-size: 18px; margin-top: 15px; line-height: 1.6;">
                                     <span class="lang-ko">까다로운 기준으로 선별된 안전한 환경에서 오직 거래에만 집중하세요.</span>
                                     <span class="lang-en">Focus solely on your trading in a secure environment selected
                                         through strict standards.</span>
@@ -1048,6 +1048,179 @@
                     </div>
                 </div>
             </section>
+            
+            <!-- ========== BTC LONG/SHORT DASHBOARD SECTION ========== -->
+            <section id="btc-dashboard" style="padding: 5px 0 20px;">
+                <div class="themesflat-container">
+                    <div class="row">
+                        <div class="col-12">
+                            <style>
+                                #btc-dashboard .dashboard-card {
+                                    background: #1E1E1E;
+                                    padding: 25px;
+                                    border-radius: 18px;
+                                    border: 1px solid rgba(255, 255, 255, 0.1);
+                                    max-width: 600px;
+                                    margin: 0 auto;
+                                    text-align: center;
+                                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                                    color: #FFFFFF;
+                                }
+                                #btc-dashboard .dashboard-title {
+                                    font-size: 20px;
+                                    font-weight: 800;
+                                    margin-bottom: 20px;
+                                    color: #E0E0E0;
+                                }
+                                #btc-dashboard .loading-text {
+                                    font-size: 16px;
+                                    padding: 20px;
+                                    color: #888;
+                                }
+                                #btc-dashboard .ratio-display {
+                                    font-size: 32px;
+                                    font-weight: 800;
+                                    margin-bottom: 20px;
+                                }
+                                #btc-dashboard .stats-container {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    margin-bottom: 12px;
+                                    font-weight: 700;
+                                    font-size: 15px;
+                                }
+                                #btc-dashboard .long-label { color: #00C076; }
+                                #btc-dashboard .short-label { color: #FF6838; }
+                                
+                                #btc-dashboard .progress-bar-wrap {
+                                    height: 28px;
+                                    background: rgba(255,255,255,0.05);
+                                    border-radius: 14px;
+                                    display: flex;
+                                    overflow: hidden;
+                                    margin-bottom: 25px;
+                                }
+                                #btc-dashboard .bar-long {
+                                    background: #00C076;
+                                    height: 100%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 13px;
+                                    font-weight: 800;
+                                    color: #000;
+                                    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+                                    white-space: nowrap;
+                                }
+                                #btc-dashboard .bar-short {
+                                    background: #FF6838;
+                                    height: 100%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 13px;
+                                    font-weight: 800;
+                                    color: #000;
+                                    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+                                    white-space: nowrap;
+                                }
+                                #btc-dashboard .refresh-btn {
+                                    background: #333;
+                                    color: #fff;
+                                    border: none;
+                                    padding: 10px 24px;
+                                    border-radius: 8px;
+                                    font-weight: 700;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                    font-size: 14px;
+                                }
+                                #btc-dashboard .refresh-btn:hover {
+                                    background: #444;
+                                    transform: translateY(-2px);
+                                }
+                                #btc-dashboard .refresh-btn:active {
+                                    transform: translateY(0);
+                                }
+
+                                @media (max-width: 767px) {
+                                    #btc-dashboard .dashboard-card {
+                                        padding: 20px 15px;
+                                        border-radius: 12px;
+                                        margin: 0 10px;
+                                    }
+                                    #btc-dashboard .dashboard-title { font-size: 17px; }
+                                    #btc-dashboard .ratio-display { font-size: 24px; }
+                                    #btc-dashboard .stats-container { font-size: 13px; }
+                                    #btc-dashboard .progress-bar-wrap { height: 24px; }
+                                    #btc-dashboard .bar-long, #btc-dashboard .bar-short { font-size: 11px; }
+                                }
+                            </style>
+                            <div class="dashboard-card wow fadeInUp">
+                                <h2 class="dashboard-title">BTC 롱/숏 비율 (15분 기준)</h2>
+                                <div id="btc-loading" class="loading-text">데이터 불러오는 중...</div>
+                                <div id="btc-content" style="display: none;">
+                                    <div class="ratio-display" id="btcRatioDisplay">Long/Short: 0.00</div>
+                                    <div class="stats-container">
+                                        <div class="long-label">Long: <span id="btcLongVal">0</span>%</div>
+                                        <div class="short-label">Short: <span id="btcShortVal">0</span>%</div>
+                                    </div>
+                                    <div class="progress-bar-wrap">
+                                        <div id="btcLongBar" class="bar-long" style="width: 50%;"></div>
+                                        <div id="btcShortBar" class="bar-short" style="width: 50%;"></div>
+                                    </div>
+                                </div>
+                                <button class="refresh-btn" onclick="fetchBtcData()">새로고침</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <script>
+                async function fetchBtcData() {
+                    const loading = document.getElementById('btc-loading');
+                    const content = document.getElementById('btc-content');
+                    loading.style.display = 'block';
+                    content.style.display = 'none';
+                    
+                    try {
+                        const response = await fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=15m');
+                        const data = await response.json();
+                        
+                        if(data && Array.isArray(data) && data.length > 0) {
+                            const latest = data[data.length - 1];
+                            const longVal = parseFloat(latest.longAccount) * 100;
+                            const shortVal = parseFloat(latest.shortAccount) * 100;
+                            const ratio = parseFloat(latest.longShortRatio);
+
+                            document.getElementById('btcRatioDisplay').innerText = `Ratio: ${ratio.toFixed(2)}`;
+                            document.getElementById('btcLongVal').innerText = longVal.toFixed(2);
+                            document.getElementById('btcShortVal').innerText = shortVal.toFixed(2);
+                            
+                            const longBar = document.getElementById('btcLongBar');
+                            const shortBar = document.getElementById('btcShortBar');
+                            
+                            longBar.style.width = longVal + '%';
+                            longBar.innerText = longVal.toFixed(2) + '%';
+                            
+                            shortBar.style.width = shortVal + '%';
+                            shortBar.innerText = shortVal.toFixed(2) + '%';
+
+                            loading.style.display = 'none';
+                            content.style.display = 'block';
+                        } else {
+                            throw new Error('No data');
+                        }
+                    } catch (error) {
+                        console.error('Fetch error:', error);
+                        loading.innerText = '데이터를 불러오는데 실패했습니다.';
+                    }
+                }
+                
+                // Initialize on load
+                document.addEventListener('DOMContentLoaded', fetchBtcData);
+            </script>
 
             <!-- ========== HIGHLIGHTS SECTION ========== -->
             <section id="highlights">
@@ -1780,7 +1953,7 @@
                                         <div class="swiper-slide">
                                             <a href="https://lbank.com/ref/4G10B" target="_blank"
                                                 style="display: block;">
-                                                <img src="public/photo_2026-03-03_17-19-31.jpg" alt="Event Banner 1">
+                                                <img src="benefit/photo_2026-03-15_01-26-36.jpg" alt="Event Banner 1">
                                             </a>
                                         </div>
                                         <!-- 추가 사진 예시 -->
