@@ -49,14 +49,23 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var isKakao = /Kakaotalk/i.test(navigator.userAgent);
-            if (isKakao) {
-                // Remove target="_blank" for KakaoTalk to prevent security warnings and black screen popups
-                var links = document.querySelectorAll('.kakaotalk-safe-link');
-                links.forEach(function(link) {
-                    link.removeAttribute('target');
-                    link.removeAttribute('rel');
-                });
-            }
+            var links = document.querySelectorAll('.kakaotalk-safe-link');
+            
+            links.forEach(function(link) {
+                if (isKakao) {
+                    // KakaoTalk in-app browser workaround: force open in external browser
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        var originalUrl = link.href;
+                        // Use Kakao's custom scheme to break out of the in-app browser
+                        location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(originalUrl);
+                    });
+                } else {
+                    // For normal browsers, let the link behave normally
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                }
+            });
         });
     </script>
 
@@ -1754,7 +1763,7 @@
                                         </td>
                                         <td>
                                             <div class="exchange-action-btns">
-                                                <a href="https://m.site.naver.com/22ZTR" 
+                                                <a href="https://www.lbank.com/signup?icode=4G10B" 
                                                     target="_blank" rel="noopener noreferrer"
                                                     class="btn-signup kakaotalk-safe-link"><span class="lang-en">Sign Up</span><span
                                                         class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
@@ -1965,7 +1974,7 @@
                             <div class="events-swiper">
                                 <div class="swiper-container events-swiper-container">
                                     <div class="swiper-wrapper">
-                                            <a href="https://m.site.naver.com/22ZTR"
+                                            <a href="https://www.lbank.com/signup?icode=4G10B"
                                                 target="_blank" rel="noopener noreferrer"
                                                 class="kakaotalk-safe-link"
                                                 style="display: block;">
