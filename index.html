@@ -45,10 +45,14 @@
         content="Welcome to the world of rare digital art. Explore the best art from hand-picked digital artist out there and find the hidden gem.">
     <meta property="twitter:image" content="https://clare-dex-8upp.vercel.app/photo_2026-03-02_15-24-44.jpg">
 
-    <!-- KakaoTalk Link Fix Script -->
+    <!-- KakaoTalk & Social App Link Fix Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var isKakao = /Kakaotalk/i.test(navigator.userAgent);
+            var ua = navigator.userAgent || navigator.vendor || window.opera;
+            var isKakao = /Kakaotalk/i.test(ua);
+            var isTelegram = /Telegram/i.test(ua);
+            var isLine = /Line/i.test(ua);
+            
             var links = document.querySelectorAll('.kakaotalk-safe-link');
             
             links.forEach(function(link) {
@@ -56,12 +60,22 @@
                     // KakaoTalk in-app browser workaround: force open in external browser
                     link.addEventListener('click', function(e) {
                         e.preventDefault();
-                        var originalUrl = link.href;
-                        // Use Kakao's custom scheme to break out of the in-app browser
-                        location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(originalUrl);
+                        location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(link.href);
+                    });
+                } else if (isTelegram || isLine) {
+                    // For Telegram and Line, we try to force a new window which often triggers external browser or full-screen mode
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                    
+                    // Additional heuristic: sometimes using window.open works better in these apps
+                    link.addEventListener('click', function(e) {
+                        if (window.innerWidth <= 767) {
+                            e.preventDefault();
+                            window.open(link.href, '_blank');
+                        }
                     });
                 } else {
-                    // For normal browsers, let the link behave normally
+                    // For normal browsers
                     link.setAttribute('target', '_blank');
                     link.setAttribute('rel', 'noopener noreferrer');
                 }
@@ -1763,7 +1777,7 @@
                                         </td>
                                         <td>
                                             <div class="exchange-action-btns">
-                                                <a href="https://www.lbank.com/en-US/login/?icode=4G10B" 
+                                                <a href="https://www.lbank.com/signup?icode=4G10B" 
                                                     target="_blank" rel="noopener noreferrer"
                                                     class="btn-signup kakaotalk-safe-link"><span class="lang-en">Sign Up</span><span
                                                         class="lang-ko">가입하기</span><span class="lang-zh">注册</span></a>
@@ -1974,11 +1988,11 @@
                             <div class="events-swiper">
                                 <div class="swiper-container events-swiper-container">
                                     <div class="swiper-wrapper">
-                                            <a href="https://www.lbank.com/en-US/login/?icode=4G10B"
+                                            <a href="https://www.lbank.com/signup?icode=4G10B"
                                                 target="_blank" rel="noopener noreferrer"
                                                 class="kakaotalk-safe-link"
                                                 style="display: block;">
-                                                <img src="benefit/photo_2026-03-15_01-26-36.jpg" alt="Event Banner 1">
+                                                <img src="benefit/photo_2026-03-15_01-26-36.jpg" alt="Event Banner 1" style="width: 100%; border-radius: 16px;">
                                             </a>
                                         </div>
                                         <!-- 추가 사진 예시 -->
