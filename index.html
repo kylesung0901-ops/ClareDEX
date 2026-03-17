@@ -1259,6 +1259,91 @@
                 // Initialize on load
                 document.addEventListener('DOMContentLoaded', fetchBtcData);
             </script>
+            
+            <!-- ========== COMMUNITY SECTION ========== -->
+            <section id="community" style="padding: 40px 0;">
+                <div class="themesflat-container">
+                    <div class="row">
+                        <div class="col-12">
+                            <style>
+                                .community-card {
+                                    background: #1E1E1E;
+                                    padding: 40px;
+                                    border-radius: 20px;
+                                    border: 1px solid rgba(255, 255, 255, 0.1);
+                                    max-width: 800px;
+                                    margin: 0 auto;
+                                    text-align: center;
+                                    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+                                    color: #FFFFFF;
+                                }
+                                .community-title {
+                                    font-size: 28px;
+                                    font-weight: 800;
+                                    color: #ddf247;
+                                    margin-bottom: 25px;
+                                }
+                                .community-description {
+                                    font-size: 16px;
+                                    line-height: 1.6;
+                                    color: rgba(255, 255, 255, 0.8);
+                                    margin-bottom: 30px;
+                                    text-align: left;
+                                    max-width: 650px;
+                                    margin-left: auto;
+                                    margin-right: auto;
+                                }
+                                .community-btn {
+                                    display: inline-flex;
+                                    align-items: center;
+                                    gap: 12px;
+                                    padding: 18px 40px;
+                                    background: #0088cc;
+                                    color: #fff !important;
+                                    border-radius: 14px;
+                                    font-weight: 700;
+                                    font-size: 18px;
+                                    text-decoration: none;
+                                    transition: all 0.3s;
+                                    margin-bottom: 15px;
+                                }
+                                .community-btn:hover {
+                                    background: #0077b5;
+                                    transform: translateY(-3px);
+                                    box-shadow: 0 8px 25px rgba(0, 136, 204, 0.4);
+                                }
+                                @media (max-width: 767px) {
+                                    .community-card { padding: 30px 20px; margin: 0 10px; }
+                                    .community-title { font-size: 22px; }
+                                    .community-description { font-size: 14px; }
+                                    .community-btn { padding: 14px 28px; font-size: 16px; width: 100%; justify-content: center; }
+                                }
+                            </style>
+                            <div class="community-card wow fadeInUp">
+                                <h2 class="community-title">
+                                    <span class="lang-en">Join the Clare DEX Community</span>
+                                    <span class="lang-ko">Join the Clare DEX Community</span>
+                                    <span class="lang-zh">加入 Clare DEX 社区</span>
+                                </h2>
+                                
+                                <a href="https://t.me/Clare_PerpDEX" target="_blank" class="community-btn">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zM16.906 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                                    </svg>
+                                    <span class="lang-ko">Clare DEX 무료입장</span>
+                                    <span class="lang-en">Free Entry to Clare DEX</span>
+                                    <span class="lang-zh">免费进入 Clare DEX</span>
+                                </a>
+
+                                <div class="community-description">
+                                    <p>▶️ Our Telegram group provides market insights, the latest Bitcoin news, real-time trade updates and technical chart analysis.</p>
+                                    <p style="margin-top: 8px; color: rgba(255, 255, 255, 0.6);">* Clare DEX 텔레그램 방에서는 시장 인사이트, 최신 비트코인 뉴스, 실시간 거래 현황, 그리고 기술적 차트 분석을 제공합니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <!-- ========== HIGHLIGHTS SECTION ========== -->
             <section id="highlights">
@@ -1541,9 +1626,9 @@
                         <div class="col-12">
                             <h2 class="wow fadeInUp"
                                 style="font-size: 36px; font-weight: 800; color: #ffffff; margin-bottom: 40px;">
-                                <span class="lang-en">CEX Exchange List</span>
-                                <span class="lang-ko">CEX 거래소 리스트</span>
-                                <span class="lang-zh">CEX 交易所列表</span>
+                                <span class="lang-en">CEX Exchange</span>
+                                <span class="lang-ko">CEX 거래소</span>
+                                <span class="lang-zh">CEX 交易所</span>
                             </h2>
                         </div>
                     </div>
@@ -1824,9 +1909,9 @@
                         <div class="col-12">
                             <h2 class="wow fadeInUp"
                                 style="font-size: 36px; font-weight: 800; color: #ffffff; margin-bottom: 40px;">
-                                <span class="lang-en">DEX Exchange List</span>
-                                <span class="lang-ko">DEX 거래소 리스트</span>
-                                <span class="lang-zh">DEX 交易所列表</span>
+                                <span class="lang-en">DEX Exchange</span>
+                                <span class="lang-ko">DEX 거래소</span>
+                                <span class="lang-zh">DEX 交易所</span>
                             </h2>
                         </div>
                     </div>
