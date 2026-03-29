@@ -2977,6 +2977,43 @@
             }, 1000);
         });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var userAgent = navigator.userAgent.toLowerCase();
+            var isKakao = userAgent.indexOf('kakaotalk') > -1;
+            var isTelegram = userAgent.indexOf('telegram') > -1 || userAgent.indexOf('telegrambot') > -1;
+            var isLine = userAgent.indexOf('line') > -1;
+            var isInApp = isKakao || isTelegram || isLine;
+            var isAndroid = userAgent.indexOf('android') > -1;
+            var isIOS = userAgent.indexOf('iphone') > -1 || userAgent.indexOf('ipad') > -1 || userAgent.indexOf('ipod') > -1;
+
+            if (isInApp) {
+                // LBank 링크 및 kakaotalk-safe-link 클래스를 가진 모든 링크를 대상으로 합니다.
+                var links = document.querySelectorAll('a[href*="lbank.com"], a.kakaotalk-safe-link');
+                links.forEach(function (link) {
+                    link.addEventListener('click', function (e) {
+                        var href = this.getAttribute('href');
+                        if (!href) return;
+                        
+                        if (isKakao) {
+                            e.preventDefault();
+                            location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(href);
+                        } else if (isAndroid && (isTelegram || isLine)) {
+                            e.preventDefault();
+                            var urlWithoutProtocol = href.replace(/^https?:\/\//, '');
+                            location.href = 'intent://' + urlWithoutProtocol + '#Intent;scheme=https;end;';
+                        } else if (isIOS && (isTelegram || isLine)) {
+                            // iOS의 경우 Intent 방식이 동작하지 않으므로, 안내 메시지를 띄웁니다.
+                            var r = confirm('인앱 브라우저에서는 가입 화면이 보이지 않을 수 있습니다.\n\n화면 우측 하단(또는 상단)의 나침반이나 공유/메뉴(⋯) 버튼을 눌러 "Safari로 열기"나 "기본 브라우저로 열기"를 선택해주세요.\n\n계속 진행하시겠습니까?');
+                            if (!r) {
+                                e.preventDefault();
+                            }
+                        }
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>
