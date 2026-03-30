@@ -97,6 +97,8 @@
             });
         });
     </script>
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
 </head>
 
@@ -1265,239 +1267,273 @@
             (function() {
                 'use strict';
 
-                // ── SuperTrend + K-Means Volatility Clustering Signal Engine ──
-                // Port of Pine Script logic to JavaScript
+                // ── CONFIG ──
+                var BINANCE_API = 'https://fapi.binance.com/fapi/v1/klines';
+                var BINANCE_WS  = 'wss://fstream.binance.com/ws/btcusdt@kline_5m';
+                var SYMBOL = 'BTCUSDT';
+                var INTERVAL = '5m';
+                var INITIAL_LIMIT = 1500;    // ~5 days of 5min data
+                var FETCH_BATCH = 1500;      // load 1500 more on scroll
+                var ATR_PERIOD = 10;
+                var SUPERTREND_FACTOR = 3.0;
+                var KMEANS_LOOKBACK = 200;
+                var KMEANS_ITERATIONS = 10;
 
-                const BINANCE_API = 'https://fapi.binance.com/fapi/v1/klines';
-                const SYMBOL = 'BTCUSDT';
-                const INTERVAL = '5m';
-                const LIMIT = 500;
-                const ATR_PERIOD = 10;
-                const SUPERTREND_FACTOR = 3.0;
-                const KMEANS_LOOKBACK = 200;
-                const KMEANS_ITERATIONS = 10;
+                // ── Globals ──
+                var chart, candleSeries, stUpAreaSeries, stDownAreaSeries, markersPrimitive;
+                var allCandles = [];
+                var ws = null;
+                var LWC;
+                var isFetchingMore = false;
+                var oldestTimestamp = null;
+                var hasMoreHistory = true;
 
-                // ── ATR Calculation ──
+                // ── ATR ──
                 function calcATR(candles, period) {
                     var atr = [];
                     for (var i = 0; i < candles.length; i++) {
                         if (i === 0) { atr.push(candles[i].high - candles[i].low); continue; }
                         var tr = Math.max(
                             candles[i].high - candles[i].low,
-                            Math.abs(candles[i].high - candles[i-1].close),
-                            Math.abs(candles[i].low - candles[i-1].close)
+                            Math.abs(candles[i].high - candles[i - 1].close),
+                            Math.abs(candles[i].low - candles[i - 1].close)
                         );
-                        if (i < period) {
-                            atr.push(tr);
-                        } else if (i === period) {
-                            var sum = tr;
-                            for (var j = 1; j < period; j++) sum += Math.max(candles[i-j].high - candles[i-j].low, Math.abs(candles[i-j].high - candles[i-j-1].close), Math.abs(candles[i-j].low - candles[i-j-1].close));
+                        if (i < period) { atr.push(tr); }
+                        else if (i === period) {
+                            var sum = 0;
+                            for (var j = 0; j < period; j++) {
+                                var jj = i - j;
+                                var jtr = jj === 0 ? (candles[0].high - candles[0].low) :
+                                    Math.max(candles[jj].high - candles[jj].low,
+                                        Math.abs(candles[jj].high - candles[jj-1].close),
+                                        Math.abs(candles[jj].low - candles[jj-1].close));
+                                sum += jtr;
+                            }
                             atr.push(sum / period);
                         } else {
-                            atr.push((atr[i-1] * (period - 1) + tr) / period);
+                            atr.push((atr[i - 1] * (period - 1) + tr) / period);
                         }
                     }
                     return atr;
                 }
 
-                // ── K-Means Clustering (3 clusters: high, medium, low) ──
-                function kMeansClustering(volatilitySlice, iterations) {
-                    if (volatilitySlice.length < 3) return volatilitySlice[volatilitySlice.length - 1] || 0;
-                    var sorted = volatilitySlice.slice().sort(function(a,b){ return a - b; });
-                    var cLow = sorted[Math.floor(sorted.length * 0.15)];
-                    var cMid = sorted[Math.floor(sorted.length * 0.5)];
-                    var cHigh = sorted[Math.floor(sorted.length * 0.85)];
-
-                    for (var iter = 0; iter < iterations; iter++) {
+                // ── K-Means ──
+                function kMeans(volSlice, iters) {
+                    if (volSlice.length < 3) return volSlice[volSlice.length - 1] || 0;
+                    var sorted = volSlice.slice().sort(function(a, b) { return a - b; });
+                    var cL = sorted[Math.floor(sorted.length * 0.15)];
+                    var cM = sorted[Math.floor(sorted.length * 0.5)];
+                    var cH = sorted[Math.floor(sorted.length * 0.85)];
+                    for (var it = 0; it < iters; it++) {
                         var hv = [], mv = [], lv = [];
-                        for (var i = 0; i < volatilitySlice.length; i++) {
-                            var v = volatilitySlice[i];
-                            var dH = Math.abs(v - cHigh);
-                            var dM = Math.abs(v - cMid);
-                            var dL = Math.abs(v - cLow);
+                        for (var i = 0; i < volSlice.length; i++) {
+                            var v = volSlice[i], dH = Math.abs(v - cH), dM = Math.abs(v - cM), dL = Math.abs(v - cL);
                             if (dH <= dM && dH <= dL) hv.push(v);
                             else if (dM <= dH && dM <= dL) mv.push(v);
                             else lv.push(v);
                         }
-                        if (hv.length > 0) cHigh = hv.reduce(function(a,b){return a+b;},0) / hv.length;
-                        if (mv.length > 0) cMid = mv.reduce(function(a,b){return a+b;},0) / mv.length;
-                        if (lv.length > 0) cLow = lv.reduce(function(a,b){return a+b;},0) / lv.length;
+                        if (hv.length) cH = hv.reduce(function(a,b){return a+b;},0)/hv.length;
+                        if (mv.length) cM = mv.reduce(function(a,b){return a+b;},0)/mv.length;
+                        if (lv.length) cL = lv.reduce(function(a,b){return a+b;},0)/lv.length;
                     }
-
-                    // Assign current volatility to nearest centroid
-                    var current = volatilitySlice[volatilitySlice.length - 1];
-                    var distH = Math.abs(current - cHigh);
-                    var distM = Math.abs(current - cMid);
-                    var distL = Math.abs(current - cLow);
-                    if (distH <= distM && distH <= distL) return cHigh;
-                    if (distM <= distH && distM <= distL) return cMid;
-                    return cLow;
+                    var cur = volSlice[volSlice.length - 1];
+                    var d1 = Math.abs(cur-cH), d2 = Math.abs(cur-cM), d3 = Math.abs(cur-cL);
+                    if (d1 <= d2 && d1 <= d3) return cH;
+                    if (d2 <= d1 && d2 <= d3) return cM;
+                    return cL;
                 }
 
-                // ── SuperTrend Calculation ──
-                function calcSuperTrend(candles, atr, factor, lookback, kmeansIter) {
-                    var st = [];
-                    var dir = [];
-                    var longPos = [];
-                    var shortPos = [];
-
-                    for (var i = 0; i < candles.length; i++) {
+                // ── SuperTrend ──
+                function calcSuperTrend(candles, atr) {
+                    var n = candles.length;
+                    var st = new Array(n), dir = new Array(n);
+                    var upperBands = new Array(n), lowerBands = new Array(n);
+                    for (var i = 0; i < n; i++) {
+                        var hl2 = (candles[i].high + candles[i].low) / 2;
                         if (i < ATR_PERIOD + 1) {
-                            st.push((candles[i].high + candles[i].low) / 2);
-                            dir.push(1);
-                            longPos.push(-1);
-                            shortPos.push(1);
+                            st[i] = hl2; dir[i] = 1;
+                            upperBands[i] = hl2 + SUPERTREND_FACTOR * atr[i];
+                            lowerBands[i] = hl2 - SUPERTREND_FACTOR * atr[i];
                             continue;
                         }
-
-                        // K-Means adaptive volatility
-                        var start = Math.max(0, i - lookback + 1);
-                        var volSlice = atr.slice(start, i + 1);
-                        var assignedCentroid = kMeansClustering(volSlice, kmeansIter);
-
-                        var hl2 = (candles[i].high + candles[i].low) / 2;
-                        var upperBand = hl2 + factor * assignedCentroid;
-                        var lowerBand = hl2 - factor * assignedCentroid;
-
-                        // Previous values
-                        var prevUpper = st[i-1] || upperBand;
-                        var prevLower = st[i-1] || lowerBand;
-                        var prevClose = candles[i-1].close;
-                        var prevDir = dir[i-1];
-                        var prevST = st[i-1];
-
-                        // Adjust bands
-                        if (lowerBand > (prevDir === 1 ? prevST : prevLower) || prevClose < (prevDir === 1 ? prevST : prevLower)) {
-                            // keep lowerBand
-                        } else {
-                            lowerBand = prevDir === 1 ? prevST : prevLower;
-                        }
-
-                        if (upperBand < (prevDir === -1 ? prevST : prevUpper) || prevClose > (prevDir === -1 ? prevST : prevUpper)) {
-                            // keep upperBand
-                        } else {
-                            upperBand = prevDir === -1 ? prevST : prevUpper;
-                        }
-
-                        var curDir;
-                        var curST;
+                        var start = Math.max(0, i - KMEANS_LOOKBACK + 1);
+                        var centroid = kMeans(atr.slice(start, i + 1), KMEANS_ITERATIONS);
+                        var upper = hl2 + SUPERTREND_FACTOR * centroid;
+                        var lower = hl2 - SUPERTREND_FACTOR * centroid;
+                        var prevLower = lowerBands[i-1], prevUpper = upperBands[i-1];
+                        if (lower > prevLower || candles[i-1].close < prevLower) {} else { lower = prevLower; }
+                        if (upper < prevUpper || candles[i-1].close > prevUpper) {} else { upper = prevUpper; }
+                        lowerBands[i] = lower; upperBands[i] = upper;
+                        var prevDir = dir[i-1], prevST = st[i-1];
                         if (prevDir === 1) {
-                            if (candles[i].close < prevST) {
-                                curDir = -1;
-                                curST = upperBand;
-                            } else {
-                                curDir = 1;
-                                curST = lowerBand;
-                            }
+                            if (candles[i].close < prevST) { dir[i] = -1; st[i] = upper; }
+                            else { dir[i] = 1; st[i] = lower; }
                         } else {
-                            if (candles[i].close > prevST) {
-                                curDir = 1;
-                                curST = lowerBand;
-                            } else {
-                                curDir = -1;
-                                curST = upperBand;
-                            }
-                        }
-
-                        st.push(curST);
-                        dir.push(curDir);
-
-                        // Long position logic
-                        var prevLongPos = longPos[i-1];
-                        var prevShortPos = shortPos[i-1];
-                        var longA = curDir === 1 ? curST : curST;  // lower band for long stop
-                        var longB = curDir === -1 ? curST : curST; // upper for long trigger
-                        var shortA = longA;
-                        var shortB = longB;
-
-                        // Simplified position tracking based on SuperTrend direction change
-                        if (curDir === 1 && prevDir === -1) {
-                            longPos.push(-1);  // Long entry
-                            shortPos.push(-1); // Short exit
-                        } else if (curDir === -1 && prevDir === 1) {
-                            longPos.push(1);   // Long exit
-                            shortPos.push(1);  // Short entry
-                        } else {
-                            longPos.push(prevLongPos);
-                            shortPos.push(prevShortPos);
+                            if (candles[i].close > prevST) { dir[i] = 1; st[i] = lower; }
+                            else { dir[i] = -1; st[i] = upper; }
                         }
                     }
-
-                    return { st: st, dir: dir, longPos: longPos, shortPos: shortPos };
+                    return { st: st, dir: dir };
                 }
 
-                // ── Fetch Binance Klines ──
-                async function fetchKlines() {
-                    var url = BINANCE_API + '?symbol=' + SYMBOL + '&interval=' + INTERVAL + '&limit=' + LIMIT;
+                // ── Markers ──
+                function genMarkers(candles, dir) {
+                    var markers = [];
+                    var startIdx = ATR_PERIOD + 2;
+                    for (var i = startIdx; i < candles.length; i++) {
+                        if (dir[i] === 1 && dir[i-1] === -1) {
+                            markers.push({ time: candles[i].time, position: 'belowBar', color: '#26a69a', shape: 'arrowUp', text: 'LONG ENTRY' });
+                            markers.push({ time: candles[i].time, position: 'aboveBar', color: '#ef5350', shape: 'circle', text: 'SHORT CLOSE' });
+                        } else if (dir[i] === -1 && dir[i-1] === 1) {
+                            markers.push({ time: candles[i].time, position: 'aboveBar', color: '#ef5350', shape: 'arrowDown', text: 'SHORT ENTRY' });
+                            markers.push({ time: candles[i].time, position: 'belowBar', color: '#26a69a', shape: 'circle', text: 'LONG CLOSE' });
+                        }
+                    }
+                    markers.sort(function(a,b){ return a.time - b.time; });
+                    return markers;
+                }
+
+                // ── Area Fill Data ──
+                function buildFillData(candles, st, dir) {
+                    var greenData = [], redData = [];
+                    var startIdx = ATR_PERIOD + 2;
+                    for (var i = startIdx; i < candles.length; i++) {
+                        var t = candles[i].time;
+                        if (dir[i] === 1) {
+                            greenData.push({ time: t, value: st[i] });
+                            redData.push({ time: t, value: NaN });
+                        } else {
+                            redData.push({ time: t, value: st[i] });
+                            greenData.push({ time: t, value: NaN });
+                        }
+                    }
+                    return { green: greenData, red: redData };
+                }
+
+                // ── Fetch Klines (with optional endTime for history) ──
+                async function fetchKlines(limit, endTime) {
+                    var url = BINANCE_API + '?symbol=' + SYMBOL + '&interval=' + INTERVAL + '&limit=' + (limit || INITIAL_LIMIT);
+                    if (endTime) url += '&endTime=' + endTime;
                     var resp = await fetch(url);
                     var data = await resp.json();
                     return data.map(function(k) {
-                        return {
-                            time: Math.floor(k[0] / 1000),
-                            open: parseFloat(k[1]),
-                            high: parseFloat(k[2]),
-                            low: parseFloat(k[3]),
-                            close: parseFloat(k[4])
-                        };
+                        return { time: Math.floor(k[0] / 1000), open: +k[1], high: +k[2], low: +k[3], close: +k[4] };
                     });
                 }
 
-                // ── Build Chart ──
+                // ── Render ──
+                function renderChart(candles) {
+                    var atr = calcATR(candles, ATR_PERIOD);
+                    var result = calcSuperTrend(candles, atr);
+                    var fillData = buildFillData(candles, result.st, result.dir);
+                    var markers = genMarkers(candles, result.dir);
+                    var greenClean = fillData.green.filter(function(d){ return !isNaN(d.value); });
+                    var redClean = fillData.red.filter(function(d){ return !isNaN(d.value); });
+
+                    candleSeries.setData(candles);
+                    stUpAreaSeries.setData(greenClean);
+                    stDownAreaSeries.setData(redClean);
+
+                    if (markersPrimitive) { markersPrimitive.setMarkers(markers); }
+                    else if (markers.length) { markersPrimitive = LWC.createSeriesMarkers(candleSeries, markers); }
+
+                    var lastDir = result.dir[result.dir.length - 1];
+                    var badge = document.getElementById('currentSignalBadge');
+                    if (lastDir === 1) {
+                        badge.className = 'signal-badge long-signal';
+                        badge.innerText = '🟢 현재: LONG 구간';
+                    } else {
+                        badge.className = 'signal-badge short-signal';
+                        badge.innerText = '🔴 현재: SHORT 구간';
+                    }
+                    var now = new Date();
+                    document.getElementById('chartUpdateTime').innerText =
+                        '마지막 업데이트: ' + now.getHours().toString().padStart(2,'0') + ':' +
+                        now.getMinutes().toString().padStart(2,'0') + ':' +
+                        now.getSeconds().toString().padStart(2,'0');
+                }
+
+                // ── Fetch older history when user scrolls left ──
+                async function loadMoreHistory() {
+                    if (isFetchingMore || !hasMoreHistory || allCandles.length === 0) return;
+                    isFetchingMore = true;
+                    try {
+                        var endMs = allCandles[0].time * 1000 - 1; // 1ms before oldest candle
+                        var olderCandles = await fetchKlines(FETCH_BATCH, endMs);
+                        if (!olderCandles || olderCandles.length === 0) {
+                            hasMoreHistory = false;
+                            isFetchingMore = false;
+                            return;
+                        }
+                        // Deduplicate: remove any candles from older that already exist
+                        var existingFirst = allCandles[0].time;
+                        olderCandles = olderCandles.filter(function(c) { return c.time < existingFirst; });
+                        if (olderCandles.length === 0) {
+                            hasMoreHistory = false;
+                            isFetchingMore = false;
+                            return;
+                        }
+                        // Prepend older data
+                        allCandles = olderCandles.concat(allCandles);
+                        oldestTimestamp = allCandles[0].time;
+                        renderChart(allCandles);
+                    } catch(e) {
+                        console.warn('Failed to load more history:', e);
+                    }
+                    isFetchingMore = false;
+                }
+
+                // ── WebSocket ──
+                function connectWebSocket() {
+                    if (ws) { try { ws.close(); } catch(e){} }
+                    ws = new WebSocket(BINANCE_WS);
+                    ws.onmessage = function(evt) {
+                        try {
+                            var msg = JSON.parse(evt.data);
+                            var k = msg.k;
+                            if (!k) return;
+                            var candle = {
+                                time: Math.floor(k.t / 1000),
+                                open: +k.o, high: +k.h, low: +k.l, close: +k.c
+                            };
+                            if (allCandles.length > 0 && allCandles[allCandles.length - 1].time === candle.time) {
+                                allCandles[allCandles.length - 1] = candle;
+                            } else if (allCandles.length > 0 && candle.time > allCandles[allCandles.length - 1].time) {
+                                allCandles.push(candle);
+                                // Do NOT shift/trim - keep all history
+                            }
+                            renderChart(allCandles);
+                        } catch(e) { console.warn('WS parse error', e); }
+                    };
+                    ws.onclose = function() { setTimeout(connectWebSocket, 3000); };
+                    ws.onerror = function() { ws.close(); };
+                }
+
+                // ── Price formatter (show full BTC price like 67,718.00) ──
+                function formatPrice(price) {
+                    if (price >= 1000) {
+                        return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                    return price.toFixed(2);
+                }
+
+                // ── Init ──
                 async function initSignalChart() {
                     try {
-                        var candles = await fetchKlines();
-                        if (!candles || candles.length < 50) throw new Error('Insufficient data');
+                        allCandles = await fetchKlines(INITIAL_LIMIT);
+                        if (!allCandles || allCandles.length < 50) throw new Error('Insufficient data');
+                        oldestTimestamp = allCandles[0].time;
 
-                        var atr = calcATR(candles, ATR_PERIOD);
-                        var result = calcSuperTrend(candles, atr, SUPERTREND_FACTOR, KMEANS_LOOKBACK, KMEANS_ITERATIONS);
-
-                        // Generate markers
-                        var markers = [];
-                        for (var i = 1; i < candles.length; i++) {
-                            if (result.dir[i] === 1 && result.dir[i-1] === -1) {
-                                markers.push({
-                                    time: candles[i].time,
-                                    position: 'belowBar',
-                                    color: '#00C076',
-                                    shape: 'arrowUp',
-                                    text: 'LONG'
-                                });
-                            } else if (result.dir[i] === -1 && result.dir[i-1] === 1) {
-                                markers.push({
-                                    time: candles[i].time,
-                                    position: 'aboveBar',
-                                    color: '#FF4976',
-                                    shape: 'arrowDown',
-                                    text: 'SHORT'
-                                });
-                            }
-                        }
-
-                        // Prepare SuperTrend line data (split into up/down)
-                        var stUpData = [];
-                        var stDownData = [];
-                        for (var i = ATR_PERIOD + 2; i < candles.length; i++) {
-                            if (result.dir[i] === 1) {
-                                stUpData.push({ time: candles[i].time, value: result.st[i] });
-                                stDownData.push({ time: candles[i].time, value: NaN });
-                            } else {
-                                stDownData.push({ time: candles[i].time, value: result.st[i] });
-                                stUpData.push({ time: candles[i].time, value: NaN });
-                            }
-                        }
-
-                        // Show chart container
                         document.getElementById('chartLoading').style.display = 'none';
                         document.getElementById('chartContainer').style.display = 'block';
 
-                        // Create chart
                         var container = document.getElementById('chartContainer');
-                        var LWC = LightweightCharts;
-                        var chart = LWC.createChart(container, {
+                        LWC = LightweightCharts;
+
+                        chart = LWC.createChart(container, {
                             layout: {
                                 background: { type: 'solid', color: '#141414' },
-                                textColor: '#888',
-                                fontSize: 12
+                                textColor: '#999', fontSize: 11
                             },
                             grid: {
                                 vertLines: { color: 'rgba(255,255,255,0.03)' },
@@ -1510,103 +1546,77 @@
                             },
                             rightPriceScale: {
                                 borderColor: 'rgba(255,255,255,0.08)',
-                                scaleMargins: { top: 0.1, bottom: 0.1 }
+                                scaleMargins: { top: 0.05, bottom: 0.05 },
+                                minimumWidth: 85
                             },
                             timeScale: {
                                 borderColor: 'rgba(255,255,255,0.08)',
-                                timeVisible: true,
-                                secondsVisible: false
+                                timeVisible: true, secondsVisible: false
+                            },
+                            localization: {
+                                priceFormatter: formatPrice
                             },
                             handleScroll: { vertTouchDrag: false }
                         });
 
-                        // Candlestick series
-                        var candleSeries = chart.addSeries(LWC.CandlestickSeries, {
-                            upColor: '#26a69a',
-                            downColor: '#ef5350',
+                        // Green area (uptrend fill)
+                        stUpAreaSeries = chart.addSeries(LWC.AreaSeries, {
+                            lineColor: '#26a69a', lineWidth: 2,
+                            topColor: 'rgba(38,166,154,0.35)',
+                            bottomColor: 'rgba(38,166,154,0.0)',
+                            crosshairMarkerVisible: false,
+                            priceLineVisible: false, lastValueVisible: false,
+                            priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
+                        });
+                        // Red area (downtrend fill)
+                        stDownAreaSeries = chart.addSeries(LWC.AreaSeries, {
+                            lineColor: '#ef5350', lineWidth: 2,
+                            topColor: 'rgba(239,83,80,0.35)',
+                            bottomColor: 'rgba(239,83,80,0.0)',
+                            crosshairMarkerVisible: false,
+                            priceLineVisible: false, lastValueVisible: false,
+                            priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
+                        });
+                        // Candlestick (on top)
+                        candleSeries = chart.addSeries(LWC.CandlestickSeries, {
+                            upColor: '#26a69a', downColor: '#ef5350',
                             borderVisible: false,
-                            wickUpColor: '#26a69a',
-                            wickDownColor: '#ef5350'
+                            wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+                            priceFormat: { type: 'price', precision: 2, minMove: 0.01 }
                         });
-                        candleSeries.setData(candles);
 
-                        // SuperTrend Up line (green)
-                        var stUpSeries = chart.addSeries(LWC.LineSeries, {
-                            color: '#00C076',
-                            lineWidth: 2,
-                            lineStyle: 0,
-                            crosshairMarkerVisible: false,
-                            priceLineVisible: false,
-                            lastValueVisible: false
-                        });
-                        stUpSeries.setData(stUpData.filter(function(d){ return !isNaN(d.value); }));
-
-                        // SuperTrend Down line (red)
-                        var stDownSeries = chart.addSeries(LWC.LineSeries, {
-                            color: '#FF4976',
-                            lineWidth: 2,
-                            lineStyle: 0,
-                            crosshairMarkerVisible: false,
-                            priceLineVisible: false,
-                            lastValueVisible: false
-                        });
-                        stDownSeries.setData(stDownData.filter(function(d){ return !isNaN(d.value); }));
-
-                        // Set markers
-                        if (markers.length > 0) {
-                            LWC.createSeriesMarkers(candleSeries, markers);
-                        }
-
+                        renderChart(allCandles);
                         chart.timeScale().fitContent();
 
-                        // Update signal badge
-                        var lastDir = result.dir[result.dir.length - 1];
-                        var badge = document.getElementById('currentSignalBadge');
-                        if (lastDir === 1) {
-                            badge.className = 'signal-badge long-signal';
-                            badge.innerText = '🟢 현재: LONG 구간';
-                        } else {
-                            badge.className = 'signal-badge short-signal';
-                            badge.innerText = '🔴 현재: SHORT 구간';
-                        }
-
-                        // Update time
-                        var now = new Date();
-                        document.getElementById('chartUpdateTime').innerText =
-                            '마지막 업데이트: ' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
-
-                        // Responsive resize
-                        var resizeObserver = new ResizeObserver(function(entries) {
-                            for (var entry of entries) {
-                                var w = entry.contentRect.width;
-                                var h = entry.contentRect.height;
-                                chart.applyOptions({ width: w, height: h });
+                        // ── Infinite scroll: load more when reaching left edge ──
+                        chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
+                            if (!range) return;
+                            // If user scrolled so that left edge is near the first bar
+                            if (range.from <= 10) {
+                                loadMoreHistory();
                             }
                         });
-                        resizeObserver.observe(container);
+
+                        // Responsive
+                        new ResizeObserver(function(entries) {
+                            var cr = entries[0].contentRect;
+                            chart.applyOptions({ width: cr.width, height: cr.height });
+                        }).observe(container);
+
+                        // WebSocket
+                        connectWebSocket();
 
                     } catch(err) {
                         console.error('Signal chart error:', err);
-                        document.getElementById('chartLoading').innerHTML = '<span style="color:#FF4976;">차트 로딩 실패. 잠시 후 다시 시도합니다.</span>';
+                        document.getElementById('chartLoading').innerHTML =
+                            '<span style="color:#FF4976;">차트 로딩 실패. 잠시 후 다시 시도합니다.</span>';
                         setTimeout(initSignalChart, 5000);
                     }
                 }
 
-                // Initialize on DOM load
                 document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(initSignalChart, 300);
                 });
-
-                // Auto-refresh every 5 minutes
-                setInterval(function() {
-                    var container = document.getElementById('chartContainer');
-                    if (container) {
-                        container.innerHTML = '';
-                        container.style.display = 'none';
-                        document.getElementById('chartLoading').style.display = 'flex';
-                        initSignalChart();
-                    }
-                }, 300000);
             })();
             </script>
 
@@ -1622,10 +1632,15 @@
                                     border-radius: 18px;
                                     border: 1px solid rgba(255, 255, 255, 0.1);
                                     max-width: 600px;
+                                    width: 100%;
                                     margin: 0 auto;
                                     text-align: center;
                                     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                                     color: #FFFFFF;
+                                }
+                                #btc-dashboard .col-12 {
+                                    display: flex;
+                                    justify-content: center;
                                 }
                                 #btc-dashboard .dashboard-title {
                                     font-size: 20px;
@@ -2594,14 +2609,17 @@
                                 }
                             </style>
                             <div class="events-swiper">
-                                <div class="swiper-container events-swiper-container">
+                                <!-- Swiper JS -->
+                                <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+                                
+                                <div class="swiper events-swiper-container">
                                     <div class="swiper-wrapper">
                                         <div class="swiper-slide">
                                             <a href="https://lbank.com/ref/4G10B"
                                                 target="_blank" rel="noopener noreferrer"
                                                 class="kakaotalk-safe-link"
                                                 style="display: block;">
-                                                <img src="benefit/photo_2026-03-30_00-25-42.jpg" alt="LBank Event" style="width: 100%; border-radius: 16px;">
+                                                <img src="public/benefit/photo_2026-03-30_00-25-42.jpg" alt="LBank Event" style="width: 100%; border-radius: 16px;">
                                             </a>
                                         </div>
                                         <div class="swiper-slide">
@@ -2609,21 +2627,21 @@
                                                 target="_blank" rel="noopener noreferrer"
                                                 class="kakaotalk-safe-link"
                                                 style="display: block;">
-                                                <img src="benefit/20260323194841.png" alt="BitMEX Event" style="width: 100%; border-radius: 16px;">
+                                                <img src="public/benefit/20260323194841.png" alt="BitMEX Event" style="width: 100%; border-radius: 16px;">
                                             </a>
                                         </div>
                                     </div>
                                     <!-- Pagination 표시 영역 -->
-                                    <div class="events-swiper-pagination"></div>
+                                    <div class="events-swiper-pagination swiper-pagination"></div>
                                 </div>
                                 <!-- 좌우 이동 버튼 -->
-                                <div class="events-swiper-button-prev">
+                                <div class="events-swiper-button-prev swiper-button-prev">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="15 18 9 12 15 6"></polyline>
                                     </svg>
                                 </div>
-                                <div class="events-swiper-button-next">
+                                <div class="events-swiper-button-next swiper-button-next">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="9 18 15 12 9 6"></polyline>
@@ -2636,7 +2654,6 @@
                         <a href="https://www.bitmex.com/app/register/X7-mMx" target="_blank" rel="noopener noreferrer" style="padding: 10px 18px; border-radius: 12px; background: #0D1A34; color:#fff; text-decoration: none; font-weight: 700; border: 1px solid #3772ff;">BitMEX 이벤트 바로가기</a>
                         <a href="https://lbank.com/ref/4G10B" target="_blank" rel="noopener noreferrer" class="kakaotalk-safe-link" style="padding: 10px 18px; border-radius: 12px; background: #1E2E4C; color:#fff; text-decoration: none; font-weight: 700; border: 1px solid #3772ff;">LBank 이벤트 바로가기</a>
                     </div>
-                    <!-- Swiper Script Initialization -->
                     <script>
                         document.addEventListener("DOMContentLoaded", function () {
                             setTimeout(function () {
@@ -2659,7 +2676,7 @@
                                         }
                                     });
                                 }
-                            }, 500);
+                            }, 1000);
                         });
                     </script>
                 </div>
