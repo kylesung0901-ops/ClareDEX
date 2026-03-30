@@ -1586,7 +1586,18 @@
                         });
 
                         renderChart(allCandles);
-                        chart.timeScale().fitContent();
+                        
+                        // ── Responsive initial zoom ──
+                        if (window.innerWidth < 768) {
+                            // On mobile, show only about 60 candles to spread them out
+                            chart.timeScale().setVisibleLogicalRange({
+                                from: allCandles.length - 60,
+                                to: allCandles.length + 5 // padding for current price label
+                            });
+                        } else {
+                            // On PC, keep fitContent as requested
+                            chart.timeScale().fitContent();
+                        }
 
                         // ── Infinite scroll: load more when reaching left edge ──
                         chart.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
