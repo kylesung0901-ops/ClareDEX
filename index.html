@@ -150,9 +150,16 @@
                                             </li>
                                             <li class="menu-item menu-item-highlight">
                                                 <a href="#highlights" class="btn-highlights">
-                                                    <span class="lang-en">Free Benefits</span>
-                                                    <span class="lang-ko">Clare DEX 무료 혜택</span>
-                                                    <span class="lang-zh">免费福利</span>
+                                                    <span class="lang-en">Clare DEX 서비스</span>
+                                                    <span class="lang-ko">Clare DEX 서비스</span>
+                                                    <span class="lang-zh">Clare DEX 서비스</span>
+                                                </a>
+                                            </li>
+                                            <li class="menu-item">
+                                                <a href="#kol">
+                                                    <span class="lang-en">🔑 KOL Partnership</span>
+                                                    <span class="lang-ko">🔑 KOL Partnership</span>
+                                                    <span class="lang-zh">🔑 KOL Partnership</span>
                                                 </a>
                                             </li>
                                             <li class="menu-item">
@@ -1029,9 +1036,88 @@
                                 body:not([data-lang]) .lang-ko {
                                     display: inline;
                                 }
+                                .hero-message {
+                                    width: 100%;
+                                    max-width: 960px;
+                                    margin: 0 auto 8px;
+                                    display: flex;
+                                    flex-direction: column;
+                                    align-items: center;
+                                    justify-content: center;
+                                    gap: 2px;
+                                    text-align: center;
+                                }
+                                .hero-kicker {
+                                    display: block;
+                                    width: fit-content;
+                                    max-width: 100%;
+                                    margin: 0 auto;
+                                    margin-bottom: 5px !important;
+                                    font-size: 30px !important;
+                                    line-height: 1.12;
+                                    font-weight: 800;
+                                    letter-spacing: 0.01em;
+                                    color: #ffffff !important;
+                                    text-align: center;
+                                    position: relative;
+                                    left: -15px;
+                                }
+                                .hero-title-main {
+                                    display: block;
+                                    width: fit-content;
+                                    max-width: 100%;
+                                    margin: 0 auto;
+                                    font-size: 56px;
+                                    line-height: 1.08;
+                                    font-weight: 800;
+                                    color: #ffffff !important;
+                                    text-align: center;
+                                }
+                                .hero-brand {
+                                    display: block;
+                                    width: fit-content;
+                                    max-width: 100%;
+                                    margin: 6px auto 0;
+                                    margin-bottom: 0 !important;
+                                    font-size: 30px !important;
+                                    line-height: 1.1;
+                                    font-weight: 800;
+                                    letter-spacing: 0.04em;
+                                    color: #ffffff !important;
+                                    text-align: center;
+                                }
+                                .content > .hero-message + h1,
+                                .content > .hero-message + h1 + p,
+                                .content > .hero-message + h1 + p + p {
+                                    display: none;
+                                }
                                 .mobile-break { display: none; }
                                 .mobile-2line { display: none; }
                                 @media (max-width: 767px) {
+                                    .hero-message {
+                                        max-width: 100%;
+                                        padding: 0 12px;
+                                        margin-bottom: 6px;
+                                        gap: 2px;
+                                    }
+                                    .hero-kicker {
+                                        margin: 0 auto;
+                                        margin-bottom: 0 !important;
+                                        font-size: 20px !important;
+                                        line-height: 1.1;
+                                        position: relative;
+                                        left: -15px;
+                                    }
+                                    .hero-title-main {
+                                        font-size: 34px;
+                                        line-height: 1.08;
+                                    }
+                                    .hero-brand {
+                                        font-size: 20px !important;
+                                        margin-top: 4px;
+                                        margin-bottom: 0 !important;
+                                        letter-spacing: 0.03em;
+                                    }
                                     .mobile-break { display: block; }
                                     .pc-only { display: none; }
                                     /* 모바일: 페이백 2줄 표시 */
@@ -1071,6 +1157,11 @@
                                 }
                             </style>
                             <div class="content">
+                                <div class="hero-message">
+                                    <p class="hero-kicker wow fadeInUp notranslate" data-wow-delay="0s">Crypto Business Development</p>
+                                    <h1 id="hero-main-title" data-wow-delay="0.1s" class="wow fadeInUp notranslate hero-title-main">최적의 효율, 완성된 시스템</h1>
+                                    <p class="hero-brand wow fadeInUp notranslate" data-wow-delay="0.2s">CLARE DEX</p>
+                                </div>
                                 <h1 id="hero-title" data-wow-delay="0s" class="wow fadeInUp notranslate"
                                     style="font-size: 32px; line-height: 1.4; margin-bottom: 15px;">
                                     <span class="lang-ko">검증된 파트너 거래소, <br class="mobile-break">안전한 트레이딩의 시작</span>
@@ -1372,9 +1463,9 @@
                 <div class="themesflat-container">
                     <div class="highlights-content" style="display:block; width:100%;">
                         <h2 class="wow fadeInUp" style="font-size:32px; font-weight:800; color:#ffffff; margin-bottom:32px; text-align:left;">
-                            <span class="lang-en">Clare DEX Free Benefits</span>
-                            <span class="lang-ko">Clare DEX 무료 혜택</span>
-                            <span class="lang-zh">Clare DEX 免费福利</span>
+                            <span class="lang-en">Clare DEX Service</span>
+                            <span class="lang-ko">Clare DEX 서비스</span>
+                            <span class="lang-zh">Clare DEX 服务</span>
                         </h2>
 
                         <!-- ── Highlights Cards CSS ── -->
@@ -1523,6 +1614,67 @@
                                 transform: translateY(-2px);
                                 color: #fff !important;
                             }
+                            /* ── KOL 카드 전용: 50:50 대칭 레이아웃 ── */
+                            .hcard--kol {
+                                align-items: stretch;
+                            }
+                            .hcard--kol .hcard-info {
+                                flex: 1 1 0;
+                                gap: 18px;
+                            }
+                            .hcard--kol .hcard-title {
+                                font-size: 22px;
+                                font-weight: 900;
+                                line-height: 1.4;
+                            }
+                            .hcard--kol .hcard-step-main {
+                                font-size: 16px;
+                                font-weight: 700;
+                            }
+                            .hcard--kol .hcard-btn-primary {
+                                font-size: 16px;
+                                padding: 14px 24px;
+                                margin-top: 6px;
+                            }
+                            /* ── KOL 이미지 전용: 왼쪽 텍스트 높이에 딱 맞춤 ── */
+                            .hcard-img--kol {
+                                flex: 0 0 42%;
+                                width: 42%;
+                                border-radius: 14px;
+                                overflow: hidden;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            }
+                            .hcard-img--kol > img {
+                                width: 300px;
+                                height: 300px;
+                                object-fit: contain;
+                                border-radius: 14px;
+                                display: block;
+                            }
+                            /* ── KOL Tablet (768px ~ 1199px) ── */
+                            @media (min-width: 768px) and (max-width: 1199px) {
+                                .hcard--kol .hcard-title { font-size: 18px; }
+                                .hcard--kol .hcard-step-main { font-size: 14px; }
+                                .hcard--kol .hcard-btn-primary { font-size: 14px; padding: 12px 20px; }
+                                .hcard-img--kol { flex: 0 0 44%; width: 44%; }
+                                .hcard-img--kol > img { width: 300px; height: 300px; }
+                            }
+                            /* ── KOL Mobile (≤767px) ── */
+                            @media (max-width: 767px) {
+                                .hcard--kol .hcard-title { font-size: 15px; }
+                                .hcard--kol .hcard-step-main { font-size: 13px; }
+                                .hcard--kol .hcard-btn-primary { font-size: 14px; padding: 12px 18px; }
+                                .hcard-img--kol {
+                                    flex: unset;
+                                    width: 100%;
+                                    margin: 0 auto;
+                                    display: flex;
+                                    justify-content: center;
+                                }
+                                .hcard-img--kol > img { width: 300px; height: 300px; }
+                            }
                             /* ── Default Desktop ── */
                             .hcard-img { flex: 0 0 450px; width: 450px; }
                             /* ── Wide PC (≥1200px) ── */
@@ -1575,8 +1727,8 @@
                                 <!-- LEFT: 설명 -->
                                 <div class="hcard-info">
                                     <p class="hcard-pin">📌 All of these benefits are available once you join the Clare DEX Telegram group.</p>
-                                    <p class="hcard-title">🔑 5-Minute Scalping Indicator<br>
-                                        <span style="font-size:12px;color:rgba(255,255,255,0.5);font-weight:500;">(5분봉 지표 스캘핑용)</span>
+                                    <p class="hcard-title">🔑 5-Minute/15-Minute Scalping Indicator<br>
+                                        <span style="font-size:12px;color:rgba(255,255,255,0.5);font-weight:500;">(5분봉/15분봉 지표 스캘핑용)</span>
                                     </p>
                                     <hr class="hcard-divider">
                                     <div class="hcard-step">
@@ -1604,6 +1756,28 @@
                                             <img src="public/photo_2026-03-12_20-34-27.jpg" alt="Indicator Access 3">
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- ── Card KOL : 파트너십 ── -->
+                            <div id="kol" class="hcard hcard--kol">
+                                <div class="hcard-info">
+                                    <p class="hcard-title">🔑 KOL Partnership</p>
+                                    <hr class="hcard-divider">
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ 업계 최고 수준의 커미션 구조</p>
+                                    </div>
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ 월간 트레이딩 보너스</p>
+                                    </div>
+                                    <div class="hcard-step">
+                                        <p class="hcard-step-main">✅ 24시간 전담 파트너 지원</p>
+                                    </div>
+                                    <a href="https://t.me/claredex_kr" target="_blank" class="hcard-btn-primary">파트너십 문의</a>
+                                </div>
+                                <!-- RIGHT: KOL 파트너십 이미지 -->
+                                <div class="hcard-img hcard-img--kol">
+                                    <img src="public/6266863193816765112_120.jpg" alt="KOL Partnership">
                                 </div>
                             </div>
 
@@ -2850,9 +3024,14 @@
                         <span class="lang-zh">关于我们</span>
                     </a></li>
                 <li><a href="#highlights" class="custom-drawer-link">
-                        <span class="lang-en">Free Benefits</span>
-                        <span class="lang-ko">Clare DEX 무료 혜택</span>
-                        <span class="lang-zh">免费福利</span>
+                        <span class="lang-en">Clare DEX 서비스</span>
+                        <span class="lang-ko">Clare DEX 서비스</span>
+                        <span class="lang-zh">Clare DEX 서비스</span>
+                    </a></li>
+                <li><a href="#kol" class="custom-drawer-link">
+                        <span class="lang-en">🔑 KOL Partnership</span>
+                        <span class="lang-ko">🔑 KOL Partnership</span>
+                        <span class="lang-zh">🔑 KOL Partnership</span>
                     </a></li>
                 <li><a href="#partners" class="custom-drawer-link">
                         <span class="lang-en">Partner Exchanges</span>
