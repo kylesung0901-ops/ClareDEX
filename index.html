@@ -1040,11 +1040,12 @@
                                     width: 100%;
                                     max-width: 960px;
                                     margin: 0 auto 8px;
+                                    padding-top: 30px;
                                     display: flex;
                                     flex-direction: column;
                                     align-items: center;
                                     justify-content: center;
-                                    gap: 2px;
+                                    gap: 10px;
                                     text-align: center;
                                 }
                                 .hero-kicker {
@@ -1067,7 +1068,7 @@
                                     width: fit-content;
                                     max-width: 100%;
                                     margin: 0 auto;
-                                    font-size: 56px;
+                                    font-size: 55px !important;
                                     line-height: 1.08;
                                     font-weight: 800;
                                     color: #ffffff !important;
@@ -1079,7 +1080,7 @@
                                     max-width: 100%;
                                     margin: 6px auto 0;
                                     margin-bottom: 0 !important;
-                                    font-size: 30px !important;
+                                    font-size: 45px !important;
                                     line-height: 1.1;
                                     font-weight: 800;
                                     letter-spacing: 0.04em;
@@ -1200,6 +1201,92 @@
                 </div>
             </section>
 
+            <!-- ========== COMMUNITY SECTION ========== -->
+            <section id="community" style="padding: 40px 0;">
+                <div class="themesflat-container">
+                    <div class="row">
+                        <div class="col-12">
+                            <style>
+                                .community-card {
+                                    background: #1E1E1E;
+                                    padding: 40px;
+                                    border-radius: 20px;
+                                    border: 1px solid rgba(255, 255, 255, 0.1);
+                                    max-width: 800px;
+                                    margin: 0 auto;
+                                    text-align: center;
+                                    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+                                    color: #FFFFFF;
+                                }
+                                .community-title {
+                                    font-size: 28px;
+                                    font-weight: 800;
+                                    color: #ddf247;
+                                    margin-bottom: 25px;
+                                }
+                                .community-description {
+                                    font-size: 16px;
+                                    line-height: 1.6;
+                                    color: rgba(255, 255, 255, 0.8);
+                                    margin-top: 10px;
+                                    margin-bottom: 30px;
+                                    text-align: left;
+                                    max-width: 650px;
+                                    margin-left: auto;
+                                    margin-right: auto;
+                                }
+                                .community-btn {
+                                    display: inline-flex;
+                                    align-items: center;
+                                    gap: 12px;
+                                    padding: 18px 40px;
+                                    background: #0088cc;
+                                    color: #fff !important;
+                                    border-radius: 14px;
+                                    font-weight: 700;
+                                    font-size: 18px;
+                                    text-decoration: none;
+                                    transition: all 0.3s;
+                                    margin-bottom: 25px;
+                                }
+                                .community-btn:hover {
+                                    background: #0077b5;
+                                    transform: translateY(-3px);
+                                    box-shadow: 0 8px 25px rgba(0, 136, 204, 0.4);
+                                }
+                                @media (max-width: 767px) {
+                                    .community-card { padding: 30px 20px; margin: 0 10px; }
+                                    .community-title { font-size: 22px; }
+                                    .community-description { font-size: 14px; }
+                                    .community-btn { padding: 14px 28px; font-size: 16px; width: 100%; justify-content: center; }
+                                }
+                            </style>
+                            <div class="community-card wow fadeInUp">
+                                <h2 class="community-title">
+                                    <span class="lang-en">Join the Clare DEX Community</span>
+                                    <span class="lang-ko">Join the Clare DEX Community</span>
+                                    <span class="lang-zh">加入 Clare DEX 社区</span>
+                                </h2>
+
+                                <a href="https://t.me/Clare_PerpDEX" target="_blank" class="community-btn">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zM16.906 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                                    </svg>
+                                    <span class="lang-ko">Clare DEX 무료입장</span>
+                                    <span class="lang-en">Free Entry to Clare DEX</span>
+                                    <span class="lang-zh">免费进入 Clare DEX</span>
+                                </a>
+
+                                <div class="community-description">
+                                    <p>Clare DEX 커뮤니티 방에서는 시장 인사이트, 최신 비트코인 뉴스, 실시간 거래 현황, 그리고 기술적 차트 분석을 제공합니다.<br>(커뮤니티 방에 입장하신 분들 한정으로만, 스캘핑 타점 지표를 제공해드리고 있습니다.)</p>
+                                    <p style="margin-top: 8px; color: rgba(255, 255, 255, 0.6);">* Our Telegram group provides market insights, the latest Bitcoin news, real-time trade updates and technical chart analysis.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- ========== BTC LONG/SHORT DASHBOARD SECTION ========== -->
             <section id="btc-dashboard" style="padding: 5px 0 20px;">
                 <div class="themesflat-container">
@@ -1247,7 +1334,7 @@
                                 }
                                 #btc-dashboard .long-label { color: #00C076; }
                                 #btc-dashboard .short-label { color: #FF6838; }
-                                
+
                                 #btc-dashboard .progress-bar-wrap {
                                     height: 28px;
                                     background: rgba(255,255,255,0.05);
@@ -1332,18 +1419,18 @@
                     </div>
                 </div>
             </section>
-            
+
             <script>
                 async function fetchBtcData() {
                     const loading = document.getElementById('btc-loading');
                     const content = document.getElementById('btc-content');
                     loading.style.display = 'block';
                     content.style.display = 'none';
-                    
+
                     try {
                         const response = await fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=15m');
                         const data = await response.json();
-                        
+
                         if(data && Array.isArray(data) && data.length > 0) {
                             const latest = data[data.length - 1];
                             const longVal = parseFloat(latest.longAccount) * 100;
@@ -1353,13 +1440,13 @@
                             document.getElementById('btcRatioDisplay').innerText = `Ratio: ${ratio.toFixed(2)}`;
                             document.getElementById('btcLongVal').innerText = longVal.toFixed(2);
                             document.getElementById('btcShortVal').innerText = shortVal.toFixed(2);
-                            
+
                             const longBar = document.getElementById('btcLongBar');
                             const shortBar = document.getElementById('btcShortBar');
-                            
+
                             longBar.style.width = longVal + '%';
                             longBar.innerText = longVal.toFixed(2) + '%';
-                            
+
                             shortBar.style.width = shortVal + '%';
                             shortBar.innerText = shortVal.toFixed(2) + '%';
 
@@ -1373,95 +1460,10 @@
                         loading.innerText = '데이터를 불러오는데 실패했습니다.';
                     }
                 }
-                
+
                 // Initialize on load
                 document.addEventListener('DOMContentLoaded', fetchBtcData);
             </script>
-            
-            <!-- ========== COMMUNITY SECTION ========== -->
-            <section id="community" style="padding: 40px 0;">
-                <div class="themesflat-container">
-                    <div class="row">
-                        <div class="col-12">
-                            <style>
-                                .community-card {
-                                    background: #1E1E1E;
-                                    padding: 40px;
-                                    border-radius: 20px;
-                                    border: 1px solid rgba(255, 255, 255, 0.1);
-                                    max-width: 800px;
-                                    margin: 0 auto;
-                                    text-align: center;
-                                    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-                                    color: #FFFFFF;
-                                }
-                                .community-title {
-                                    font-size: 28px;
-                                    font-weight: 800;
-                                    color: #ddf247;
-                                    margin-bottom: 25px;
-                                }
-                                .community-description {
-                                    font-size: 16px;
-                                    line-height: 1.6;
-                                    color: rgba(255, 255, 255, 0.8);
-                                    margin-bottom: 30px;
-                                    text-align: left;
-                                    max-width: 650px;
-                                    margin-left: auto;
-                                    margin-right: auto;
-                                }
-                                .community-btn {
-                                    display: inline-flex;
-                                    align-items: center;
-                                    gap: 12px;
-                                    padding: 18px 40px;
-                                    background: #0088cc;
-                                    color: #fff !important;
-                                    border-radius: 14px;
-                                    font-weight: 700;
-                                    font-size: 18px;
-                                    text-decoration: none;
-                                    transition: all 0.3s;
-                                    margin-bottom: 15px;
-                                }
-                                .community-btn:hover {
-                                    background: #0077b5;
-                                    transform: translateY(-3px);
-                                    box-shadow: 0 8px 25px rgba(0, 136, 204, 0.4);
-                                }
-                                @media (max-width: 767px) {
-                                    .community-card { padding: 30px 20px; margin: 0 10px; }
-                                    .community-title { font-size: 22px; }
-                                    .community-description { font-size: 14px; }
-                                    .community-btn { padding: 14px 28px; font-size: 16px; width: 100%; justify-content: center; }
-                                }
-                            </style>
-                            <div class="community-card wow fadeInUp">
-                                <h2 class="community-title">
-                                    <span class="lang-en">Join the Clare DEX Community</span>
-                                    <span class="lang-ko">Join the Clare DEX Community</span>
-                                    <span class="lang-zh">加入 Clare DEX 社区</span>
-                                </h2>
-                                
-                                <a href="https://t.me/Clare_PerpDEX" target="_blank" class="community-btn">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zM16.906 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                                    </svg>
-                                    <span class="lang-ko">Clare DEX 무료입장</span>
-                                    <span class="lang-en">Free Entry to Clare DEX</span>
-                                    <span class="lang-zh">免费进入 Clare DEX</span>
-                                </a>
-
-                                <div class="community-description">
-                                    <p>▶️ Our Telegram group provides market insights, the latest Bitcoin news, real-time trade updates and technical chart analysis.</p>
-                                    <p style="margin-top: 8px; color: rgba(255, 255, 255, 0.6);">* Clare DEX 텔레그램 방에서는 시장 인사이트, 최신 비트코인 뉴스, 실시간 거래 현황, 그리고 기술적 차트 분석을 제공합니다.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             <!-- ========== HIGHLIGHTS SECTION ========== -->
             <section id="highlights">
@@ -1768,6 +1770,7 @@
                             <div id="kol" class="hcard hcard--kol">
                                 <div class="hcard-info">
                                     <p class="hcard-title">🔑 KOL Partnership</p>
+                                    <p style="color: rgba(255,255,255,0.7); font-size: 20px; margin-top: -6px; margin-bottom: 8px;">(KOL 파트너쉽 체결)</p>
                                     <hr class="hcard-divider">
                                     <div class="hcard-step">
                                         <p class="hcard-step-main">✅ 업계 최고 수준의 커미션 구조</p>
@@ -2541,7 +2544,7 @@
                                 <p style="font-size: 18px; margin-bottom: 30px; color: #aaa;">
                                     <span class="lang-en notranslate" translate="no">We welcome all inquiries,
                                         so please feel free to contact us.</span>
-                                    <span class="lang-ko notranslate" translate="no">모든 문의사항 받으니, <br class="mobile-break">편하게 연락주세요.</span>
+                                    <span class="lang-ko notranslate" translate="no">모든 비즈니스 및 개인문의 🔻</span>
                                     <span class="lang-zh notranslate" translate="no">我们接受所有咨询，请随时与我们联系。</span>
                                 </p>
                                 <a href="https://t.me/claredex_kr" target="_blank"
@@ -2575,10 +2578,10 @@
                                 <img src="public/Gemini_Generated_Image_s0rwkws0rwkws0rw.png" alt="Threads"
                                     style="height: 50px; width: auto; object-fit: contain; border-radius: 12px;">
                             </a>
-                            <a href="https://blog.naver.com/cryptobrothers/224209129707" target="_blank"
+                            <a href="https://www.youtube.com/@Clare-DEX" target="_blank"
                                 style="transition: opacity 0.3s; opacity: 1;" onmouseover="this.style.opacity='0.8'"
                                 onmouseout="this.style.opacity='1'">
-                                <img src="public/naver_blog.svg" alt="Naver Blog"
+                                <img src="public/Youtube_logo.png" alt="YouTube"
                                     style="height: 50px; width: auto; object-fit: contain;">
                             </a>
                         </div>
