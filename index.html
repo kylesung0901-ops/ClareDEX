@@ -916,6 +916,21 @@
                                                         document.addEventListener('DOMContentLoaded', applyMobileHeaderShift);
                                                         window.addEventListener('resize', applyMobileHeaderShift);
                                                     })();
+
+                                                    (function() {
+                                                        function applyPcHeroFontSizes() {
+                                                            if (window.innerWidth > 767) {
+                                                                var kicker = document.querySelector('.hero-kicker');
+                                                                var title  = document.querySelector('.hero-title-main');
+                                                                var brand  = document.querySelector('.hero-brand');
+                                                                if (kicker) kicker.style.setProperty('font-size', '20px', 'important');
+                                                                if (title)  title.style.setProperty('font-size', '40px', 'important');
+                                                                if (brand)  brand.style.setProperty('font-size', '35px', 'important');
+                                                            }
+                                                        }
+                                                        document.addEventListener('DOMContentLoaded', applyPcHeroFontSizes);
+                                                        window.addEventListener('resize', applyPcHeroFontSizes);
+                                                    })();
                                                 </script>
                                             </div>
 
