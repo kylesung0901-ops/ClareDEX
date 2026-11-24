@@ -187,7 +187,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(data)
 
-    # ------------------------------------------------------- 운영자 인증 헬퍼
+    # ----------------------------------------------------------- 운영자 인증
     def _cookie_token(self) -> str:
         raw = self.headers.get("Cookie") or ""
         for part in raw.split(";"):
@@ -208,8 +208,13 @@ class Handler(BaseHTTPRequestHandler):
             parts.append("Secure")
         return "; ".join(parts)
 
+    def _client_ip(self) -> str:
+        """리버스 프록시 뒤에서도 운영자 한 명이 전체를 잠그지 않도록 XFF 첫 홉을 우선한다."""
+        forwarded = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+        return forwarded or self.client_address[0]
+
     def _login_blocked(self) -> bool:
-        ip = self.client_address[0]
+        ip = self._client_ip()
         now = time.time()
         with _admin_lock:
             hits = [t for t in _admin_login_fails.get(ip, []) if now - t < ADMIN_LOGIN_WINDOW]
@@ -220,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
             return len(hits) >= ADMIN_LOGIN_MAX_FAILS
 
     def _record_login_fail(self) -> None:
-        ip = self.client_address[0]
+        ip = self._client_ip()
         now = time.time()
         with _admin_lock:
             hits = [t for t in _admin_login_fails.get(ip, []) if now - t < ADMIN_LOGIN_WINDOW]
@@ -229,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _clear_login_fails(self) -> None:
         with _admin_lock:
-            _admin_login_fails.pop(self.client_address[0], None)
+            _admin_login_fails.pop(self._client_ip(), None)
 
     def log_message(self, fmt: str, *args) -> None:  # noqa: A003
         print(f"[web] {self.address_string()} {fmt % args}")
@@ -339,7 +344,9 @@ class Handler(BaseHTTPRequestHandler):
                                  "error": "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요."}, 429)
                 return
             password = str(body.get("password") or "")
-            if not password or not hmac.compare_digest(password, admin_password()):
+            # 비밀번호에 한글이 올 수 있으므로 바이트로 비교한다(compare_digest 는 str 에서 비-ASCII 미지원).
+            if not password or not hmac.compare_digest(password.encode("utf-8"),
+                                                       admin_password().encode("utf-8")):
                 self._record_login_fail()
                 self._send_json({"ok": False, "error": "비밀번호가 올바르지 않습니다."}, 401)
                 return
