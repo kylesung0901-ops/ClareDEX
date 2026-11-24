@@ -57,6 +57,9 @@ def main() -> int:
         d["image_local"] = rel_image(d.get("image_path"))
         d["telegram_url"] = config.TELEGRAM_URL
         d["web_url"] = config.WEB_URL
+        # 미리보기 전용: 본문 이미지 링크를 페이지 기준 상대 경로로 바꾼 사본.
+        # 복사용 body_html 은 네이버 발행 기준(운영 도메인) 그대로 둔다.
+        d["body_html_preview"] = d["body_html"].replace(config.PUBLIC_BASE_URL + "/", "")
     write("naver-drafts.json", {"ok": True, "count": len(drafts), "drafts": drafts})
 
     ticker: dict

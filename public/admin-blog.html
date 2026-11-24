@@ -198,7 +198,7 @@
     $("#draftTitle").textContent = current.seo_title;
     $("#draftMeta").innerHTML = `<span>${esc(current.source_name)} · ${esc(current.source_grade)}</span><span>확인 ${esc(fmt(current.verified_at))} KST</span>`;
     $("#draftKeywords").innerHTML = (current.keywords || []).map((k) => `<span>#${esc(k)}</span>`).join("");
-    $("#previewPane").innerHTML = current.body_html;
+    $("#previewPane").innerHTML = current.body_html_preview || current.body_html;
     $("#htmlPane").textContent = current.body_html;
     $("#textPane").textContent = current.body_text;
     $("#imageOpen").href = current.image_url || "#";
