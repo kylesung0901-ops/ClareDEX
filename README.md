@@ -110,14 +110,21 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 ```bash
 python3 export_static.py   # data/*.json + DB → public/data/{posts,ticker,calendar,naver-drafts}.json
 ./sync_docs.sh             # 내보내기 + public/ → docs/ 복사
+./deploy_pages.sh          # 위 둘 + 커밋 + push + 라이브 200 확인 (평소엔 이것만 실행)
 ```
 
-- **라이브 URL**: https://kylesung0901-ops.github.io/claredex-v2/
-- Pages 소스: `main` 브랜치 `/docs` 폴더. `docs/` 는 `public/` 의 복사본이므로 **`public/` 수정 후 `./sync_docs.sh`** 를 다시 실행해 커밋합니다.
+- **라이브 URL**: https://kylesung0901-ops.github.io/ClareDEX/ (공개)
+  - 회원가입: https://kylesung0901-ops.github.io/ClareDEX/signup.html
+  - 블로그 초안 도구: https://kylesung0901-ops.github.io/ClareDEX/admin-blog.html
+- 저장소: `kylesung0901-ops/ClareDEX` (public)
+  - 사이트 서빙: **`gh-pages` 브랜치 루트** — GitHub Pages 소스. push 하면 자동 재빌드.
+  - 소스 보관: **`claredex-v2-preview` 브랜치** — 이 프로젝트 전체 + `docs/` 사본.
+  - `ClareDEX` 의 `main` 브랜치(기존 클레어덱스 사이트)는 건드리지 않습니다.
 - 화면은 API(`/api/...`)를 먼저 호출하고, 정적 호스팅에서 404/비-JSON 응답이 오면 `data/*.json` 스냅샷으로 자동 대체합니다(`index.html`, `admin-blog.html`).
-- 모든 자산·링크 경로는 하위 경로(`/claredex-v2/`)에서도 동작하도록 상대 경로입니다(`assets/style.css`, `images/posts/N.png`, `signup.html`).
+- 모든 자산·링크 경로는 저장소 하위 경로(`/ClareDEX/`)에서도 동작하도록 상대 경로입니다(`assets/style.css`, `images/posts/N.png`, `signup.html`).
 - `/signup.html` 은 API 가 없으면 가입 정보를 브라우저 `localStorage` 에만 저장하고 **"정적 미리보기 모드"** 안내를 표시합니다(서버 전송 없음).
 - 티커는 마지막 수집 스냅샷이므로 `지연 표시` 로 표기됩니다.
+- 블로그 초안의 **미리보기**는 본문 이미지를 상대 경로로 보여주고, **복사용 HTML** 은 네이버 발행 기준(운영 도메인)을 그대로 유지합니다.
 
 ## 남은 작업(배포·운영 단계)
 
