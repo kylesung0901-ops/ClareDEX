@@ -1,38 +1,38 @@
 {
   "ok": true,
   "stale": true,
-  "generated_at": "2026-11-24T19:56:07+09:00",
+  "generated_at": "2026-11-24T20:39:28+09:00",
   "items": [
     {
       "key": "btc_krw",
       "label": "BTC/KRW",
-      "value": 81250000.0,
-      "display": "81,250,000원",
-      "delta": -2.96,
+      "value": 81608000.0,
+      "display": "81,608,000원",
+      "delta": -2.53,
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-24T19:56:04+09:00"
+      "as_of": "2026-11-24T20:39:26+09:00"
     },
     {
       "key": "btc_usd",
       "label": "BTC/USD",
-      "value": 59683.87,
-      "display": "$59,684",
+      "value": 59865.72,
+      "display": "$59,866",
       "source": "Binance.US",
       "source_url": "https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT",
-      "as_of": "2026-11-24T19:56:07+09:00"
+      "as_of": "2026-11-24T20:39:28+09:00"
     },
     {
       "key": "kimchi_premium",
       "label": "김치프리미엄",
-      "value": 1.33,
-      "display": "+1.33%",
-      "delta": 1.33,
+      "value": 1.46,
+      "display": "+1.46%",
+      "delta": 1.46,
       "delta_unit": "%",
       "source": "업비트·Binance.US·USD/KRW",
       "source_url": "https://www.claredex.com/",
-      "as_of": "2026-11-24T19:56:07+09:00",
+      "as_of": "2026-11-24T20:39:28+09:00",
       "note": "업비트 BTC 원화가 ÷ (BTC/USD × USD/KRW) − 1"
     },
     {
@@ -47,12 +47,12 @@
     {
       "key": "long_short",
       "label": "BTC 롱/숏",
-      "value": 2.51,
+      "value": 2.59,
       "display": "72 : 28",
       "source": "OKX 계정 비율",
       "source_url": "https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy=BTC&period=1H",
-      "as_of": "2026-11-24T19:00:00+09:00",
-      "note": "롱 계정 ÷ 숏 계정 = 2.51"
+      "as_of": "2026-11-24T20:00:00+09:00",
+      "note": "롱 계정 ÷ 숏 계정 = 2.59"
     },
     {
       "key": "usdkrw",
@@ -66,22 +66,22 @@
     {
       "key": "eth_krw",
       "label": "ETH/KRW",
-      "value": 2290000.0,
-      "display": "2,290,000원",
-      "delta": -1.97,
+      "value": 2302000.0,
+      "display": "2,302,000원",
+      "delta": -1.46,
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-24T19:56:07+09:00"
+      "as_of": "2026-11-24T20:39:28+09:00"
     }
   ],
   "values": {
-    "btc_krw": 81250000.0,
-    "eth_krw": 2290000.0,
-    "btc_usd": 59683.87,
+    "btc_krw": 81608000.0,
+    "eth_krw": 2302000.0,
+    "btc_usd": 59865.72,
     "usdkrw": 1343.513843,
-    "kimchi_premium": 1.3267815463864352,
-    "long_pct": 71.5099715099715,
+    "kimchi_premium": 1.464093320651716,
+    "long_pct": 72.14484679665738,
     "fear_greed": 11
   },
   "errors": {},
