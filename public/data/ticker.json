@@ -1,38 +1,38 @@
 {
   "ok": true,
   "stale": true,
-  "generated_at": "2026-11-24T20:39:28+09:00",
+  "generated_at": "2026-11-24T20:41:20+09:00",
   "items": [
     {
       "key": "btc_krw",
       "label": "BTC/KRW",
-      "value": 81608000.0,
-      "display": "81,608,000원",
-      "delta": -2.53,
+      "value": 81579000.0,
+      "display": "81,579,000원",
+      "delta": -2.56,
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-24T20:39:26+09:00"
+      "as_of": "2026-11-24T20:41:15+09:00"
     },
     {
       "key": "btc_usd",
       "label": "BTC/USD",
-      "value": 59865.72,
+      "value": 59865.96,
       "display": "$59,866",
       "source": "Binance.US",
       "source_url": "https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT",
-      "as_of": "2026-11-24T20:39:28+09:00"
+      "as_of": "2026-11-24T20:41:20+09:00"
     },
     {
       "key": "kimchi_premium",
       "label": "김치프리미엄",
-      "value": 1.46,
-      "display": "+1.46%",
-      "delta": 1.46,
+      "value": 1.43,
+      "display": "+1.43%",
+      "delta": 1.43,
       "delta_unit": "%",
       "source": "업비트·Binance.US·USD/KRW",
       "source_url": "https://www.claredex.com/",
-      "as_of": "2026-11-24T20:39:28+09:00",
+      "as_of": "2026-11-24T20:41:20+09:00",
       "note": "업비트 BTC 원화가 ÷ (BTC/USD × USD/KRW) − 1"
     },
     {
@@ -72,15 +72,15 @@
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-24T20:39:28+09:00"
+      "as_of": "2026-11-24T20:41:20+09:00"
     }
   ],
   "values": {
-    "btc_krw": 81608000.0,
+    "btc_krw": 81579000.0,
     "eth_krw": 2302000.0,
-    "btc_usd": 59865.72,
+    "btc_usd": 59865.96,
     "usdkrw": 1343.513843,
-    "kimchi_premium": 1.464093320651716,
+    "kimchi_premium": 1.4276306920455895,
     "long_pct": 72.14484679665738,
     "fear_greed": 11
   },

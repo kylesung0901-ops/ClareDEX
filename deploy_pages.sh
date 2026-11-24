@@ -47,18 +47,26 @@ echo "4) 라이브 확인: $SITE"
 for i in $(seq 1 30); do
   code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$SITE" || true)
   if [ "$code" = "200" ]; then
-    echo "   ✅ HTTP 200"
-    for page in signup.html admin/ data/posts.json assets/style.css; do
-      echo "   $(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}${page}") ${SITE}${page}"
-    done
-    # 운영자 전용 데이터는 공개 정적 호스팅에 없어야 한다 (404 기대)
-    for page in data/naver-drafts.json admin-blog.html; do
-      echo "   $(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}${page}") ${SITE}${page}  (기대: 404)"
-    done
-    exit 0
+    # 새 빌드가 반영됐는지까지 확인한다: /admin/ 은 200, 운영자 데이터·옛 페이지는 404
+    admin=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}admin/" || true)
+    drafts=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}data/naver-drafts.json" || true)
+    legacy=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}admin-blog.html" || true)
+    if [ "$admin" = "200" ] && [ "$drafts" = "404" ] && [ "$legacy" = "404" ]; then
+      echo "   ✅ HTTP 200 · /admin/ 200 · 운영자 데이터 404"
+      for page in signup.html admin/ data/posts.json assets/style.css; do
+        echo "   $(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}${page}") ${SITE}${page}"
+      done
+      # 운영자 전용 데이터는 공개 정적 호스팅에 없어야 한다 (404 기대)
+      for page in data/naver-drafts.json admin-blog.html; do
+        echo "   $(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}${page}") ${SITE}${page}  (기대: 404)"
+      done
+      exit 0
+    fi
+    printf "   Pages 재빌드 대기 %s/30 (admin=%s drafts=%s admin-blog=%s)\n" "$i" "$admin" "$drafts" "$legacy"
+  else
+    printf "   대기 %s/30 (HTTP %s)\n" "$i" "$code"
   fi
-  printf "   대기 %s/30 (HTTP %s)\n" "$i" "$code"
   sleep 10
 done
-echo "   ⚠ 아직 200 이 아닙니다. Pages 빌드는 1~2분 걸릴 수 있습니다: $SITE"
+echo "   ⚠ 새 빌드가 아직 반영되지 않았습니다. Pages 빌드 상태를 확인하세요: https://github.com/${REPO}/deployments"
 exit 1
