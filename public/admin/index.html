@@ -34,26 +34,26 @@
 <main class="admin-shell">
   <div class="wrap">
 
-    <!-- 정적 프리뷰(GitHub Pages) 안내 -->
-    <div id="staticNotice" class="notice" hidden>
-      <span aria-hidden="true">🔒</span>
-      <div>
-        <b>이 화면은 정적 프리뷰입니다.</b>
-        정적 프리뷰에서는 보안을 위해 내부 초안 데이터를 비공개로 둡니다. 실제 서버(<code>claredex.com/admin</code>)에서 로그인 후 이용하세요.
-      </div>
-    </div>
-
     <!-- 1) 로그인 게이트 -->
     <section id="gate" hidden>
       <div class="admin-head">
         <div>
           <span class="eyebrow"><span class="bar" aria-hidden="true"></span>Operator only</span>
-          <h1>운영자 로그인</h1>
-          <p>네이버 블로그 SEO 초안 도구는 운영자만 사용합니다. 비밀번호를 입력해 주세요.</p>
+          <h1>네이버 블로그 SEO 초안</h1>
+          <p>운영자 전용 화면입니다. 비밀번호를 입력하면 초안 목록이 열립니다.</p>
         </div>
       </div>
 
-      <div class="admin-gate-card">
+      <!-- 정적 프리뷰(GitHub Pages) 안내 -->
+      <div id="staticNotice" class="notice" hidden>
+        <span aria-hidden="true">🔒</span>
+        <div>
+          <b>이 화면은 정적 프리뷰입니다.</b>
+          정적 프리뷰에서는 보안을 위해 내부 초안 데이터를 비공개로 둡니다. 실제 서버(<code>claredex.com/admin</code>)에서 로그인 후 이용하세요.
+        </div>
+      </div>
+
+      <div class="admin-gate-card" id="gateCard">
         <form id="loginForm" novalidate>
           <div class="field">
             <label for="password">운영자 비밀번호</label>
@@ -161,6 +161,7 @@
   const gate = $("#gate");
   const desk = $("#desk");
   const staticNotice = $("#staticNotice");
+  const gateCard = $("#gateCard");
   const logoutBtn = $("#logoutBtn");
 
   let drafts = [];
@@ -196,9 +197,11 @@
 
   function showStatic() {
     staticNotice.hidden = false;
-    gate.hidden = true;
+    gate.hidden = false;
     desk.hidden = true;
     logoutBtn.hidden = true;
+    gateCard.hidden = true;
+    document.title = "정적 프리뷰 · 네이버 블로그 초안 · 클레어덱스";
   }
 
   function showGate(message) {
@@ -206,6 +209,7 @@
     desk.hidden = true;
     logoutBtn.hidden = true;
     gate.hidden = false;
+    gateCard.hidden = false;
     $("#loginErr").textContent = message || "";
     $("#loginBtn").disabled = false;
     $("#loginBtn").textContent = "로그인 →";
@@ -217,6 +221,7 @@
   function showDesk() {
     staticNotice.hidden = true;
     gate.hidden = true;
+    gateCard.hidden = false;
     desk.hidden = false;
     logoutBtn.hidden = false;
   }

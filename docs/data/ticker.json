@@ -1,38 +1,38 @@
 {
   "ok": true,
   "stale": true,
-  "generated_at": "2026-11-24T20:41:20+09:00",
+  "generated_at": "2026-11-24T20:42:46+09:00",
   "items": [
     {
       "key": "btc_krw",
       "label": "BTC/KRW",
-      "value": 81579000.0,
-      "display": "81,579,000원",
-      "delta": -2.56,
+      "value": 81597000.0,
+      "display": "81,597,000원",
+      "delta": -2.54,
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-24T20:41:15+09:00"
+      "as_of": "2026-11-24T20:42:43+09:00"
     },
     {
       "key": "btc_usd",
       "label": "BTC/USD",
-      "value": 59865.96,
-      "display": "$59,866",
+      "value": 59885.73,
+      "display": "$59,886",
       "source": "Binance.US",
       "source_url": "https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT",
-      "as_of": "2026-11-24T20:41:20+09:00"
+      "as_of": "2026-11-24T20:42:46+09:00"
     },
     {
       "key": "kimchi_premium",
       "label": "김치프리미엄",
-      "value": 1.43,
-      "display": "+1.43%",
-      "delta": 1.43,
+      "value": 1.42,
+      "display": "+1.42%",
+      "delta": 1.42,
       "delta_unit": "%",
       "source": "업비트·Binance.US·USD/KRW",
       "source_url": "https://www.claredex.com/",
-      "as_of": "2026-11-24T20:41:20+09:00",
+      "as_of": "2026-11-24T20:42:46+09:00",
       "note": "업비트 BTC 원화가 ÷ (BTC/USD × USD/KRW) − 1"
     },
     {
@@ -66,21 +66,21 @@
     {
       "key": "eth_krw",
       "label": "ETH/KRW",
-      "value": 2302000.0,
-      "display": "2,302,000원",
-      "delta": -1.46,
+      "value": 2303000.0,
+      "display": "2,303,000원",
+      "delta": -1.41,
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-24T20:41:20+09:00"
+      "as_of": "2026-11-24T20:42:46+09:00"
     }
   ],
   "values": {
-    "btc_krw": 81579000.0,
-    "eth_krw": 2302000.0,
-    "btc_usd": 59865.96,
+    "btc_krw": 81597000.0,
+    "eth_krw": 2303000.0,
+    "btc_usd": 59885.73,
     "usdkrw": 1343.513843,
-    "kimchi_premium": 1.4276306920455895,
+    "kimchi_premium": 1.4165186304999633,
     "long_pct": 72.14484679665738,
     "fear_greed": 11
   },

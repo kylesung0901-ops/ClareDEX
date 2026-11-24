@@ -184,11 +184,11 @@ def server_checks(port: int) -> None:
 
         status, headers, raw = http(base + "/admin")
         admin_html = raw.decode("utf-8", "replace")
-        check(status == 200 and "운영자 로그인" in admin_html,
+        check(status == 200 and "운영자 전용" in admin_html and "운영자 비밀번호" in admin_html,
               "GET /admin → 200 (운영자 로그인 게이트)", f"HTTP {status}")
         check(headers.get("Cache-Control") == "no-store", "운영자 화면 Cache-Control: no-store")
         status, _, raw = http(base + "/admin/")
-        check(status == 200 and "운영자 로그인" in raw.decode("utf-8", "replace"),
+        check(status == 200 and "운영자 비밀번호" in raw.decode("utf-8", "replace"),
               "GET /admin/ → 200", f"HTTP {status}")
         check("정적 프리뷰에서는 보안을 위해 내부 초안 데이터를 비공개로 둡니다" in admin_html,
               "운영자 화면에 정적 프리뷰 비공개 안내 포함")
