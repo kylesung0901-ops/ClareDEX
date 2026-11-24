@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "updated_at": "2026-11-24T19:40:00+09:00",
+  "timezone": "Asia/Seoul",
+  "note": "각 기관의 공식 일정 페이지에서 확인한 발표 예정 시각입니다. 기관 사정에 따라 변경될 수 있습니다.",
+  "events": [
+    {
+      "id": "bea-gdp-q3-2nd",
+      "title": "미 3분기 GDP 2차 추정치",
+      "org": "미 경제분석국(BEA)",
+      "datetime_kst": "2026-11-25T22:30:00+09:00",
+      "local_time": "2026-11-25 08:30 ET",
+      "note": "기업 이익(Corporate Profits) 잠정치도 같은 시각에 발표됩니다.",
+      "source_url": "https://www.bea.gov/news/schedule",
+      "grade": "1차 공식"
+    },
+    {
+      "id": "fomc-2026-12",
+      "title": "FOMC 회의 결과 발표 (12/8~9)",
+      "org": "미 연방준비제도(Fed)",
+      "datetime_kst": "2026-12-10T04:00:00+09:00",
+      "local_time": "2026-12-09 14:00 ET",
+      "note": "경제전망요약(SEP)이 함께 공개되는 회의입니다. 성명 발표 시각은 통상 14:00 ET입니다.",
+      "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+      "grade": "1차 공식"
+    },
+    {
+      "id": "bls-cpi-2026-11",
+      "title": "미 11월 소비자물가지수(CPI)",
+      "org": "미 노동통계국(BLS)",
+      "datetime_kst": "2026-12-10T22:30:00+09:00",
+      "local_time": "2026-12-10 08:30 ET",
+      "note": "2026년 11월분 CPI 발표 예정 시각입니다.",
+      "source_url": "https://www.bls.gov/schedule/news_release/cpi.htm",
+      "grade": "1차 공식"
+    }
+  ]
+}
