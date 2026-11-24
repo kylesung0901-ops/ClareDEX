@@ -184,7 +184,7 @@ def server_checks(port: int) -> None:
 
         status, headers, raw = http(base + "/admin")
         admin_html = raw.decode("utf-8", "replace")
-        check(status == 200 and "운영자 전용" in admin_html and "운영자 비밀번호" in admin_html,
+        check(status == 200 and "운영자 로그인" in admin_html and "운영자 비밀번호" in admin_html,
               "GET /admin → 200 (운영자 로그인 게이트)", f"HTTP {status}")
         check(headers.get("Cache-Control") == "no-store", "운영자 화면 Cache-Control: no-store")
         status, _, raw = http(base + "/admin/")
