@@ -39,8 +39,8 @@
       <div class="admin-head">
         <div>
           <span class="eyebrow"><span class="bar" aria-hidden="true"></span>Operator only</span>
-          <h1>네이버 블로그 SEO 초안</h1>
-          <p>운영자 전용 화면입니다. 비밀번호를 입력하면 초안 목록이 열립니다.</p>
+          <h1 id="gateTitle">운영자 로그인</h1>
+          <p id="gateLead">운영자 전용 화면입니다. 비밀번호를 입력하면 초안 목록이 열립니다.</p>
         </div>
       </div>
 
@@ -201,6 +201,8 @@
     desk.hidden = true;
     logoutBtn.hidden = true;
     gateCard.hidden = true;
+    $("#gateTitle").textContent = "네이버 블로그 SEO 초안";
+    $("#gateLead").textContent = "운영자 전용 화면입니다. 이 프리뷰에서는 초안 목록을 열지 않습니다.";
     document.title = "정적 프리뷰 · 네이버 블로그 초안 · 클레어덱스";
   }
 
@@ -210,6 +212,9 @@
     logoutBtn.hidden = true;
     gate.hidden = false;
     gateCard.hidden = false;
+    $("#gateTitle").textContent = "운영자 로그인";
+    $("#gateLead").textContent = "운영자 전용 화면입니다. 비밀번호를 입력하면 초안 목록이 열립니다.";
+    document.title = "운영자 로그인 · 클레어덱스";
     $("#loginErr").textContent = message || "";
     $("#loginBtn").disabled = false;
     $("#loginBtn").textContent = "로그인 →";
