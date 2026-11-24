@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10초 무료 가입 · 클레어덱스</title>
+<meta name="description" content="관심자산을 등록하면 관련 공식 속보만 모아서, 발표 직후 텔레그램으로 먼저 받아볼 수 있습니다. 클레어덱스 무료 회원가입.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="./" aria-label="클레어덱스 홈">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">CLAREDEX</span>
+      <span class="brand-sub">Investment Journal</span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a href="./#breaking">실시간 속보</a>
+      <a href="./#onepage">오늘의 한 장</a>
+      <a href="https://www.claredex.com/" target="_blank" rel="noopener">인사이트</a>
+      <a href="./#calendar">공식 일정</a>
+    </nav>
+    <div class="header-actions">
+      <a class="link-quiet" href="./">둘러보기</a>
+      <a class="btn btn-dark btn-sm" href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener">텔레그램 채널</a>
+    </div>
+  </div>
+</header>
+
+<main class="auth-shell">
+  <div class="wrap auth-grid">
+    <section class="auth-copy">
+      <span class="eyebrow"><span class="bar" aria-hidden="true"></span>10초 무료 가입</span>
+      <h1>내 관심자산 속보만<br>골라서, 가장 먼저.</h1>
+      <p class="lead">뉴스를 봤을 때는 이미 가격이 움직인 뒤였습니다. 클레어덱스는 공식 원문을 확인한 시각과 출처를 그대로 남기고, 내 자산에 의미 있는 소식만 골라 전합니다.</p>
+
+      <ul class="benefits">
+        <li>
+          <span class="num">01</span>
+          <div><b>관심자산 맞춤 속보</b><span>BTC·ETH·나스닥·코스피·삼성전자·NVDA 중 고른 자산과 연결된 공식 발표만 모아 봅니다.</span></div>
+        </li>
+        <li>
+          <span class="num">02</span>
+          <div><b>아침 브리핑 1시간 조기 공개</b><span>오늘의 한 장과 주요 일정 요약을 비회원보다 먼저 확인합니다.</span></div>
+        </li>
+        <li>
+          <span class="num">03</span>
+          <div><b>원문·확인 시각 아카이브</b><span>지난 속보를 키워드와 자산으로 검색하고, 원문 링크로 바로 확인합니다.</span></div>
+        </li>
+      </ul>
+
+      <p class="auth-fine" style="margin-top:26px;max-width:460px">
+        클레어덱스는 공식 기관의 원문과 확인 시각만 표기합니다. 어떤 글도 특정 종목의 매수·매도 권유가 아니며, 투자 판단의 책임은 투자자 본인에게 있습니다.
+      </p>
+    </section>
+
+    <section class="auth-card" aria-live="polite">
+      <!-- step 1 -->
+      <div id="step1">
+        <div class="auth-steps" aria-hidden="true"><span class="step-dot on"></span><span class="step-dot"></span></div>
+        <h2>10초 만에 시작하기</h2>
+        <p class="hint">이메일만 있으면 바로 시작할 수 있습니다. 결제 정보는 필요하지 않습니다.</p>
+
+        <div class="social-row">
+          <button class="btn-social btn-kakao" type="button" data-social="kakao">카카오로 시작하기 <span class="soon">준비 중</span></button>
+          <button class="btn-social btn-google" type="button" data-social="google">Google로 시작하기 <span class="soon">준비 중</span></button>
+        </div>
+
+        <div class="divider">또는 이메일로</div>
+
+        <form id="signupForm" novalidate>
+          <div class="field">
+            <label for="email">이메일</label>
+            <input id="email" name="email" type="email" inputmode="email" placeholder="you@example.com" autocomplete="email" required>
+            <div class="err" id="emailErr"></div>
+          </div>
+          <div class="field">
+            <label for="name">이름 <span style="color:var(--faint);font-weight:400">(선택)</span></label>
+            <input id="name" name="name" type="text" placeholder="호칭으로 불러드릴게요" autocomplete="name">
+          </div>
+          <button class="btn btn-signal btn-block" type="submit" id="signupBtn">무료로 시작하기 →</button>
+          <p class="auth-fine">가입하면 관심자산을 고르는 다음 단계로 바로 이동합니다. 언제든 수정할 수 있습니다.</p>
+        </form>
+
+        <p class="auth-aside-note">이미 계정이 있다면, 같은 이메일로 다시 진행해 관심자산을 수정할 수 있습니다. (프로토타입 단계로 비밀번호 없이 이메일만 저장합니다.)</p>
+      </div>
+
+      <!-- step 2 -->
+      <div id="step2" hidden>
+        <div class="auth-steps" aria-hidden="true"><span class="step-dot on"></span><span class="step-dot on"></span></div>
+        <h2>어떤 자산을 보시나요?</h2>
+        <p class="hint">3개 이상 고르면 타임라인이 가장 쓸모 있어집니다. 나중에 언제든 바꿀 수 있어요.</p>
+        <div class="watch-grid" id="watchGrid" role="group" aria-label="관심자산 선택"></div>
+        <div class="watch-count" id="watchCount"><b>0</b>개 선택 · 3개 이상을 권장합니다</div>
+        <button class="btn btn-dark btn-block" id="watchBtn" disabled>알림 설정 완료 →</button>
+        <button class="btn btn-ghost btn-block" id="skipBtn" style="margin-top:8px;padding:12px;font-size:13px">나중에 고를게요</button>
+      </div>
+
+      <!-- step 3 -->
+      <div id="step3" class="success-panel" hidden>
+        <div class="success-icon" aria-hidden="true">✓</div>
+        <h2>준비됐습니다<span id="whoName"></span></h2>
+        <p>관심자산 속보를 이제 모아서 보실 수 있습니다.<br>발표 직후 알림은 텔레그램에서 가장 빠릅니다.</p>
+        <div class="watch-summary" id="watchSummary"></div>
+        <a class="tg-btn" href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener" style="background:#14130e;color:#f4efe2">텔레그램 채널 열기 ↗</a>
+        <a class="btn btn-ghost btn-block" href="./#breaking" style="margin-top:10px;padding:12px;font-size:13.5px">내 관심자산 속보 보러가기 →</a>
+        <p class="auth-fine" id="successEmail" style="margin-top:16px"></p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p class="compliance">
+      <strong>웨일파트너스는 유사투자자문업 신고를 준비 중입니다.</strong>
+      클레어덱스가 제공하는 모든 정보는 공식 원문을 확인해 요약한 참고 자료이며, 특정 종목·자산의 매수·매도 권유 또는 수익 보장이 아닙니다.
+      투자 판단과 그 결과에 대한 책임은 투자자 본인에게 있습니다.
+    </p>
+    <div class="footer-bottom">
+      <span>© 2026 웨일파트너스 · 클레어덱스</span>
+      <span><a href="./" style="text-decoration:none">홈으로</a> · 문의: AdminContact@claredex.com</span>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const WATCH_KEY = "claredex_watchlist";
+  const ASSETS = [
+    { key: "BTC", sub: "비트코인" },
+    { key: "ETH", sub: "이더리움" },
+    { key: "나스닥", sub: "미국 기술주" },
+    { key: "코스피", sub: "국내 대형주" },
+    { key: "삼성전자", sub: "국내 반도체" },
+    { key: "NVDA", sub: "엔비디아" }
+  ];
+  const selected = new Set();
+  let email = "";
+  let previewMode = false;
+
+  /* 정적 호스팅(GitHub Pages) 대응: /api 가 없으면 localStorage 에만 저장 */
+  const LOCAL_USERS = "claredex_users";
+
+  function readLocalUsers() {
+    try { const v = JSON.parse(localStorage.getItem(LOCAL_USERS) || "{}"); return v && typeof v === "object" ? v : {}; } catch (e) { return {}; }
+  }
+  function writeLocalUsers(users) { localStorage.setItem(LOCAL_USERS, JSON.stringify(users)); }
+
+  async function callApi(path, body) {
+    let res;
+    try {
+      res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+    } catch (netErr) {
+      throw Object.assign(new Error("API 연결 없음"), { fallback: true });
+    }
+    const ctype = res.headers.get("content-type") || "";
+    if (!ctype.includes("json")) throw Object.assign(new Error("API 없음"), { fallback: true });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw Object.assign(new Error(data.error || "요청에 실패했습니다."), { fallback: false });
+    return data;
+  }
+
+  function localSignup(value, name) {
+    const users = readLocalUsers();
+    const prev = users[value] || { email: value, name: null, provider: "email", watchlist: [] };
+    users[value] = Object.assign({}, prev, { name: name || prev.name || null, provider: "email" });
+    writeLocalUsers(users);
+    return users[value];
+  }
+  function localWatchlist(value, list) {
+    const users = readLocalUsers();
+    users[value] = Object.assign({ email: value, name: null, provider: "email", watchlist: [] }, users[value], { watchlist: list });
+    writeLocalUsers(users);
+  }
+
+  function toast(msg) {
+    const el = $("#toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove("show"), 3200);
+  }
+
+  document.querySelectorAll("[data-social]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      toast("카카오·구글 로그인은 정식 오픈 시 연결됩니다. 지금은 이메일로 10초면 시작할 수 있어요.");
+    });
+  });
+
+  $("#signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const emailInput = $("#email");
+    const err = $("#emailErr");
+    const value = emailInput.value.trim().toLowerCase();
+    err.textContent = "";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(value)) {
+      err.textContent = "이메일 형식을 확인해 주세요.";
+      emailInput.focus();
+      return;
+    }
+    const btn = $("#signupBtn");
+    btn.disabled = true;
+    btn.textContent = "만드는 중…";
+    const nameValue = $("#name").value.trim() || null;
+    try {
+      let user;
+      try {
+        const data = await callApi("/api/signup", { email: value, name: nameValue, provider: "email", watchlist: [] });
+        user = data.user || {};
+      } catch (apiErr) {
+        if (!apiErr.fallback) throw apiErr;
+        previewMode = true;
+        user = localSignup(value, nameValue);
+      }
+      email = value;
+      sessionStorage.setItem("claredex_email", email);
+      const existing = (user && user.watchlist) || [];
+      existing.forEach((a) => selected.add(a));
+      $("#step1").hidden = true;
+      $("#step2").hidden = false;
+      renderWatch();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (ex) {
+      err.textContent = ex.message;
+      btn.disabled = false;
+      btn.textContent = "무료로 시작하기 →";
+    }
+  });
+
+  function renderWatch() {
+    const grid = $("#watchGrid");
+    grid.innerHTML = ASSETS.map((a) => `
+      <button type="button" class="watch-opt" data-key="${a.key}" aria-pressed="${selected.has(a.key)}">
+        <b>${a.key}</b><span>${a.sub}</span>
+      </button>`).join("");
+    grid.querySelectorAll(".watch-opt").forEach((el) => {
+      el.addEventListener("click", () => {
+        const k = el.dataset.key;
+        if (selected.has(k)) selected.delete(k); else selected.add(k);
+        el.setAttribute("aria-pressed", selected.has(k));
+        updateCount();
+      });
+    });
+    updateCount();
+  }
+
+  function updateCount() {
+    const n = selected.size;
+    $("#watchCount").innerHTML = `<b>${n}</b>개 선택 · ${n >= 3 ? "좋아요, 이제 맞춤 속보가 쌓입니다" : "3개 이상을 권장합니다"}`;
+    $("#watchBtn").disabled = n === 0;
+  }
+
+  async function saveWatchlist(skip) {
+    const list = skip ? [] : Array.from(selected);
+    try {
+      if (list.length) {
+        try {
+          await callApi("/api/watchlist", { email: email, watchlist: list });
+        } catch (apiErr) {
+          if (!apiErr.fallback) throw apiErr;
+          previewMode = true;
+          localWatchlist(email, list);
+        }
+        localStorage.setItem(WATCH_KEY, JSON.stringify(list));
+      }
+      if (!skip) localStorage.setItem(WATCH_KEY, JSON.stringify(list));
+      showSuccess(list);
+    } catch (ex) {
+      toast(ex.message);
+    }
+  }
+
+  function showSuccess(list) {
+    $("#step2").hidden = true;
+    $("#step3").hidden = false;
+    $("#whoName").textContent = $("#name").value.trim() ? ", " + $("#name").value.trim() + "님" : "!";
+    $("#watchSummary").innerHTML = list.length
+      ? list.map((a) => `<span>★ ${a}</span>`).join("")
+      : "<span>관심자산은 나중에 등록할 수 있어요</span>";
+    $("#successEmail").textContent = previewMode
+      ? email + " · 정적 미리보기라 서버 전송 없이 이 브라우저에만 저장되었습니다."
+      : email + " 로 무료 회원으로 등록되었습니다.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  $("#watchBtn").addEventListener("click", () => saveWatchlist(false));
+  $("#skipBtn").addEventListener("click", () => saveWatchlist(true));
+
+  // 이미 이 브라우저에서 가입한 기록이 있으면 살짝 안내
+  const saved = sessionStorage.getItem("claredex_email");
+  if (saved) $("#email").value = saved;
+
+  // 정적 호스팅 미리보기 감지: /api/health 가 없으면 localStorage 모드임을 알린다
+  (async function detectPreview() {
+    try {
+      const res = await fetch("/api/health", { cache: "no-store" });
+      const ctype = res.headers.get("content-type") || "";
+      if (!res.ok || !ctype.includes("json")) throw new Error("static");
+    } catch (e) {
+      previewMode = true;
+      const note = document.createElement("p");
+      note.className = "auth-fine";
+      note.style.cssText = "margin-top:14px;padding-top:12px;border-top:1px dashed var(--line, #ddd);color:#8A1C1C";
+      note.innerHTML = "<b>정적 미리보기 모드</b> · 서버가 연결되지 않아 가입 정보는 이 브라우저(localStorage)에만 저장되고 전송되지 않습니다.";
+      $("#step1").appendChild(note);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
