@@ -6,7 +6,11 @@
   posts.json         ← GET /api/posts?limit=60
   ticker.json        ← GET /api/ticker (마지막 수집 스냅샷)
   calendar.json      ← GET /api/calendar
-  naver-drafts.json  ← GET /api/naver-drafts
+
+**네이버 초안(`naver-drafts.json`)은 일부러 내보내지 않는다.**
+초안은 운영자 내부 자료이고 `/api/naver-drafts` 는 로그인 없이는 401 이므로, 공개 정적
+호스팅에 스냅샷을 두면 누구나 내려받을 수 있게 된다. 이전 버전이 남긴 파일도 지운다.
+운영자는 실제 서버(`claredex.com/admin`)에서 로그인해 사용한다.
 
 이미지 경로는 GitHub Pages 하위 경로(`/claredex-v2/`)에서도 동작하도록 상대 경로
 (`images/posts/N.png`)로 기록한다.
@@ -20,6 +24,9 @@ import config
 import db
 
 OUT_DIR = config.PUBLIC_DIR / "data"
+
+# 공개 정적 호스팅에 두면 안 되는 파일 (이전 배포본이 남긴 것까지 제거)
+FORBIDDEN_EXPORTS = ("naver-drafts.json",)
 
 
 def rel_image(path: str | None) -> str | None:
@@ -44,23 +51,23 @@ def write(name: str, payload: dict) -> Path:
     return path
 
 
+def purge_forbidden() -> list[Path]:
+    removed = []
+    for name in FORBIDDEN_EXPORTS:
+        path = OUT_DIR / name
+        if path.exists():
+            path.unlink()
+            removed.append(path)
+    return removed
+
+
 def main() -> int:
     db.init_db()
+    removed = purge_forbidden()
     with db.session() as conn:
         posts = db.list_posts(conn, limit=60)
-        drafts = db.list_drafts(conn)
 
     write("posts.json", {"ok": True, "count": len(posts), "posts": [post_json(p) for p in posts]})
-
-    for d in drafts:
-        d["image_url"] = rel_image(d.get("image_path"))
-        d["image_local"] = rel_image(d.get("image_path"))
-        d["telegram_url"] = config.TELEGRAM_URL
-        d["web_url"] = config.WEB_URL
-        # 미리보기 전용: 본문 이미지 링크를 페이지 기준 상대 경로로 바꾼 사본.
-        # 복사용 body_html 은 네이버 발행 기준(운영 도메인) 그대로 둔다.
-        d["body_html_preview"] = d["body_html"].replace(config.PUBLIC_BASE_URL + "/", "")
-    write("naver-drafts.json", {"ok": True, "count": len(drafts), "drafts": drafts})
 
     ticker: dict
     try:
@@ -80,9 +87,11 @@ def main() -> int:
 
     print(f"내보내기 완료 → {OUT_DIR}")
     print(f"  posts.json        {len(posts)}건")
-    print(f"  naver-drafts.json {len(drafts)}건")
     print(f"  ticker.json       {len(ticker.get('items') or [])}항목")
     print(f"  calendar.json     {len(calendar.get('events') or [])}일정")
+    print("  naver-drafts.json 내보내지 않음 (운영자 전용 · 서버 로그인 후 조회)")
+    for path in removed:
+        print(f"  삭제: {path.name} (공개 정적 호스팅 노출 방지)")
     return 0
 
 

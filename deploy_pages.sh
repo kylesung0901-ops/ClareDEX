@@ -48,8 +48,12 @@ for i in $(seq 1 30); do
   code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$SITE" || true)
   if [ "$code" = "200" ]; then
     echo "   ✅ HTTP 200"
-    for page in signup.html admin-blog.html data/posts.json assets/style.css; do
+    for page in signup.html admin/ data/posts.json assets/style.css; do
       echo "   $(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}${page}") ${SITE}${page}"
+    done
+    # 운영자 전용 데이터는 공개 정적 호스팅에 없어야 한다 (404 기대)
+    for page in data/naver-drafts.json admin-blog.html; do
+      echo "   $(curl -s -o /dev/null -m 10 -w '%{http_code}' "${SITE}${page}") ${SITE}${page}  (기대: 404)"
     done
     exit 0
   fi

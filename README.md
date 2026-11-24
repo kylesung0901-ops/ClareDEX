@@ -7,8 +7,8 @@
 collector.py      공식 소스 수집 → SQLite 저장 → 브랜드 썸네일 PNG 생성 → 시장지표 캐시
 naver_drafts.py   글마다 네이버 SEO 초안(제목·키워드·본문 HTML·CTA) 생성
 server.py         정적 파일 + JSON API 서버 (표준 라이브러리만 사용)
-verify.py         DB 무결성 + 실제 HTTP 40개 항목 자체 검증
-public/           메인 · 회원가입 · 블로그 초안 도구
+verify.py         DB 무결성 + 실제 HTTP 60개 항목 자체 검증
+public/           메인 · 회원가입 · 운영자(/admin) 블로그 초안 도구
 data/             claredex.db, market_cache.json, calendar.json, verify_report.json
 ```
 
@@ -26,6 +26,15 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 - 필수 패키지: Python 3.12 표준 라이브러리 + `Pillow`(썸네일). `lxml`/`matplotlib`은 쓰지 않았습니다.
 - 한글 폰트: `/usr/share/fonts/pickle-hwp/NotoSansCJKkr-Regular.otf` 를 사용하며, 다른 환경에서는 `thumbnail.py` 의 `FONT_CANDIDATES` 에 경로를 추가하면 됩니다.
 - `.env`(선택): `.env.example` 을 복사해 `OPENDART_API_KEY`, `ECOS_API_KEY` 를 넣으면 국내 공시·한국은행 기준금리 수집이 활성화됩니다. 키가 없으면 로그만 남기고 건너뜁니다.
+
+### 운영자 화면(`/admin`) 비밀번호
+
+블로그 초안 도구는 **운영자 전용**이라 `/admin` 로그인 게이트 뒤에 있습니다.
+
+- 비밀번호는 `ADMIN_PASSWORD` 환경변수(또는 `claredex-v2/.env`)로 지정합니다. `.env.example` 에 `ADMIN_PASSWORD=claredex-admin-2026` 이 들어 있습니다.
+- 값이 없으면 **개발용 기본값 `claredex-admin-2026`** 으로 동작하고 기동 시 경고를 남깁니다. 실제 배포(`claredex.com`)에서는 반드시 길고 무작위인 값으로 교체하세요.
+- 세션은 서버 메모리에만 두는 무작위 토큰이며 `HttpOnly; SameSite=Lax` 쿠키(12시간)로 전달됩니다. 서버를 재시작하면 모든 세션이 끊깁니다.
+- 같은 IP에서 5분에 10회 이상 틀리면 잠시 `429` 로 차단합니다.
 
 ## 수집 소스와 처리 원칙
 
@@ -61,19 +70,22 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 |---|---|---|
 | GET | `/` | 메인 (티커·히어로·오늘의 한 장·카운트다운·속보 타임라인·컴플라이언스 푸터) |
 | GET | `/signup.html`, `/signup` | 10초 가입 + 관심자산 온보딩 (기존 404 경로 복구) |
-| GET | `/admin-blog.html`, `/admin-blog` | 네이버 초안 미리보기·1클릭 복사 |
+| GET | `/admin`, `/admin/` | 운영자 전용 네이버 초안 도구 (미로그인 시 “운영자 로그인” 화면, `noindex`) |
 | GET | `/api/ticker` | BTC KRW/USD, 김치프리미엄, 공포탐욕, 롱숏, USD/KRW, ETH. 실패 시 `data/market_cache.json` 폴백(`stale: true`) |
 | GET | `/api/posts?category=&tag=&q=&limit=` | 속보 목록 |
-| GET | `/api/naver-drafts` | 초안 목록 (본문 HTML 포함) |
+| GET | `/api/naver-drafts` | 초안 목록 (본문 HTML 포함) — **운영자 로그인 필요, 미로그인 401** |
 | GET | `/api/calendar` | KST 공식 일정 |
+| GET | `/api/admin/session` | 현재 운영자 세션 상태 `{authenticated}` |
 | POST | `/api/signup` | `{email, name, provider, watchlist}` → users 저장 (201) |
 | POST | `/api/watchlist` | `{email, watchlist}` → 관심자산 갱신 |
+| POST | `/api/admin/login` | `{password}` → 200 + `Set-Cookie: claredex_admin=…` (틀리면 401) |
+| POST | `/api/admin/logout` | 세션 폐기 + 쿠키 만료 (`Max-Age=0`) |
 
 ## 화면
 
 - **메인** — 다크 지표 티커(항목별 출처 표기) → 히어로(승인 문구 + `내 관심자산 속보 무료로 받기 →` + 텔레그램) → 2열 핵심 존(오늘의 한 장 / KST 카운트다운) → 실시간 속보 타임라인(카테고리·관심자산 필터, 검색, `N분 전 확인`, 출처 등급 배지, 3줄 요약, 시장 영향 한 줄, 자산 태그, `공식 원문 보기 ↗`) → 사이드바(관심자산·텔레그램·수집 소스) → 컴플라이언스 푸터.
 - **회원가입** — 카카오/구글 버튼(정식 오픈 전 "준비 중" 안내) + 동작하는 이메일 가입 → 관심자산 6종 선택(BTC·ETH·나스닥·코스피·삼성전자·NVDA) → 완료 화면 + 텔레그램 CTA. 선택값은 `localStorage`에도 저장되어 메인의 `★ 내 관심자산` 필터에 바로 반영됩니다.
-- **블로그 초안 도구** — 초안 목록, 제목/서식 유지 본문/HTML/태그/이미지 링크 복사, 미리보기·HTML·텍스트 탭.
+- **운영자 페이지(/admin)** — 비밀번호 로그인 게이트 → 초안 목록, 제목/서식 유지 본문/HTML/태그/이미지 링크 복사, 미리보기·HTML·텍스트 탭, 로그아웃. 정적 프리뷰에서는 초안 대신 비공개 안내를 표시합니다.
 
 ## 공식 일정(카운트다운) 데이터
 
@@ -97,10 +109,12 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 ## 검증 결과 (요약)
 
-`python3 verify.py` → **41/41 통과**
+`python3 verify.py` → **60/60 통과**
 - 3개 테이블·필수 컬럼, `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 9개 썸네일 1200×630 PNG
 - 글 1건당 초안 1건, 키워드 5~8, 텔레그램/웹 링크·고지·이미지 링크 포함, CTA 최대 유사도 0.40
-- HTTP: `/`, `/signup.html`, `/signup`, `/admin-blog.html`, `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q), `/api/naver-drafts`, `/api/calendar` 200
+- HTTP: `/`, `/signup.html`, `/signup`, `/admin`·`/admin/`(로그인 게이트 200·`no-store`), `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q), `/api/calendar` 200 / `/admin-blog.html`·`/admin-blog` 404
+- 운영자 인증: 미로그인 `/api/naver-drafts` 401 → 틀린 비밀번호 401 → `login` 200·`HttpOnly; SameSite=Lax` 쿠키 → `/api/naver-drafts` 200·9건 → `logout` 200 → 다시 401
+- 정적 프리뷰: `export_static.py` 가 `public/data/naver-drafts.json` 을 만들지 않음, 메인·회원가입에 `admin-blog` 링크 없음, `public/admin-blog.html` 삭제 확인
 - POST `/api/signup` 201 → `/api/watchlist` 200 → SQLite 저장 확인, 같은 이메일 재가입 시 관심자산 보존, 잘못된 이메일 400, 미지원 자산 4xx, 없는 경로 404, 상위 경로 403, 테스트 서버 정상 종료
 
 ## GitHub Pages 정적 프리뷰
@@ -108,19 +122,20 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 서버 없이 화면만 그대로 확인할 수 있도록 정적 스냅샷 배포를 넣었습니다.
 
 ```bash
-python3 export_static.py   # data/*.json + DB → public/data/{posts,ticker,calendar,naver-drafts}.json
+python3 export_static.py   # data/*.json + DB → public/data/{posts,ticker,calendar}.json
 ./sync_docs.sh             # 내보내기 + public/ → docs/ 복사
 ./deploy_pages.sh          # 위 둘 + 커밋 + push + 라이브 200 확인 (평소엔 이것만 실행)
 ```
 
 - **라이브 URL**: https://kylesung0901-ops.github.io/ClareDEX/ (공개)
   - 회원가입: https://kylesung0901-ops.github.io/ClareDEX/signup.html
-  - 블로그 초안 도구: https://kylesung0901-ops.github.io/ClareDEX/admin-blog.html
+  - 운영자 페이지: https://kylesung0901-ops.github.io/ClareDEX/admin/ (정적 프리뷰에서는 초안을 비공개로 두고 안내만 표시)
 - 저장소: `kylesung0901-ops/ClareDEX` (public)
   - 사이트 서빙: **`gh-pages` 브랜치 루트** — GitHub Pages 소스. push 하면 자동 재빌드.
   - 소스 보관: **`claredex-v2-preview` 브랜치** — 이 프로젝트 전체 + `docs/` 사본.
   - `ClareDEX` 의 `main` 브랜치(기존 클레어덱스 사이트)는 건드리지 않습니다.
-- 화면은 API(`/api/...`)를 먼저 호출하고, 정적 호스팅에서 404/비-JSON 응답이 오면 `data/*.json` 스냅샷으로 자동 대체합니다(`index.html`, `admin-blog.html`).
+- 화면은 API(`/api/...`)를 먼저 호출하고, 정적 호스팅에서 404/비-JSON 응답이 오면 `data/*.json` 스냅샷으로 자동 대체합니다(`index.html`).
+- **운영자 초안은 정적 호스팅에 내보내지 않습니다.** `/api/naver-drafts` 는 로그인 없이는 401 이고, `export_static.py` 는 `naver-drafts.json` 을 만들지 않으며(이전 배포본 파일도 삭제), `/admin` 은 서버가 없으면 “정적 프리뷰에서는 보안을 위해 내부 초안 데이터를 비공개로 둡니다. 실제 서버(claredex.com/admin)에서 로그인 후 이용하세요.” 안내를 표시합니다.
 - 모든 자산·링크 경로는 저장소 하위 경로(`/ClareDEX/`)에서도 동작하도록 상대 경로입니다(`assets/style.css`, `images/posts/N.png`, `signup.html`).
 - `/signup.html` 은 API 가 없으면 가입 정보를 브라우저 `localStorage` 에만 저장하고 **"정적 미리보기 모드"** 안내를 표시합니다(서버 전송 없음).
 - 티커는 마지막 수집 스냅샷이므로 `지연 표시` 로 표기됩니다.

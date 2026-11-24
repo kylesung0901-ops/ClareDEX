@@ -593,6 +593,20 @@ h1.hero-title em {
   line-height: 1.65; margin-bottom: 18px;
 }
 .notice b { color: var(--gold); }
+.notice code, .auth-fine code {
+  font-family: var(--mono); font-size: 11.5px; background: var(--paper-3);
+  border-radius: 5px; padding: 1px 5px; color: var(--ink-2);
+}
+
+/* 운영자 로그인 게이트 (/admin) */
+.admin-gate-card {
+  max-width: 430px; background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 26px 26px 20px; box-shadow: var(--shadow);
+}
+.admin-gate-card .btn { margin-top: 6px; }
+.admin-gate-card .auth-fine {
+  margin: 12px 0 0; font-size: 11px; color: var(--muted); line-height: 1.7;
+}
 
 /* --------------------------------------------------------------- misc */
 .skeleton { position: relative; overflow: hidden; background: var(--paper-2); border-radius: 6px; color: transparent !important; }

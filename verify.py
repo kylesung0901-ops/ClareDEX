@@ -2,6 +2,7 @@
 
 1) DB 스키마·글·초안·썸네일 무결성
 2) 실제 서버를 임시 포트로 띄워 HTTP 200 / JSON / HTML / POST 동작 확인 후 정상 종료
+3) 운영자(/admin) 경로·인증·정적 프리뷰 비공개 확인
 
 사용: python3 verify.py [--port 8765]
 """
@@ -23,6 +24,7 @@ import config
 config.load_env()
 
 import db  # noqa: E402
+import server  # noqa: E402  (운영자 비밀번호·세션 규칙을 한 곳에서 가져온다)
 
 RESULTS: list[tuple[bool, str, str]] = []
 
@@ -34,12 +36,14 @@ def check(ok: bool, name: str, detail: str = "") -> bool:
     return bool(ok)
 
 
-def http(url: str, method: str = "GET", body: dict | None = None, timeout: int = 15):
+def http(url: str, method: str = "GET", body: dict | None = None, timeout: int = 15, cookie: str | None = None):
     data = None
     headers = {"Accept": "*/*"}
     if body is not None:
         data = json.dumps(body).encode("utf-8")
         headers["Content-Type"] = "application/json"
+    if cookie:
+        headers["Cookie"] = cookie
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -178,9 +182,19 @@ def server_checks(port: int) -> None:
         status, _, raw = http(base + "/signup")
         check(status == 200 and "카카오" in raw.decode("utf-8", "replace"), "GET /signup (기존 404 경로) → 200")
 
-        status, headers, raw = http(base + "/admin-blog.html")
-        check(status == 200 and "네이버 블로그 SEO 초안" in raw.decode("utf-8", "replace"),
-              "GET /admin-blog.html → 200")
+        status, headers, raw = http(base + "/admin")
+        admin_html = raw.decode("utf-8", "replace")
+        check(status == 200 and "운영자 로그인" in admin_html,
+              "GET /admin → 200 (운영자 로그인 게이트)", f"HTTP {status}")
+        check(headers.get("Cache-Control") == "no-store", "운영자 화면 Cache-Control: no-store")
+        status, _, raw = http(base + "/admin/")
+        check(status == 200 and "운영자 로그인" in raw.decode("utf-8", "replace"),
+              "GET /admin/ → 200", f"HTTP {status}")
+        check("정적 프리뷰에서는 보안을 위해 내부 초안 데이터를 비공개로 둡니다" in admin_html,
+              "운영자 화면에 정적 프리뷰 비공개 안내 포함")
+        for legacy in ("/admin-blog.html", "/admin-blog"):
+            status, _, _ = http(base + legacy)
+            check(status == 404, f"GET {legacy} → 404 (공개 노출 제거)", f"HTTP {status}")
 
         status, headers, raw = http(base + "/assets/style.css")
         check(status == 200 and "text/css" in headers.get("Content-Type", ""), "GET /assets/style.css → 200")
@@ -212,11 +226,48 @@ def server_checks(port: int) -> None:
         q = json.loads(raw)
         check(status == 200 and q.get("count", 0) >= 1, "GET /api/posts?q=FOMC 검색", f"{q.get('count')}건")
 
+        status, _, raw = http(base + "/api/admin/session")
+        sess = json.loads(raw)
+        check(status == 200 and sess.get("authenticated") is False,
+              "미로그인 GET /api/admin/session → authenticated:false", f"HTTP {status}")
+
         status, _, raw = http(base + "/api/naver-drafts")
+        drafts_denied = json.loads(raw)
+        check(status == 401 and "로그인" in drafts_denied.get("error", ""),
+              "미로그인 GET /api/naver-drafts → 401", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/admin/login", "POST", {"password": "wrong-password-for-verify"})
+        check(status == 401 and json.loads(raw).get("ok") is False,
+              "틀린 비밀번호 POST /api/admin/login → 401", f"HTTP {status}")
+
+        status, headers, raw = http(base + "/api/admin/login", "POST", {"password": server.admin_password()})
+        login = json.loads(raw)
+        set_cookie = headers.get("Set-Cookie", "")
+        check(status == 200 and login.get("authenticated") is True,
+              "POST /api/admin/login → 200 + 세션 발급", f"HTTP {status}")
+        check("HttpOnly" in set_cookie and "SameSite=Lax" in set_cookie,
+              "세션 쿠키 HttpOnly · SameSite=Lax", set_cookie.split(";", 1)[0])
+        admin_cookie = set_cookie.split(";", 1)[0]
+        check(admin_cookie.startswith(server.ADMIN_COOKIE + "=") and len(admin_cookie) > 30,
+              f"세션 쿠키 이름: {server.ADMIN_COOKIE}")
+
+        status, _, raw = http(base + "/api/admin/session", cookie=admin_cookie)
+        check(status == 200 and json.loads(raw).get("authenticated") is True,
+              "로그인 후 GET /api/admin/session → authenticated:true")
+
+        status, _, raw = http(base + "/api/naver-drafts", cookie=admin_cookie)
         drafts = json.loads(raw)
-        check(status == 200 and drafts.get("count", 0) > 0, "GET /api/naver-drafts → 200", f"{drafts.get('count')}건")
-        d0 = drafts["drafts"][0]
-        check("t.me/Clare_PerpDEX" in d0["body_html"] and d0["seo_title"], "초안 응답: 본문·이미지 링크 포함")
+        check(status == 200 and drafts.get("count") == 9, "로그인 후 GET /api/naver-drafts → 200 · 9건",
+              f"HTTP {status} · {drafts.get('count')}건")
+        d0 = (drafts.get("drafts") or [{}])[0]
+        check("t.me/Clare_PerpDEX" in d0.get("body_html", "") and d0.get("seo_title"),
+              "초안 응답: 본문·이미지 링크 포함")
+
+        status, headers, raw = http(base + "/api/admin/logout", "POST", {}, cookie=admin_cookie)
+        check(status == 200 and "Max-Age=0" in headers.get("Set-Cookie", ""),
+              "POST /api/admin/logout → 200 + 쿠키 만료")
+        status, _, raw = http(base + "/api/naver-drafts", cookie=admin_cookie)
+        check(status == 401, "로그아웃 후 GET /api/naver-drafts → 401 (세션 폐기)", f"HTTP {status}")
 
         status, _, raw = http(base + "/api/calendar")
         cal = json.loads(raw)
@@ -268,6 +319,28 @@ def server_checks(port: int) -> None:
         check(proc.poll() is not None, "테스트 서버 정상 종료", f"exit={proc.returncode}")
 
 
+def static_checks() -> None:
+    print("\n── 3. 정적 프리뷰 — 운영자 데이터 비공개 ──────────────────")
+    proc = subprocess.run(
+        [sys.executable, "export_static.py"],
+        cwd=str(config.BASE_DIR), capture_output=True, text=True, timeout=120,
+    )
+    ok = check(proc.returncode == 0, "export_static.py 실행",
+               (proc.stderr or proc.stdout or "")[-300:] if proc.returncode else "")
+    if ok:
+        drafts_snapshot = config.PUBLIC_DIR / "data" / "naver-drafts.json"
+        check(not drafts_snapshot.exists(),
+              "public/data/naver-drafts.json 내보내지 않음 (공개 호스팅 차단)",
+              str(drafts_snapshot) if drafts_snapshot.exists() else "파일 없음")
+        check((config.PUBLIC_DIR / "data" / "posts.json").exists(), "public/data/posts.json 정상 생성")
+
+    index_html = (config.PUBLIC_DIR / "index.html").read_text(encoding="utf-8")
+    signup_html = (config.PUBLIC_DIR / "signup.html").read_text(encoding="utf-8")
+    check("admin-blog" not in index_html and "admin-blog" not in signup_html,
+          "메인·회원가입에 admin-blog 링크 없음")
+    check(not (config.PUBLIC_DIR / "admin-blog.html").exists(), "public/admin-blog.html 삭제됨")
+
+
 def free_port(preferred: int = 8765) -> int:
     for port in (preferred, 8766, 8767, 8799, 0):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -287,6 +360,7 @@ def main() -> int:
     db_checks()
     port = args.port or free_port()
     server_checks(port)
+    static_checks()
 
     passed = sum(1 for ok, _, _ in RESULTS if ok)
     print("\n" + "=" * 74)
