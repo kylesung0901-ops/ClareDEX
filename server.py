@@ -22,6 +22,7 @@ public/ 정적 파일 + JSON API.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import hmac
 import json
 import os
@@ -29,6 +30,8 @@ import re
 import secrets
 import threading
 import time
+import urllib.request
+from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -41,7 +44,8 @@ import collector  # noqa: E402
 import db  # noqa: E402
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
-PROVIDERS = {"email", "kakao", "google", "naver"}
+PHONE_RE = re.compile(r"^01[016789]\d{7,8}$")
+PROVIDERS = {"email", "phone", "kakao", "google", "naver"}
 
 TICKER_TTL = 20.0
 _ticker_lock = threading.Lock()
@@ -58,6 +62,67 @@ ADMIN_LOGIN_WINDOW = 300.0  # 4xx 실패 누적 구간(초)
 _admin_lock = threading.Lock()
 _admin_sessions: dict[str, float] = {}  # token → 만료 시각(epoch)
 _admin_login_fails: dict[str, list[float]] = {}  # client ip → 실패 시각 목록
+
+# 휴대폰 인증번호 발송 제한(메모리)
+_phone_lock = threading.Lock()
+_phone_sends: dict[str, list[float]] = {}  # phone 또는 ip → 발송 시각 목록
+
+
+def normalize_phone(raw: object) -> str | None:
+    """010-1234-5678 · +82 10 1234 5678 · 01012345678 → '01012345678'."""
+    digits = re.sub(r"\D", "", str(raw or ""))
+    if digits.startswith("82"):
+        digits = "0" + digits[2:]
+    return digits if PHONE_RE.match(digits) else None
+
+
+def mask_phone(phone: str) -> str:
+    if len(phone) == 11:
+        return f"{phone[:3]}-****-{phone[-4:]}"
+    return phone[:3] + "-***-" + phone[-4:]
+
+
+def _code_hash(phone: str, code: str, salt: str) -> str:
+    return hashlib.sha256(f"{salt}:{phone}:{code}".encode("utf-8")).hexdigest()
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _rate_limited(key: str, limit: int, window: float) -> bool:
+    now = time.time()
+    with _phone_lock:
+        hits = [t for t in _phone_sends.get(key, []) if now - t < window]
+        _phone_sends[key] = hits
+        return len(hits) >= limit
+
+
+def _record_send(key: str) -> None:
+    with _phone_lock:
+        _phone_sends.setdefault(key, []).append(time.time())
+
+
+def send_sms(phone: str, text: str) -> dict:
+    """SMS 발송. SMS_WEBHOOK_URL 이 없으면 개발/데모 모드로 동작한다."""
+    url = (os.environ.get("SMS_WEBHOOK_URL") or "").strip()
+    if not url:
+        return {"sent": False, "mode": "demo"}
+    payload = json.dumps({
+        "to": phone,
+        "text": text,
+        "sender": (os.environ.get("SMS_SENDER") or "").strip(),
+    }).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    key = (os.environ.get("SMS_API_KEY") or "").strip()
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return {"sent": 200 <= resp.status < 300, "mode": "live", "status": resp.status}
+    except Exception as exc:  # noqa: BLE001
+        return {"sent": False, "mode": "live", "error": str(exc)}
 
 
 def admin_password() -> str:
@@ -289,11 +354,17 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"ok": True, "count": len(drafts), "drafts": drafts})
             return
         if route == "/api/calendar":
-            try:
-                data = json.loads(config.CALENDAR_PATH.read_text(encoding="utf-8"))
-            except Exception:
-                data = {"events": []}
-            self._send_json({"ok": True, **data})
+            self._send_json({"ok": True, **config.load_calendar()})
+            return
+        if route == "/api/stats":
+            with db.session() as conn:
+                stats = db.today_stats(conn)
+                levels = db.importance_counts(conn)
+            self._send_json({"ok": True, "today": stats, "importance": levels,
+                             "timezone": "Asia/Seoul"})
+            return
+        if route == "/api/plans":
+            self._send_json({"ok": True, "plans": config.PLANS, "sms_mode": config.sms_mode()})
             return
         if route == "/api/health":
             with db.session() as conn:
@@ -356,13 +427,100 @@ class Handler(BaseHTTPRequestHandler):
                             200, cookies=[self._admin_cookie(token)])
             return
 
+        if route == "/api/phone/send-code":
+            phone = normalize_phone(body.get("phone"))
+            if not phone:
+                self._send_json({"ok": False, "error": "휴대폰 번호 형식을 확인해 주세요. 예: 010-1234-5678"}, 400)
+                return
+            if _rate_limited(phone, config.PHONE_MAX_SENDS, config.PHONE_RESEND_WINDOW) or \
+                    _rate_limited("ip:" + self._client_ip(), config.PHONE_MAX_SENDS * 4, config.PHONE_RESEND_WINDOW):
+                self._send_json({"ok": False, "error": "인증번호 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."}, 429)
+                return
+            code = f"{secrets.randbelow(1_000_000):06d}"
+            salt = secrets.token_hex(16)
+            now = config.now_kst()
+            expires = now + timedelta(seconds=config.PHONE_CODE_TTL)
+            with db.session() as conn:
+                db.create_phone_code(conn, phone, _code_hash(phone, code, salt), salt,
+                                     config.iso_kst(expires), purpose="signup",
+                                     created_at=config.iso_kst(now))
+            _record_send(phone)
+            _record_send("ip:" + self._client_ip())
+            sms = send_sms(phone, f"[클레어덱스] 인증번호 {code} ({config.PHONE_CODE_TTL // 60}분 이내 입력)")
+            if not sms.get("sent") and config.sms_mode() == "live":
+                # 실발송 설정이 있는데 발송에 실패한 경우: 인증번호를 응답에 노출하지 않는다.
+                self._send_json({"ok": False, "demo": False, "sms_mode": "live",
+                                 "error": "인증번호 발송에 실패했습니다. 잠시 후 다시 시도해 주세요."}, 502)
+                return
+            payload = {
+                "ok": True,
+                "demo": config.sms_mode() == "demo",
+                "sms_mode": config.sms_mode(),
+                "phone_masked": mask_phone(phone),
+                "expires_in": config.PHONE_CODE_TTL,
+                "code_length": 6,
+                "resend_after": 30,
+            }
+            if payload["demo"]:
+                # 실제 SMS 키가 없을 때만: 테스트할 수 있도록 인증번호를 응답에 담는다.
+                payload["dev_code"] = code
+                payload["notice"] = ("개발/데모 모드입니다. SMS가 실제로 발송되지 않아 "
+                                     "테스트용 인증번호를 함께 돌려드립니다. .env 에 SMS_WEBHOOK_URL 을 설정하면 실제 발송으로 전환됩니다.")
+            self._send_json(payload, 200)
+            return
+
+        if route == "/api/phone/verify-code":
+            phone = normalize_phone(body.get("phone"))
+            code = re.sub(r"\D", "", str(body.get("code") or ""))
+            if not phone or len(code) != 6:
+                self._send_json({"ok": False, "error": "휴대폰 번호와 6자리 인증번호를 확인해 주세요."}, 400)
+                return
+            now = config.now_kst()
+            with db.session() as conn:
+                row = db.latest_phone_code(conn, phone, purpose="signup")
+                if not row:
+                    self._send_json({"ok": False, "error": "인증번호 요청 기록이 없습니다. 인증번호를 다시 받아 주세요."}, 400)
+                    return
+                if config.parse_kst(row["expires_at"]) <= now:
+                    self._send_json({"ok": False, "error": "인증번호가 만료되었습니다. 다시 받아 주세요."}, 400)
+                    return
+                if int(row["attempts"]) >= config.PHONE_MAX_ATTEMPTS:
+                    self._send_json({"ok": False, "error": "입력 횟수를 초과했습니다. 인증번호를 다시 받아 주세요."}, 429)
+                    return
+                if not hmac.compare_digest(_code_hash(phone, code, row["salt"]), row["code_hash"]):
+                    attempts = db.bump_phone_attempts(conn, int(row["id"]))
+                    self._send_json({"ok": False, "error": "인증번호가 올바르지 않습니다.",
+                                     "attempts_left": max(0, config.PHONE_MAX_ATTEMPTS - attempts)}, 400)
+                    return
+                token = secrets.token_urlsafe(24)
+                expires = now + timedelta(seconds=config.PHONE_TOKEN_TTL)
+                db.mark_phone_verified(conn, int(row["id"]), _token_hash(token), config.iso_kst(now))
+                conn.execute("UPDATE phone_verifications SET expires_at = ? WHERE id = ?",
+                             (config.iso_kst(expires), int(row["id"])))
+                conn.commit()
+            self._send_json({"ok": True, "phone_masked": mask_phone(phone),
+                             "verification_token": token,
+                             "expires_in": config.PHONE_TOKEN_TTL,
+                             "demo": config.sms_mode() == "demo"}, 200)
+            return
+
         if route == "/api/signup":
-            email = str(body.get("email", "")).strip().lower()
+            email = str(body.get("email", "")).strip().lower() or None
+            phone_raw = body.get("phone")
+            phone = normalize_phone(phone_raw) if phone_raw else None
+            token = str(body.get("verification_token") or "").strip()
             name = str(body.get("name", "")).strip() or None
-            provider = str(body.get("provider", "email")).strip().lower() or "email"
+            provider = str(body.get("provider", "")).strip().lower() or ("phone" if phone else "email")
             watchlist = body.get("watchlist") or []
-            if not EMAIL_RE.match(email):
+
+            if phone_raw and not phone:
+                self._send_json({"ok": False, "error": "휴대폰 번호 형식을 확인해 주세요. 예: 010-1234-5678"}, 400)
+                return
+            if email and not EMAIL_RE.match(email):
                 self._send_json({"ok": False, "error": "이메일 형식을 확인해 주세요."}, 400)
+                return
+            if not email and not phone:
+                self._send_json({"ok": False, "error": "휴대폰 인증 또는 이메일 중 하나가 필요합니다."}, 400)
                 return
             if provider not in PROVIDERS:
                 self._send_json({"ok": False, "error": f"지원하지 않는 provider 입니다: {provider}"}, 400)
@@ -379,11 +537,33 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 return
             with db.session() as conn:
-                existing = db.get_user(conn, email)
-                # 이미 가입한 이메일을 다시 진행할 때 빈 목록으로 기존 관심자산을 지우지 않는다.
+                verified = None
+                if email and phone:
+                    # 인증 토큰을 소모하기 전에 계정 충돌을 먼저 확인한다.
+                    by_phone = db.get_user_by_phone(conn, phone)
+                    if by_phone and by_phone.get("email") and by_phone["email"] != email:
+                        self._send_json({"ok": False,
+                                         "error": "이미 다른 계정에 연결된 휴대폰 번호입니다. 기존 계정으로 로그인하거나 다른 번호를 사용해 주세요."}, 409)
+                        return
+                if phone:
+                    if not token:
+                        self._send_json({"ok": False,
+                                         "error": "휴대폰 인증을 먼저 완료해 주세요.",
+                                         "need": "phone_verification"}, 400)
+                        return
+                    if not db.consume_phone_token(conn, phone, _token_hash(token)):
+                        self._send_json({"ok": False,
+                                         "error": "휴대폰 인증이 만료되었거나 이미 사용되었습니다. 다시 인증해 주세요.",
+                                         "need": "phone_verification"}, 401)
+                        return
+                    verified = True
+                existing = db.get_user(conn, email) if email else db.get_user_by_phone(conn, phone)
+                # 이미 가입한 회원을 다시 진행할 때 빈 목록으로 기존 관심자산을 지우지 않는다.
                 effective = watchlist if (watchlist or not existing) else None
-                user = db.upsert_user(conn, email=email, name=name, provider=provider, watchlist=effective)
-            self._send_json({"ok": True, "user": user, "next": "/signup?step=watchlist"}, 201)
+                user = db.upsert_user(conn, email=email, name=name, provider=provider,
+                                      watchlist=effective, phone=phone, phone_verified=verified)
+            self._send_json({"ok": True, "user": user, "next": "/signup?step=watchlist",
+                             "sms_mode": config.sms_mode()}, 201)
             return
 
         if route == "/api/watchlist":

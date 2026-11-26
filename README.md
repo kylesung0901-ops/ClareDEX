@@ -1,15 +1,17 @@
-# ClareDEX v2 — 웹 · 수집엔진 · 네이버 블로그 초안기
+# ClareDEX v2 — 웹 · 수집엔진 · 휴대폰 인증 가입
 
-클레어덱스(웨일파트너스)의 1단계 승인 와이어프레임을 구현한 프로토타입입니다.
-**공식 원문만 수집 → 사실만 요약 → 웹 발행 → 네이버 블로그 SEO 초안 생성 → 복사 발행**까지의 파이프라인을 담고 있습니다.
+클레어덱스(웨일파트너스)의 v2 프로토타입입니다.
+**공식 원문만 수집 → 중요도(S/A/B) 분류 → 사실만 요약 → 웹 발행 → 휴대폰 인증 가입 → 네이버 블로그 SEO 초안**까지의 파이프라인을 담고 있습니다.
 
 ```
-collector.py      공식 소스 수집 → SQLite 저장 → 브랜드 썸네일 PNG 생성 → 시장지표 캐시
+collector.py      공식 소스 수집 → SQLite 저장 → 중요도 분류 → 썸네일 PNG → 시장지표 캐시 → 공식 일정 스냅샷
+content.py        원문 제목·공시 항목 기반 요약 3줄 · 시장 영향 문구 · 중요도 규칙
 naver_drafts.py   글마다 네이버 SEO 초안(제목·키워드·본문 HTML·CTA) 생성
 server.py         정적 파일 + JSON API 서버 (표준 라이브러리만 사용)
-verify.py         DB 무결성 + 실제 HTTP 60개 항목 자체 검증
-public/           메인 · 회원가입 · 운영자(/admin) 블로그 초안 도구
-data/             claredex.db, market_cache.json, calendar.json, verify_report.json
+verify.py         DB 무결성 + 실제 HTTP 자체 검증
+public/           메인 · 휴대폰 인증 가입 · 운영자(/admin) 블로그 초안 도구
+calendar.json     기관 공식 페이지에서 확인한 발표 일정(커밋 대상)
+data/             claredex.db, market_cache.json, verify_report.json (git 제외)
 ```
 
 ## 실행 방법
@@ -17,7 +19,7 @@ data/             claredex.db, market_cache.json, calendar.json, verify_report.j
 ```bash
 cd claredex-v2
 
-python3 collector.py          # 1) 공식 원문 수집 (+ 썸네일·시장지표 캐시)
+python3 collector.py          # 1) 공식 원문 수집 (+ 중요도 분류·썸네일·시장지표·일정 스냅샷)
 python3 naver_drafts.py       # 2) 네이버 블로그 SEO 초안 생성
 python3 server.py --port 8000 # 3) 서버 실행 → http://localhost:8000
 python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄웠다가 종료)
@@ -25,13 +27,22 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 - 필수 패키지: Python 3.12 표준 라이브러리 + `Pillow`(썸네일). `lxml`/`matplotlib`은 쓰지 않았습니다.
 - 한글 폰트: `/usr/share/fonts/pickle-hwp/NotoSansCJKkr-Regular.otf` 를 사용하며, 다른 환경에서는 `thumbnail.py` 의 `FONT_CANDIDATES` 에 경로를 추가하면 됩니다.
-- `.env`(선택): `.env.example` 을 복사해 `OPENDART_API_KEY`, `ECOS_API_KEY` 를 넣으면 국내 공시·한국은행 기준금리 수집이 활성화됩니다. 키가 없으면 로그만 남기고 건너뜁니다.
+- `.env`(선택): `.env.example` 을 복사해 키를 넣습니다. 없으면 해당 수집·발송만 건너뛰고 나머지는 그대로 동작합니다.
+
+### 휴대폰 인증 · SMS 개발/데모 모드
+
+`/signup` 은 **휴대폰 번호 → 6자리 인증번호 → 관심자산 선택** 순서로 진행합니다.
+
+- `SMS_WEBHOOK_URL` 이 없으면 **개발/데모 모드**입니다. 실제 문자가 나가지 않는 대신, `POST /api/phone/send-code` 응답과 화면에 `demo: true` 와 **테스트용 인증번호(`dev_code`)** 를 표시합니다. 그 번호로 `POST /api/phone/verify-code` 를 호출하면 그대로 가입 테스트가 됩니다.
+- `SMS_WEBHOOK_URL`(필요 시 `SMS_API_KEY`, `SMS_SENDER`)을 설정하면 `{"to","text","sender"}` JSON 을 그 주소로 POST 하는 **실발송 모드**로 바뀌고, 응답에는 인증번호가 더 이상 포함되지 않습니다. 실제 문자 대행사(알리고·네이버 클라우드·Twilio 등)의 규격에 맞춘 프록시 URL 을 연결하세요.
+- 인증번호는 5분 유효, 5회 입력 제한, 같은 번호로 10분에 3회까지 발송합니다. 저장은 평문이 아니라 번호별 salt + SHA-256 해시입니다.
+- 인증 완료 토큰은 30분 유효·1회용이며, 가입(`POST /api/signup`)에서 소모됩니다.
 
 ### 운영자 화면(`/admin`) 비밀번호
 
 블로그 초안 도구는 **운영자 전용**이라 `/admin` 로그인 게이트 뒤에 있습니다.
 
-- 비밀번호는 `ADMIN_PASSWORD` 환경변수(또는 `claredex-v2/.env`)로 지정합니다. `.env.example` 에 `ADMIN_PASSWORD=claredex-admin-2026` 이 들어 있습니다.
+- 비밀번호는 `ADMIN_PASSWORD` 환경변수(또는 `.env`)로 지정합니다. `.env.example` 에 `ADMIN_PASSWORD=claredex-admin-2026` 이 들어 있습니다.
 - 값이 없으면 **개발용 기본값 `claredex-admin-2026`** 으로 동작하고 기동 시 경고를 남깁니다. 실제 배포(`claredex.com`)에서는 반드시 길고 무작위인 값으로 교체하세요.
 - 세션은 서버 메모리에만 두는 무작위 토큰이며 `HttpOnly; SameSite=Lax` 쿠키(12시간)로 전달됩니다. 서버를 재시작하면 모든 세션이 끊깁니다.
 - 같은 IP에서 5분에 10회 이상 틀리면 잠시 `429` 로 차단합니다.
@@ -55,45 +66,79 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 - `source_hash = sha256(source_url)` + `UNIQUE` 로 중복 발행을 차단합니다.
 - 해석 문구는 "영향을 줄 수 있습니다" 수준의 조건문이며 매수·매도 권유·목표가·수익 보장 표현을 쓰지 않습니다.
 - 연준 제목을 한국어로 확신할 수 없으면 원문 제목을 그대로 병기합니다.
+- 중요도 S/A/B 는 **발표 유형**(FOMC·CPI·고용·8-K 2.02 실적 등)과 원문 주소·공시 항목으로 정한 클레어덱스의 분류 값입니다. 시장 방향 예측이 아닙니다.
+
+### 중요도 등급
+
+| 등급 | 표시 | 기준 예시 |
+|---|---|---|
+| **S** | 빨간 배지 | FOMC 성명·의사록, 8-K 항목 2.02(빅테크 실적), 공식 일정의 CPI·고용보고서 |
+| **A** | 금색 배지 | 10-Q·10-K 정기보고서, 8-K 주요 항목(계약·경영진·통제권 변경 등), 자본·스트레스테스트 규제, DART 잠정실적·유상증자 |
+| **B** | 회색 테두리 | 모기지 면제 기준 금액 같은 지엽적 행정 보도자료, 개별 기관 제재·조사, 일반 공시 |
+
+- `content.fed_importance`, `content.sec_importance`, `content.dart_importance` 가 규칙을 갖고 있고, `content.classify_post_importance` 가 이미 저장된 글을 다시 분류합니다.
+- 컬럼이 없던 시절에 쌓인 글은 `collector.py` 실행 시 자동으로 등급이 채워집니다.
+- 예전 버전이 만든 "연준 공식 보도자료"·천편일률적 안내 문구도 `collector.py` 가 저장된 원문 제목을 근거로 다시 씁니다(새 숫자를 만들지 않음).
 
 ## DB 스키마 (`data/claredex.db`)
 
-- **posts** — id, title, category, source_name, source_grade, source_url, `source_hash UNIQUE`, verified_at, summary_lines(JSON, 3줄), market_impact, tags(JSON), image_path, is_member_early, created_at, **published_at**(원문 발표 시각, 추가), **topic**(초안 생성용 주제 키, 추가)
-- **users** — id, email UNIQUE, name, provider, watchlist(JSON), created_at
+- **posts** — id, title, category, source_name, source_grade, source_url, `source_hash UNIQUE`, verified_at, summary_lines(JSON, 3줄), market_impact, tags(JSON), image_path, is_member_early, created_at, published_at, topic, **importance**(S/A/B)
+- **users** — id, `email UNIQUE`(NULL 허용), name, provider, watchlist(JSON), **phone**, **phone_verified**, **phone_verified_at**, **plan**(`free`/`pro`), **alerts_enabled**, created_at
+- **phone_verifications** — id, phone, code_hash, salt, purpose, attempts, token_hash, verified_at, consumed_at, expires_at, created_at
 - **naver_drafts** — id, post_id UNIQUE, seo_title, keywords(JSON 5~8), body_html, body_text, telegram_cta, web_cta, image_path, created_at
 
-`published_at`·`topic` 은 brief 의 필수 컬럼에 더해 사실 보존과 초안 품질을 위해 추가한 컬럼입니다.
+`init_db()` 는 기존 DB 를 그대로 살리면서 마이그레이션합니다. `users.email` 의 NOT NULL 은 휴대폰만으로 가입할 수 있도록 테이블 재작성으로 풀고, `posts.importance`·`users.phone/phone_verified/plan/alerts_enabled` 는 `ALTER TABLE` 로 추가합니다. `phone` 에는 NULL 을 제외한 UNIQUE 인덱스가 걸립니다.
 
 ## HTTP API
 
 | Method | Path | 설명 |
 |---|---|---|
-| GET | `/` | 메인 (티커·히어로·오늘의 한 장·카운트다운·속보 타임라인·컴플라이언스 푸터) |
-| GET | `/signup.html`, `/signup` | 10초 가입 + 관심자산 온보딩 (기존 404 경로 복구) |
+| GET | `/` | 메인 (긴급 속보 카드 · 티커 · 히어로 · 오늘의 한 장 · 카운트다운 · 공식 일정 목록 · 속보 타임라인 · 무료/Pro 안내) |
+| GET | `/signup.html`, `/signup` | 휴대폰 인증 가입 + 관심자산 온보딩 |
 | GET | `/admin`, `/admin/` | 운영자 전용 네이버 초안 도구 (미로그인 시 “운영자 로그인” 화면, `noindex`) |
 | GET | `/api/ticker` | BTC KRW/USD, 김치프리미엄, 공포탐욕, 롱숏, USD/KRW, ETH. 실패 시 `data/market_cache.json` 폴백(`stale: true`) |
-| GET | `/api/posts?category=&tag=&q=&limit=` | 속보 목록 |
+| GET | `/api/posts?category=&tag=&q=&limit=` | 속보 목록 (`importance`, `importance_label` 포함) |
+| GET | `/api/stats` | KST 기준 오늘 확인 건수·최근 확인일·전체 건수·등급별 건수 |
+| GET | `/api/calendar` | KST 공식 일정 (빈 값은 서버에서 제거) |
+| GET | `/api/plans` | 무료/Pro 플랜 설명과 SMS 모드(`demo`/`live`) |
 | GET | `/api/naver-drafts` | 초안 목록 (본문 HTML 포함) — **운영자 로그인 필요, 미로그인 401** |
-| GET | `/api/calendar` | KST 공식 일정 |
 | GET | `/api/admin/session` | 현재 운영자 세션 상태 `{authenticated}` |
-| POST | `/api/signup` | `{email, name, provider, watchlist}` → users 저장 (201) |
-| POST | `/api/watchlist` | `{email, watchlist}` → 관심자산 갱신 |
+| POST | `/api/phone/send-code` | `{phone}` → 6자리 인증번호 발송. 데모 모드면 `dev_code` 포함 |
+| POST | `/api/phone/verify-code` | `{phone, code}` → `verification_token`(30분·1회용) |
+| POST | `/api/signup` | `{phone, verification_token, name?, watchlist}` 또는 `{email, name?, provider, watchlist}` → users 저장 (201) |
+| POST | `/api/watchlist` | `{email, watchlist}` → 관심자산 갱신 (이메일 가입 회원용) |
 | POST | `/api/admin/login` | `{password}` → 200 + `Set-Cookie: claredex_admin=…` (틀리면 401) |
 | POST | `/api/admin/logout` | 세션 폐기 + 쿠키 만료 (`Max-Age=0`) |
 
 ## 화면
 
-- **메인** — 다크 지표 티커(항목별 출처 표기) → 히어로(승인 문구 + `내 관심자산 속보 무료로 받기 →` + 텔레그램) → 2열 핵심 존(오늘의 한 장 / KST 카운트다운) → 실시간 속보 타임라인(카테고리·관심자산 필터, 검색, `N분 전 확인`, 출처 등급 배지, 3줄 요약, 시장 영향 한 줄, 자산 태그, `공식 원문 보기 ↗`) → 사이드바(관심자산·텔레그램·수집 소스) → 컴플라이언스 푸터.
-- **회원가입** — 카카오/구글 버튼(정식 오픈 전 "준비 중" 안내) + 동작하는 이메일 가입 → 관심자산 6종 선택(BTC·ETH·나스닥·코스피·삼성전자·NVDA) → 완료 화면 + 텔레그램 CTA. 선택값은 `localStorage`에도 저장되어 메인의 `★ 내 관심자산` 필터에 바로 반영됩니다.
+- **메인** — 최상단 **긴급 속보 카드**(S등급 우선, 「펼치기」와 무관하게 `바로 가입하기 →` 가 `/signup` 으로 이동) → 다크 지표 티커(항목별 출처 표기) → 히어로 → 2열 핵심 존(오늘의 한 장 / KST 카운트다운) → **공식 일정 목록**(D-day·기관·KST 시각·중요도, 빈 칸 없음) → 실시간 속보 타임라인(카테고리·**S 긴급**·관심자산 필터, 검색, `N분 전 확인`, 등급 배지, 3줄 요약, 시장 영향, 자산 태그, `공식 원문 보기 ↗`) → 사이드바(관심자산·무료 회원 혜택 / Pro 준비 중·텔레그램·수집 소스) → **가입 혜택 밴드**(무료 회원 vs Pro 2열) → 컴플라이언스 푸터.
+- **오늘 확인 건수** — `오늘 확인 N건` 은 **KST 자정 기준 오늘 `verified_at` 건수**만 셉니다. 오늘 0건이면 `오늘 확인 0건 · 최근 확인 N건 (M/D)` 로 최근 확인일을 함께 표시합니다.
+- **회원가입** — 휴대폰 번호 → 인증번호 6자리(5분 타이머) → 관심자산 6종 선택 → 완료. 이메일만으로 가입하는 경로도 남아 있습니다. SMS 키가 없으면 화면에 `개발/데모 모드` 와 테스트 인증번호를 표시합니다. 정적 프리뷰에서는 `정적 미리보기 모드` 로 브라우저에만 저장됩니다.
 - **운영자 페이지(/admin)** — 비밀번호 로그인 게이트 → 초안 목록, 제목/서식 유지 본문/HTML/태그/이미지 링크 복사, 미리보기·HTML·텍스트 탭, 로그아웃. 정적 프리뷰에서는 초안 대신 비공개 안내를 표시합니다.
 
 ## 공식 일정(카운트다운) 데이터
 
-`data/calendar.json` 에 기관 공식 일정 페이지에서 확인한 3건을 넣었습니다.
+`calendar.json` 에 기관 공식 페이지에서 **직접 확인한 일정만** 커밋합니다. 화면과 `/api/calendar` 는 필수 값(`id·title·org·datetime_kst·local_time·source_url`)이 비어 있는 일정을 버리므로 `—` 가 노출되지 않습니다.
 
-1. 미 3분기 GDP 2차 추정치 — 2026-11-25 22:30 KST (`bea.gov/news/schedule`, 08:30 ET)
-2. FOMC 결과 발표(12/8~9 회의) — 2026-12-10 04:00 KST (`federalreserve.gov/monetarypolicy/fomccalendars.htm`, 14:00 ET)
-3. 미 11월 CPI — 2026-12-10 22:30 KST (`bls.gov/schedule/news_release/cpi.htm`, 08:30 ET)
+| 일정 | KST | 중요도 | 원문 |
+|---|---|---|---|
+| 미 11월 고용보고서 | 2026-12-04 22:30 | S | `bls.gov/schedule/news_release/empsit.htm` |
+| 미 10월 국제무역수지 | 2026-12-08 22:30 | B | `bea.gov/news/schedule` |
+| FOMC 결과 발표(12/8~9, SEP) | 2026-12-10 04:00 | S | `federalreserve.gov/monetarypolicy/fomccalendars.htm` |
+| 미 11월 CPI | 2026-12-10 22:30 | S | `bls.gov/schedule/news_release/cpi.htm` |
+| 미 3분기 GDP 3차 추정치·기업이익 | 2026-12-23 22:30 | A | `bea.gov/news/schedule` |
+| 미 11월 개인소득·지출(PCE) | 2026-12-23 22:30 | A | `bea.gov/news/schedule` |
+| FOMC 결과 발표(2027년 1/26~27) | 2027-01-28 04:00 | A | `federalreserve.gov/monetarypolicy/fomccalendars.htm` |
+
+> 발표 시각은 해당 기관 일정 페이지의 ET 표기를 KST 로 환산한 값입니다. FOMC 성명은 통상 회의 둘째 날 14:00 ET 로, 원문 일정 페이지의 회의 날짜와 함께 표기했습니다.
+
+## 무료 회원 · Pro 플랜
+
+- **무료 회원(휴대폰 인증)**: 내 관심자산 실시간 알림(최대 3개), 3초 요약 전문, S등급 긴급 속보 알림, 이번 주 공식 일정.
+- **Pro(출시 준비 중)**: 무지연 속보, 공시 즉시 분석(SEC 8-K·10-Q · DART), 무제한 관심자산, 개인 텔레그램 봇·카카오 알림톡 연동.
+- 가격과 출시 일정은 아직 확정하지 않았습니다. 화면과 API 어디에도 추측 가격을 넣지 않습니다. `config.PLANS` 가 단일 출처이고 `/api/plans` 로 노출됩니다.
+- 결제 연동은 아직 없습니다. `users.plan` 은 `free`/`pro` 값만 갖고, Pro 권한 게이트는 다음 단계 작업입니다.
 
 ## 네이버 블로그 자동화 범위
 
@@ -106,23 +151,26 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 가 들어갑니다.
 
 > 초안 본문 이미지 URL은 `CLAREDEX_PUBLIC_BASE_URL`(기본 `https://www.claredex.com`) 기준입니다. `public/images/posts/*.png` 를 실제 도메인에 배포해야 네이버에서 이미지가 보입니다.
+> 수집기가 기존 글의 제목·요약을 갱신한 뒤에는 `python3 naver_drafts.py --rebuild` 로 초안을 다시 만들 수 있습니다.
 
 ## 검증 결과 (요약)
 
-`python3 verify.py` → **60/60 통과**
-- 3개 테이블·필수 컬럼, `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 9개 썸네일 1200×630 PNG
-- 글 1건당 초안 1건, 키워드 5~8, 텔레그램/웹 링크·고지·이미지 링크 포함, CTA 최대 유사도 0.40
-- HTTP: `/`, `/signup.html`, `/signup`, `/admin`·`/admin/`(로그인 게이트 200·`no-store`), `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q), `/api/calendar` 200 / `/admin-blog.html`·`/admin-blog` 404
-- 운영자 인증: 미로그인 `/api/naver-drafts` 401 → 틀린 비밀번호 401 → `login` 200·`HttpOnly; SameSite=Lax` 쿠키 → `/api/naver-drafts` 200·9건 → `logout` 200 → 다시 401
-- 정적 프리뷰: `export_static.py` 가 `public/data/naver-drafts.json` 을 만들지 않음, 메인·회원가입에 `admin-blog` 링크 없음, `public/admin-blog.html` 삭제 확인
-- POST `/api/signup` 201 → `/api/watchlist` 200 → SQLite 저장 확인, 같은 이메일 재가입 시 관심자산 보존, 잘못된 이메일 400, 미지원 자산 4xx, 없는 경로 404, 상위 경로 403, 테스트 서버 정상 종료
+`python3 verify.py` → **93/93 통과**
+- 3+1개 테이블·필수 컬럼(`importance`, `phone`, `phone_verified`, `plan`, `alerts_enabled`), `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 중요도 값 S/A/B·분류 규칙 7종, 오늘(KST) 건수 ≤ 전체 · 0건일 때 최근 확인일 · 다음 날 기준 재계산, 1200×630 PNG
+- 글 1건당 초안 1건, 키워드 5~8, 텔레그램/웹 링크·고지·이미지 링크 포함, CTA 최대 유사도 0.47
+- HTTP: `/`, `/signup.html`(휴대폰 인증 마크업), `/signup`, `/admin`·`/admin/`(로그인 게이트 200·`no-store`), `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q·중요도), `/api/stats`, `/api/plans`, `/api/calendar`(3건 이상·빈 값 없음·KST·정렬)
+- 긴급 속보 `바로 가입하기` 버튼: `signup.html` 링크 + `aria-disabled` 없음 / 중요도 배지·일정 목록·무료/Pro 안내 마크업
+- 운영자 인증: 미로그인 401 → 틀린 비밀번호 401 → 로그인 200·`HttpOnly; SameSite=Lax` 쿠키 → 초안 목록 200 → 로그아웃 200 → 다시 401
+- 휴대폰 인증: 데모 인증번호 발급 → 잘못된 번호 400 → 틀린 인증번호 400 → 인증 200·토큰 → 토큰 없는 가입 400 → 가입 201(`phone_verified`, `plan:free`) → 토큰 재사용 401 → SQLite 저장 확인
+- 정적 프리뷰: `export_static.py` 가 `naver-drafts.json` 을 만들지 않음, `stats.json`·`calendar.json`·`posts.json(importance)` 생성, 메인·회원가입에 `admin-blog` 링크 없음, `public/admin-blog.html` 삭제 확인
+- POST `/api/signup`(이메일) 201 → `/api/watchlist` 200 → SQLite 저장, 같은 이메일 재가입 시 관심자산 보존, 잘못된 이메일 400, 미지원 자산 4xx, 없는 경로 404, 상위 경로 403, 테스트 서버 정상 종료
 
 ## GitHub Pages 정적 프리뷰
 
 서버 없이 화면만 그대로 확인할 수 있도록 정적 스냅샷 배포를 넣었습니다.
 
 ```bash
-python3 export_static.py   # data/*.json + DB → public/data/{posts,ticker,calendar}.json
+python3 export_static.py   # DB + calendar.json → public/data/{posts,ticker,calendar,stats}.json
 ./sync_docs.sh             # 내보내기 + public/ → docs/ 복사
 ./deploy_pages.sh          # 위 둘 + 커밋 + push + 라이브 200 확인 (평소엔 이것만 실행)
 ```
@@ -137,14 +185,15 @@ python3 export_static.py   # data/*.json + DB → public/data/{posts,ticker,cale
 - 화면은 API(`/api/...`)를 먼저 호출하고, 정적 호스팅에서 404/비-JSON 응답이 오면 `data/*.json` 스냅샷으로 자동 대체합니다(`index.html`).
 - **운영자 초안은 정적 호스팅에 내보내지 않습니다.** `/api/naver-drafts` 는 로그인 없이는 401 이고, `export_static.py` 는 `naver-drafts.json` 을 만들지 않으며(이전 배포본 파일도 삭제), `/admin` 은 서버가 없으면 “정적 프리뷰에서는 보안을 위해 내부 초안 데이터를 비공개로 둡니다. 실제 서버(claredex.com/admin)에서 로그인 후 이용하세요.” 안내를 표시합니다.
 - 모든 자산·링크 경로는 저장소 하위 경로(`/ClareDEX/`)에서도 동작하도록 상대 경로입니다(`assets/style.css`, `images/posts/N.png`, `signup.html`).
-- `/signup.html` 은 API 가 없으면 가입 정보를 브라우저 `localStorage` 에만 저장하고 **"정적 미리보기 모드"** 안내를 표시합니다(서버 전송 없음).
+- `/signup.html` 은 API 가 없으면 `정적 미리보기 모드` 로 전환해 가입 정보를 브라우저 `localStorage` 에만 저장하고, 인증번호도 화면에 표시되는 데모 번호를 사용합니다.
 - 티커는 마지막 수집 스냅샷이므로 `지연 표시` 로 표기됩니다.
 - 블로그 초안의 **미리보기**는 본문 이미지를 상대 경로로 보여주고, **복사용 HTML** 은 네이버 발행 기준(운영 도메인)을 그대로 유지합니다.
 
 ## 남은 작업(배포·운영 단계)
 
 1. `public/` 를 실제 호스팅(claredex.com)에 배포하고, 수집기를 cron/스케줄러로 10~30분 주기 실행.
-2. 카카오·구글 OAuth 키 발급 후 소셜 로그인 실연동(현재 버튼은 안내만).
-3. 텔레그램 봇 토큰으로 채널 자동 전송, 이메일 알림 발송.
-4. OpenDART·ECOS 키 등록으로 국내 공시·기준금리 확장.
-5. 회원 로그인 세션·관심자산 알림 저장(현재 프로토타입은 이메일 기반 식별).
+2. 실제 SMS 대행사 규격에 맞춘 `SMS_WEBHOOK_URL` 프록시 연결(현재는 데모 모드로도 전체 흐름 테스트 가능).
+3. Pro 결제(빌링) 연동과 `plan` 기반 권한 게이트, 관심자산 3개 제한·무제한 정책 적용.
+4. 카카오·구글 OAuth 키 발급 후 소셜 로그인 실연동(현재 화면에는 없음).
+5. 텔레그램 봇 토큰으로 채널 자동 전송, 알림톡/이메일 발송.
+6. OpenDART·ECOS 키 등록으로 국내 공시·기준금리 확장.

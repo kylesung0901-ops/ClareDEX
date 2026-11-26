@@ -15,7 +15,9 @@ import socket
 import subprocess
 import sys
 import time
+from datetime import timedelta
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -23,6 +25,7 @@ import config
 
 config.load_env()
 
+import content  # noqa: E402
 import db  # noqa: E402
 import server  # noqa: E402  (운영자 비밀번호·세션 규칙을 한 곳에서 가져온다)
 
@@ -66,13 +69,16 @@ def db_checks() -> None:
     post_cols = {r[1] for r in conn.execute("PRAGMA table_info(posts)")}
     required = {"id", "title", "category", "source_name", "source_grade", "source_url", "source_hash",
                 "verified_at", "summary_lines", "market_impact", "tags", "image_path",
-                "is_member_early", "created_at"}
+                "is_member_early", "created_at", "importance"}
     check(required <= post_cols, "posts 필수 컬럼", ", ".join(sorted(required - post_cols)) or "모두 존재")
     draft_cols = {r[1] for r in conn.execute("PRAGMA table_info(naver_drafts)")}
     check({"post_id", "seo_title", "keywords", "body_html", "body_text", "telegram_cta", "web_cta",
            "image_path"} <= draft_cols, "naver_drafts 필수 컬럼")
     user_cols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
-    check({"email", "name", "provider", "watchlist"} <= user_cols, "users 필수 컬럼")
+    user_required = {"email", "name", "provider", "watchlist", "phone", "phone_verified", "plan", "alerts_enabled"}
+    check(user_required <= user_cols, "users 필수 컬럼 (휴대폰·요금제)",
+          ", ".join(sorted(user_required - user_cols)) or "모두 존재")
+    check("phone_verifications" in tables, "테이블 존재: phone_verifications")
 
     posts = db.list_posts(conn)
     check(len(posts) > 0, "수집된 글 존재", f"{len(posts)}건")
@@ -88,6 +94,36 @@ def db_checks() -> None:
         if "+09:00" not in p["verified_at"]:
             bad.append(p["id"])
     check(not bad, "source_hash = sha256(source_url) · 3줄 요약 · 태그 · KST 확인시각", f"이상 {sorted(set(bad))}" if bad else "전체 정상")
+
+    levels = {p["importance"] for p in posts}
+    check(levels <= set(config.IMPORTANCE_LEVELS), "중요도 값 S/A/B",
+          ", ".join(sorted(levels)) or "없음")
+    check(all(p.get("importance_label") for p in posts), "중요도 라벨 표시 값")
+    check(not any("세부 내용과 수치는 원문에서 확인하세요" in line for p in posts for line in p["summary_lines"]),
+          "천편일률적 안내 문구 제거", "요약 3줄에 반복 문구 없음")
+    rules = [
+        (content.fed_importance("fomc-statement", "", "FOMC statement") == "S", "FOMC 성명 → S"),
+        (content.fed_importance("fomc-minutes", "", "Minutes of the FOMC") == "S", "FOMC 의사록 → S"),
+        (content.fed_importance("regulation", "",
+                                "Agencies announce dollar thresholds for smaller loan exemption from appraisal requirements") == "B",
+         "모기지·면제 기준 행정 발표 → B"),
+        (content.sec_importance("8-K", ["2.02"]) == "S", "8-K 2.02 실적 → S"),
+        (content.sec_importance("10-Q", []) == "A", "10-Q → A"),
+        (content.sec_importance("8-K", ["7.01"]) == "B", "8-K 7.01 → B"),
+        (content.dart_importance("주요사항보고서(유상증자결정)") == "A", "DART 유상증자 → A"),
+    ]
+    check(all(ok for ok, _ in rules), "중요도 분류 규칙",
+          ", ".join(name for ok, name in rules if not ok) or "7개 규칙 통과")
+
+    stats = db.today_stats(conn)
+    check(stats["date"] == config.now_kst().strftime("%Y-%m-%d"), "오늘(KST) 기준일", stats["date"])
+    check(0 <= stats["count"] <= stats["total"], "오늘 확인 건수 ≤ 전체", f"{stats['count']}/{stats['total']}")
+    check(stats["count"] > 0 or stats["recent"] is not None or stats["total"] == 0,
+          "오늘 0건이면 최근 확인일 제공", str(stats["recent"]))
+    future = db.today_stats(conn, now=config.now_kst() + timedelta(days=1))
+    check(future["count"] == 0 and (future["recent"] or future["total"] == 0),
+          "다음 날 기준: 오늘 0건 · 최근 확인 건수 계산",
+          f"0건 · 최근 {future['recent']}")
 
     banned = ("매수하세요", "매도하세요", "수익 보장", "반드시 오릅니다", "목표가")
     dirty = [p["id"] for p in posts if any(b in p["market_impact"] for b in banned)]
@@ -177,10 +213,27 @@ def server_checks(port: int) -> None:
               "메인 히어로·CTA 문구 포함")
         check("실시간 속보" in html and "공식 원문 보기" in html, "타임라인 섹션 마크업 포함")
 
+        flash_tag = ""
+        if 'id="flashSignup"' in html:
+            start = html.rfind("<", 0, html.index('id="flashSignup"'))
+            end = html.index(">", html.index('id="flashSignup"')) + 1
+            flash_tag = html[start:end]
+        check(bool(flash_tag) and "signup.html" in flash_tag and "aria-disabled" not in flash_tag,
+              "긴급 속보 '바로 가입하기' 버튼 활성 (aria-disabled 없음)", flash_tag[:120])
+        check("badge-imp" in html and "badge-s" in html and "id=\"eventList\"" in html,
+              "중요도 배지 · 공식 일정 목록 마크업")
+        check("id=\"plans\"" in html and "PRO" in html and "무지연 속보" in html,
+              "무료 회원 혜택 · Pro 플랜 안내")
+        check("id=\"countLine\"" in html and "오늘 확인" in html, "오늘 확인 건수 표기")
+
         status, headers, raw = http(base + "/signup.html")
-        check(status == 200 and "10초" in raw.decode("utf-8", "replace"), "GET /signup.html → 200", f"HTTP {status}")
+        signup_html = raw.decode("utf-8", "replace")
+        check(status == 200 and "휴대폰 인증" in signup_html and "인증번호 받기" in signup_html,
+              "GET /signup.html → 200 (휴대폰 인증 흐름)", f"HTTP {status}")
+        check('id="phone"' in signup_html and 'id="code"' in signup_html and "관심자산" in signup_html,
+              "회원가입: 번호 입력 → 인증번호 → 관심자산 단계")
         status, _, raw = http(base + "/signup")
-        check(status == 200 and "카카오" in raw.decode("utf-8", "replace"), "GET /signup (기존 404 경로) → 200")
+        check(status == 200 and "휴대폰" in raw.decode("utf-8", "replace"), "GET /signup (기존 404 경로) → 200")
 
         status, headers, raw = http(base + "/admin")
         admin_html = raw.decode("utf-8", "replace")
@@ -214,17 +267,32 @@ def server_checks(port: int) -> None:
         posts = json.loads(raw)
         check(status == 200 and posts.get("count", 0) > 0, "GET /api/posts → 200 + 글 목록", f"{posts.get('count')}건")
         first = (posts.get("posts") or [{}])[0]
-        check(all(k in first for k in ("title", "summary_lines", "market_impact", "tags", "source_url", "verified_at")),
-              "글 응답 필드 완전성")
+        check(all(k in first for k in ("title", "summary_lines", "market_impact", "tags", "source_url", "verified_at",
+                                        "importance", "importance_label")),
+              "글 응답 필드 완전성 (중요도 포함)")
+
+        status, _, raw = http(base + "/api/stats")
+        api_stats = json.loads(raw)
+        with db.session() as conn:
+            expected = db.today_stats(conn)
+        check(status == 200 and api_stats.get("today", {}).get("date") == expected["date"]
+              and api_stats.get("today", {}).get("count") == expected["count"],
+              "GET /api/stats → 오늘(KST) 확인 건수", f"{api_stats.get('today', {}).get('count')}건")
+
+        status, _, raw = http(base + "/api/plans")
+        plans = json.loads(raw)
+        check(status == 200 and {"free", "pro"} <= set(plans.get("plans", {}))
+              and plans.get("sms_mode") in ("demo", "live"),
+              "GET /api/plans → 무료/Pro 플랜·SMS 모드", str(plans.get("sms_mode")))
 
         status, _, raw = http(base + "/api/posts?category=macro")
         macro = json.loads(raw)
         check(status == 200 and macro["posts"] and all(p["category"] == "macro" for p in macro["posts"]),
               "GET /api/posts?category=macro 필터")
 
-        status, _, raw = http(base + "/api/posts?q=FOMC")
+        status, _, raw = http(base + "/api/posts?q=" + urllib.parse.quote("연준"))
         q = json.loads(raw)
-        check(status == 200 and q.get("count", 0) >= 1, "GET /api/posts?q=FOMC 검색", f"{q.get('count')}건")
+        check(status == 200 and q.get("count", 0) >= 1, "GET /api/posts?q=연준 검색", f"{q.get('count')}건")
 
         status, _, raw = http(base + "/api/admin/session")
         sess = json.loads(raw)
@@ -255,9 +323,12 @@ def server_checks(port: int) -> None:
         check(status == 200 and json.loads(raw).get("authenticated") is True,
               "로그인 후 GET /api/admin/session → authenticated:true")
 
+        with db.session() as conn:
+            expected_drafts = db.count_drafts(conn)
         status, _, raw = http(base + "/api/naver-drafts", cookie=admin_cookie)
         drafts = json.loads(raw)
-        check(status == 200 and drafts.get("count") == 9, "로그인 후 GET /api/naver-drafts → 200 · 9건",
+        check(status == 200 and drafts.get("count") == expected_drafts,
+              f"로그인 후 GET /api/naver-drafts → 200 · {expected_drafts}건",
               f"HTTP {status} · {drafts.get('count')}건")
         d0 = (drafts.get("drafts") or [{}])[0]
         check("t.me/Clare_PerpDEX" in d0.get("body_html", "") and d0.get("seo_title"),
@@ -271,7 +342,13 @@ def server_checks(port: int) -> None:
 
         status, _, raw = http(base + "/api/calendar")
         cal = json.loads(raw)
-        check(status == 200 and len(cal.get("events", [])) >= 1, "GET /api/calendar → 200", f"{len(cal.get('events', []))}건")
+        evs = cal.get("events", [])
+        check(status == 200 and len(evs) >= 3, "GET /api/calendar → 공식 일정 3건 이상", f"{len(evs)}건")
+        required_ev = ("id", "title", "org", "datetime_kst", "local_time", "source_url", "note", "importance")
+        blank = [e.get("id") for e in evs if any(not str(e.get(k) or "").strip() for k in required_ev)]
+        check(not blank, "공식 일정 빈 값(—) 없음", str(blank) if blank else "모든 항목 채워짐")
+        check(all("+09:00" in e["datetime_kst"] for e in evs), "공식 일정 KST 시각")
+        check(evs == sorted(evs, key=lambda e: e["datetime_kst"]), "공식 일정 시간순 정렬")
 
         email = f"verify-{int(time.time())}@claredex.test"
         status, _, raw = http(base + "/api/signup", "POST",
@@ -297,6 +374,60 @@ def server_checks(port: int) -> None:
             conn.execute("DELETE FROM users WHERE email = ?", (email,))
             conn.commit()
         check(stored == ["BTC", "ETH", "나스닥", "NVDA"], "관심자산 SQLite 저장 확인", str(stored))
+
+        # ---------------------------------------------------------- 휴대폰 인증 가입
+        phone = "010" + str(int(time.time()))[-8:]
+        status, _, raw = http(base + "/api/phone/send-code", "POST", {"phone": phone})
+        sent = json.loads(raw)
+        dev_code = str(sent.get("dev_code") or "")
+        check(status == 200 and sent.get("demo") is True and len(dev_code) == 6,
+              "POST /api/phone/send-code → 데모 모드 인증번호 발급",
+              f"HTTP {status} · demo={sent.get('demo')}")
+        check(sent.get("notice") and sent.get("sms_mode") == "demo",
+              "데모 모드 안내 문구 포함", str(sent.get("sms_mode")))
+
+        status, headers, raw = http(base + "/api/phone/send-code", "POST", {"phone": "02-123-4567"})
+        check(status == 400, "잘못된 휴대폰 번호 → 400", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/phone/verify-code", "POST",
+                              {"phone": phone, "code": "000000"})
+        check(status == 400 and "올바르지 않습니다" in json.loads(raw).get("error", ""),
+              "틀린 인증번호 → 400", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/phone/verify-code", "POST", {"phone": phone, "code": dev_code})
+        verified = json.loads(raw)
+        token = str(verified.get("verification_token") or "")
+        check(status == 200 and len(token) >= 20, "POST /api/phone/verify-code → 인증 토큰", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"phone": phone, "watchlist": ["BTC"], "provider": "phone"})
+        check(status == 400 and json.loads(raw).get("need") == "phone_verification",
+              "인증 토큰 없는 휴대폰 가입 → 400", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"phone": phone, "name": "인증검증", "provider": "phone",
+                               "verification_token": token, "watchlist": ["BTC", "ETH", "NVDA"]})
+        ph_user = json.loads(raw)
+        check(status == 201 and ph_user.get("user", {}).get("phone_verified") is True
+              and ph_user.get("user", {}).get("plan") == "free",
+              "POST /api/signup (휴대폰 인증) → 201 · phone_verified · plan:free", f"HTTP {status}")
+        check(ph_user.get("user", {}).get("watchlist") == ["BTC", "ETH", "NVDA"],
+              "휴대폰 가입 관심자산 저장", str(ph_user.get("user", {}).get("watchlist")))
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"phone": phone, "verification_token": token, "watchlist": []})
+        check(status == 401, "인증 토큰 재사용 → 401", f"HTTP {status}")
+
+        with db.session() as conn:
+            row = conn.execute("SELECT phone_verified, plan, alerts_enabled, watchlist FROM users WHERE phone = ?",
+                               (phone,)).fetchone()
+            stored_phone = dict(row) if row else None
+            conn.execute("DELETE FROM users WHERE phone = ?", (phone,))
+            conn.execute("DELETE FROM phone_verifications WHERE phone = ?", (phone,))
+            conn.commit()
+        check(bool(stored_phone) and stored_phone["phone_verified"] == 1 and stored_phone["plan"] == "free"
+              and stored_phone["alerts_enabled"] == 1,
+              "SQLite: phone_verified·plan·alerts_enabled 저장", str(stored_phone))
 
         status, _, raw = http(base + "/api/signup", "POST", {"email": "not-an-email"})
         check(status == 400 and "이메일" in json.loads(raw).get("error", ""), "잘못된 이메일 → 400")
@@ -333,6 +464,25 @@ def static_checks() -> None:
               "public/data/naver-drafts.json 내보내지 않음 (공개 호스팅 차단)",
               str(drafts_snapshot) if drafts_snapshot.exists() else "파일 없음")
         check((config.PUBLIC_DIR / "data" / "posts.json").exists(), "public/data/posts.json 정상 생성")
+        stats_path = config.PUBLIC_DIR / "data" / "stats.json"
+        check(stats_path.exists(), "public/data/stats.json 정상 생성")
+        if stats_path.exists():
+            snap = json.loads(stats_path.read_text(encoding="utf-8"))
+            check(snap.get("today", {}).get("date") and "count" in snap.get("today", {}),
+                  "stats.json: 오늘(KST) 확인 건수")
+        posts_path = config.PUBLIC_DIR / "data" / "posts.json"
+        if posts_path.exists():
+            snap_posts = json.loads(posts_path.read_text(encoding="utf-8")).get("posts") or []
+            check(bool(snap_posts) and all(p.get("importance") in config.IMPORTANCE_LEVELS for p in snap_posts),
+                  "posts.json: 중요도 S/A/B 포함")
+        cal_path = config.PUBLIC_DIR / "data" / "calendar.json"
+        if cal_path.exists():
+            snap_cal = json.loads(cal_path.read_text(encoding="utf-8"))
+            evs = snap_cal.get("events") or []
+            blank = [e.get("id") for e in evs if any(not str(e.get(k) or "").strip()
+                                                      for k in ("org", "local_time", "note", "source_url"))]
+            check(len(evs) >= 3 and not blank, "calendar.json: 3건 이상 · 빈 값 없음",
+                  f"{len(evs)}건" + (f" · 빈 값 {blank}" if blank else ""))
 
     index_html = (config.PUBLIC_DIR / "index.html").read_text(encoding="utf-8")
     signup_html = (config.PUBLIC_DIR / "signup.html").read_text(encoding="utf-8")

@@ -28,11 +28,129 @@ def _short(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
+def importance_label(level: str) -> str:
+    return config.IMPORTANCE_LEVELS.get(level, config.IMPORTANCE_LEVELS[config.IMPORTANCE_DEFAULT])["label"]
+
+
+def subject_particle(name: str) -> str:
+    """한글 이름 뒤 주격 보조사(은/는)를 받침 여부로 고른다."""
+    text = _clean(name)
+    if not text:
+        return "는"
+    last = text[-1]
+    if "가" <= last <= "힣":
+        return "은" if (ord(last) - 0xAC00) % 28 else "는"
+    return "은" if last.isdigit() or last.isalpha() else "는"
+
+
+# ---------------------------------------------------------------- 중요도 등급
+
+# 연준 보도자료 URL 의 경로 접두어는 발표 유형을 그대로 보여준다(추측이 아니라 원문 주소 기반).
+FED_URL_KINDS = {
+    "bcreg": "은행 규제",
+    "enforce": "제재·시정조치",
+    "monetary": "통화정책",
+    "orders": "은행 지주회사 명령",
+    "other": "기타 발표",
+    "press": "보도자료",
+    "bcmin": "은행 규제",
+}
+
+# 지엽적 행정·행사성 발표는 B(일반)로 둔다.
+NARROW_FED_KEYWORDS = (
+    "mortgage", "exemption", "criteria", "fee schedule", "fees for", "dollar thresholds",
+    "holiday", "challenge", "award", "winners", "appoint", "names new",
+    "obituary", "in memoriam",
+)
+
+
+def fed_kind_from_url(url: str) -> str:
+    m = re.search(r"/pressreleases/([a-z]+)\d", url or "")
+    if m:
+        return FED_URL_KINDS.get(m.group(1), "보도자료")
+    return "보도자료"
+
+
+def fed_importance(topic: str, url: str = "", title: str = "") -> str:
+    """FOMC·CPI·고용 같은 시장 전반 이벤트는 S/A, 지엽적 행정 발표는 B."""
+    if topic in ("fomc-statement", "fomc-minutes"):
+        return "S"
+    if topic in ("discount-rate-minutes", "loan-thresholds", "appraisal-exemption"):
+        return "B"
+    lowered = (title or "").lower()
+    if any(k in lowered for k in NARROW_FED_KEYWORDS):
+        return "B"
+    if topic == "regulation":
+        # 자본·스트레스테스트·최종규칙처럼 업권 비용을 바꾸는 규제는 A.
+        if any(k in lowered for k in ("capital", "stress test", "final rule")):
+            return "A"
+        return "B"
+    if topic == "enforcement":
+        # 개별 기관 제재는 업권 이슈로, 시장 전체 S/A 보다는 B.
+        return "B"
+    return "B"
+
+
+def sec_importance(form: str, items: list[str]) -> str:
+    """빅테크 실적 공시(8-K 2.02)는 S, 정기보고서·주요 수시공시는 A."""
+    if form == "8-K" and "2.02" in items:
+        return "S"
+    if form in ("10-Q", "10-K"):
+        return "A"
+    if form == "8-K" and any(code in ("1.01", "2.01", "2.03", "3.01", "4.02", "5.01", "5.02") for code in items):
+        return "A"
+    return "B"
+
+
+DART_MAJOR_KEYWORDS = (
+    "잠정", "실적", "유상증자", "무상증자", "전환사채", "신주인수권", "교환사채",
+    "최대주주", "횡령", "배임", "상장폐지", "불성실", "감사의견", "합병", "분할",
+)
+
+
+def dart_importance(report: str) -> str:
+    text = report or ""
+    if any(k in text for k in ("잠정", "실적")):
+        return "A"
+    if any(k in text for k in DART_MAJOR_KEYWORDS):
+        return "A"
+    return "B"
+
+
+def classify_post_importance(post: dict) -> str:
+    """이미 저장된 글(제목·주제·요약)에서 등급을 다시 계산한다(마이그레이션·백필용)."""
+    topic = str(post.get("topic") or "")
+    title = str(post.get("title") or "")
+    source = str(post.get("source_name") or "")
+    if topic in ("fomc-statement", "fomc-minutes") or "연준" in source:
+        return fed_importance(topic, str(post.get("source_url") or ""), title)
+    if "SEC" in source:
+        form = ""
+        for candidate in ("10-K", "10-Q", "8-K"):
+            if candidate in title:
+                form = candidate
+                break
+        items: list[str] = []
+        for line in post.get("summary_lines") or []:
+            if "신고 항목" in line:
+                labels = [part.strip() for part in line.split("신고 항목:", 1)[-1].split(",")]
+                reverse = {label: code for code, label in FORM8K_ITEMS.items()}
+                items = [reverse[label] for label in labels if label in reverse]
+        return sec_importance(form, items)
+    if "DART" in source:
+        return dart_importance(title)
+    return config.IMPORTANCE_DEFAULT
+
+
 # ---------------------------------------------------------------- 연준 RSS
 
 FED_RULES: list[tuple[str, list[str], str, str]] = [
     # (topic, keywords, 한국어 요지, 화면용 주제키)
     ("fomc-minutes", ["minutes of the federal open market committee"], "연준, FOMC 의사록 공개", "fomc-minutes"),
+    ("discount-rate-minutes", ["discount rate meetings"], "연준, 지역연준 할인율 회의 의사록 공개", "discount-rate-minutes"),
+    ("loan-thresholds", ["truth in lending", "consumer leasing"], "연준, 소비자금융 규제 기준 금액 발표", "loan-thresholds"),
+    ("appraisal-exemption", ["smaller loan exemption", "appraisal requirements"], "연준, 소액 대출 감정평가 면제 기준 발표", "appraisal-exemption"),
+    ("loan-thresholds", ["dollar thresholds"], "연준, 소액 대출 면제 기준 금액 발표", "loan-thresholds"),
     ("fomc-statement", ["fomc statement", "statement on monetary policy"], "연준, FOMC 성명 발표", "fomc-statement"),
     ("enforcement", ["enforcement action"], "연준, 금융기관 제재·시정조치 발표", "enforcement"),
     ("survey", ["survey"], "연준, 금융기관 대상 조사 결과 공개", "survey"),
@@ -46,26 +164,88 @@ FED_RULES: list[tuple[str, list[str], str, str]] = [
 
 FED_IMPACT = {
     "fomc-minutes": (
-        "정책금리 경로에 대한 단서가 담길 수 있어 금리에 민감한 나스닥·성장주·비트코인의 "
-        "변동성 요인이 됩니다. 방향은 원문 표현과 시장 반응으로 확인이 필요합니다."
+        "금리 경로를 가늠하는 문구가 담기는 문서로, 달러·미 국채 10년물 금리·나스닥 성장주·비트코인의 "
+        "할인율 가정에 직접 영향을 줄 수 있습니다. 위원별 금리 전망 표현의 변화가 확인 포인트입니다."
     ),
     "fomc-statement": (
-        "정책금리 결정문으로, 달러·미 국채금리·위험자산 전반의 할인율 가정에 직접 영향을 줄 수 있습니다."
+        "정책금리 결정과 성명 문구가 함께 나오는 발표로, 달러·미 국채금리·나스닥·비트코인의 "
+        "할인율 가정이 이 문구에 반응할 수 있습니다. 금리 결정과 향후 경로 문구를 함께 봐야 합니다."
     ),
     "enforcement": (
-        "개별 금융기관에 대한 제재로, 해당 기관과 업권의 규제 리스크 인식에 영향을 줄 수 있습니다."
+        "특정 금융기관에 대한 제재·시정조치로, 그 기관과 같은 업권(은행·지주)의 규제 비용 인식에 "
+        "영향을 줄 수 있습니다. 제재 대상과 사유가 원문에 적힌 그대로인지가 확인 포인트입니다."
     ),
     "survey": (
-        "은행의 유동성·자금 관리 행태를 보여주는 자료로, 단기 자금시장과 금리 해석의 참고가 됩니다."
+        "은행의 유동성·자금 관리 행태를 보여주는 조사로, 단기 자금시장(SOFR·단기 국채)과 "
+        "지급준비금 해석의 참고 자료가 됩니다. 은행·금융주 투자 심리에 간접적으로 닿을 수 있습니다."
     ),
     "payments": (
-        "은행·핀테크의 수수료 구조와 관련된 항목으로, 결제 업권의 비용 구조에 영향을 줄 수 있습니다."
+        "지급결제·수수료 제도 관련 발표로, 은행·핀테크·결제대행 업권의 비용 구조에 "
+        "영향을 줄 수 있습니다. 적용 시점과 대상 기관이 확인 포인트입니다."
     ),
     "regulation": (
-        "규제 방향성과 적용 시점에 대한 발표로, 해당 업권의 비용과 밸류에이션 가정에 영향을 줄 수 있습니다."
+        "금융규제 방향과 적용 시점을 담은 발표로, 은행·금융지주·핀테크의 자본 비용과 "
+        "밸류에이션 가정에 영향을 줄 수 있습니다. 최종규칙인지 제안 단계인지가 핵심입니다."
     ),
     "general-macro": (
-        "매크로 정책 관련 공식 발표로, 금리·달러·위험자산 심리에 간접적으로 영향을 줄 수 있습니다."
+        "연준이 공개한 공식 자료로, 달러·금리·위험자산 심리에 닿을 수 있습니다. "
+        "다만 발표 유형(규제·조사·지급결제·행사)에 따라 시장 파급력이 크게 달라집니다."
+    ),
+    "discount-rate-minutes": (
+        "지역연준이 권고한 할인율(discount rate) 결정을 담은 의사록으로, 연준의 유동성 공급 창구 "
+        "금리 운용을 보여줍니다. 단기 자금시장과 은행 조달 비용 해석의 참고 자료입니다."
+    ),
+    "loan-thresholds": (
+        "소비자신용·리스 거래에 규제가 적용되는 기준 금액을 정하는 행정적 발표로, "
+        "카드·캐피탈·은행 소비자금융의 실무 기준에 닿습니다. 주가·금리 방향에 대한 직접 영향은 제한적입니다."
+    ),
+    "appraisal-exemption": (
+        "고가 주택담보대출의 감정평가 요건을 면제하는 소액 대출 기준을 정하는 발표로, "
+        "모기지·주택담보대출 업권의 실무 기준에 닿습니다. 주가·금리 방향에 대한 직접 영향은 제한적입니다."
+    ),
+}
+
+# 요약 3번째 줄: 문서 유형별로 '원문에서 무엇을 확인해야 하는지'를 구체적으로 적는다.
+FED_DETAIL = {
+    "fomc-minutes": (
+        "의사록은 회의에서 논의된 정책금리 경로와 경기 판단을 담는 문서입니다. "
+        "금리 인하·동결·인상 논의의 강도와 위원별 전망 표현이 원문에서 확인할 항목입니다."
+    ),
+    "fomc-statement": (
+        "성명서는 정책금리 결정과 함께 향후 금리 경로에 대한 위원회 문구를 담습니다. "
+        "직전 회의 성명과 달라진 문장이 원문에서 확인할 항목입니다."
+    ),
+    "enforcement": (
+        "제재·시정조치 발표는 대상 기관, 사유, 부과된 조치를 담습니다. "
+        "해당 기관명과 조치 내용이 원문에서 확인할 항목입니다."
+    ),
+    "survey": (
+        "조사 결과는 은행의 유동성·자금 관리 행태에 대한 응답을 담습니다. "
+        "조사 대상과 응답 항목이 원문에서 확인할 항목입니다."
+    ),
+    "payments": (
+        "지급결제 관련 발표는 수수료·서비스 제도와 적용 시점을 담습니다. "
+        "적용 대상과 시행 일자가 원문에서 확인할 항목입니다."
+    ),
+    "regulation": (
+        "금융규제 발표는 규제 내용과 적용 범위, 최종규칙·제안 단계 여부를 담습니다. "
+        "의견수렴 기간과 시행 시점이 원문에서 확인할 항목입니다."
+    ),
+    "general-macro": (
+        "연준 보도자료는 은행 규제·조사·지급결제·행사 등 여러 유형이 있습니다. "
+        "원문 주소의 발표 유형과 제목에 적힌 주제가 확인할 항목입니다."
+    ),
+    "discount-rate-minutes": (
+        "의사록은 각 지역연준이 권고한 할인율과 그 배경을 담습니다. "
+        "지역별 권고 수준과 반대 의견 여부가 원문에서 확인할 항목입니다."
+    ),
+    "loan-thresholds": (
+        "발표는 소비자신용·리스 거래에 규제가 적용되는 기준 금액과 시행 시점을 담습니다. "
+        "기준 금액과 시행일이 원문에서 확인할 항목입니다."
+    ),
+    "appraisal-exemption": (
+        "발표는 고가 주택담보대출의 감정평가 요건을 면제하는 소액 대출 기준 금액과 적용 시점을 담습니다. "
+        "기준 금액과 시행일이 원문에서 확인할 항목입니다."
     ),
 }
 
@@ -81,6 +261,12 @@ def classify_fed(title: str) -> tuple[str, str]:
 def fed_post(item: dict, verified_at: str) -> dict:
     title = _clean(item.get("title"))
     gist, topic = classify_fed(title)
+    url = item["link"]
+    if topic == "general-macro":
+        # 제목만으로 분류되지 않으면 원문 주소의 발표 유형을 덧붙여 더 구체적으로 만든다.
+        kind = fed_kind_from_url(url)
+        if "공식 보도자료" in gist:
+            gist = f"연준, {kind} 보도자료 공개"
     published = item.get("published_kst")  # datetime
     published_iso = config.iso_kst(published) if published else None
     published_label = config.fmt_kst(published, "%Y-%m-%d %H:%M") if published else "확인 불가"
@@ -93,24 +279,30 @@ def fed_post(item: dict, verified_at: str) -> dict:
             span = m.group(2) + ("~" + m.group(3) if m.group(3) else "")
             extra = f" ({month}월 {span}일 회의, {m.group(4)})"
 
+    when_line = (
+        f"미 연방준비제도(Fed)가 {published_label} KST에 보도자료를 공개했습니다."
+        if published else
+        "미 연방준비제도(Fed)가 공식 보도자료를 공개했습니다(발표 시각은 원문에서 확인 필요)."
+    )
     summary = [
-        f"미 연방준비제도(Fed)가 {published_label} KST에 공식 보도자료를 공개했습니다.",
+        when_line,
         f"원문 제목: {_short(title, 160)}",
-        "연준 공식 RSS에서 제목·링크·발표 시각을 직접 확인했습니다. 세부 내용과 수치는 원문에서 확인하세요.",
+        FED_DETAIL.get(topic, FED_DETAIL["general-macro"]),
     ]
     return {
         "title": f"{gist}{extra}",
         "category": "macro",
         "source_name": "미 연방준비제도(Fed)",
         "source_grade": config.SOURCE_GRADES["primary"],
-        "source_url": item["link"],
-        "source_hash": sha256_url(item["link"]),
+        "source_url": url,
+        "source_hash": sha256_url(url),
         "verified_at": verified_at,
         "summary_lines": summary,
         "market_impact": FED_IMPACT.get(topic, FED_IMPACT["general-macro"]),
         "tags": _fed_tags(topic),
         "published_at": published_iso,
         "topic": topic,
+        "importance": fed_importance(topic, url, title),
     }
 
 
@@ -124,6 +316,14 @@ def _fed_tags(topic: str) -> list[str]:
         base += ["규제", "금융주"]
     elif topic == "payments":
         base += ["은행", "핀테크"]
+    elif topic == "discount-rate-minutes":
+        base += ["은행", "유동성"]
+    elif topic == "loan-thresholds":
+        base += ["규제", "은행"]
+    elif topic == "appraisal-exemption":
+        base += ["규제", "모기지"]
+    elif topic == "survey":
+        base += ["은행"]
     return list(dict.fromkeys(base))
 
 
@@ -166,14 +366,34 @@ FORM8K_ITEMS = {
 }
 
 SEC_IMPACT = {
-    "2.02": "실적 관련 수시공시로, 공개된 매출·이익이 시장 기대와 비교되며 주가에 직접 영향을 줄 수 있습니다.",
-    "5.02": "경영진 변동 공시로, 전략의 연속성에 대한 시장 판단에 영향을 줄 수 있습니다.",
-    "1.01": "주요 계약 공시로, 향후 매출과 비용 구조 해석에 영향을 줄 수 있습니다.",
-    "2.03": "자금조달 관련 공시로, 재무구조와 이자비용 해석에 영향을 줄 수 있습니다.",
-    "7.01": "기업이 자발적으로 공개한 정보로, 해당 종목과 동종 업종 심리에 영향을 줄 수 있습니다.",
-    "8.01": "기업이 공개한 주요 사항으로, 해당 종목의 수급에 영향을 줄 수 있습니다.",
-    "10-Q": "분기 실적과 재무 상태를 보여주는 정기 보고서로, 직전 분기 대비 변화가 주가에 영향을 줄 수 있습니다.",
-    "10-K": "연간 사업 구조와 위험 요인을 담은 보고서로, 중장기 밸류에이션 가정에 영향을 줄 수 있습니다.",
+    "2.02": "실적·재무 상태 공시로, 첨부된 실적 자료의 매출·이익과 가이던스가 직전 분기와 시장 기대에 비교되며 주가에 직접 영향을 줄 수 있습니다.",
+    "5.02": "임원·이사 선임 또는 사임 공시로, 전략의 연속성과 지배구조에 대한 시장 판단에 영향을 줄 수 있습니다.",
+    "1.01": "주요 계약 체결 공시로, 계약 상대와 기간·금액이 향후 매출과 비용 구조 해석의 기준이 됩니다.",
+    "2.01": "자산 취득·처분 완료 공시로, 사업 구성과 손익 구조 변화에 영향을 줄 수 있습니다.",
+    "2.03": "직접 금융채무 발생 공시로, 재무구조와 이자비용 해석에 영향을 줄 수 있습니다.",
+    "3.01": "상장 유지 요건 미충족 통지 공시로, 해당 종목의 거래·수급에 직접 영향을 줄 수 있습니다.",
+    "4.02": "이전 재무제표 신뢰 불가 공시로, 기업의 회계 신뢰성과 주가에 큰 영향을 줄 수 있습니다.",
+    "5.01": "통제권 변경 공시로, 최대주주·경영진 교체와 향후 전략 변화에 영향을 줄 수 있습니다.",
+    "7.01": "기업이 자발적으로 공개한 정보로, 해당 종목과 동종 업종 투자 심리에 영향을 줄 수 있습니다.",
+    "8.01": "기업이 공개한 주요 사항으로, 해당 종목의 수급과 업종 비교에 영향을 줄 수 있습니다.",
+    "10-Q": "분기 재무제표와 경영진 논의(MD&A)를 담은 보고서로, 직전 분기 대비 매출·이익과 비용 구조 변화가 주가에 영향을 줄 수 있습니다.",
+    "10-K": "연간 재무제표와 사업 구조·위험 요인을 담은 보고서로, 전년 대비 변화가 중장기 밸류에이션 가정에 영향을 줄 수 있습니다.",
+}
+
+SEC_DETAIL = {
+    "2.02": "2.02(실적 및 재무 상태) 항목은 매출·이익 등 실적과 재무 상태를 다루는 공시입니다. 첨부된 실적 자료의 수치가 직전 분기와 비교할 대상입니다.",
+    "1.01": "1.01(주요 계약 체결) 항목은 계약 상대·기간·금액을 담습니다. 계약 규모와 매출 인식 시점이 원문에서 확인할 항목입니다.",
+    "2.01": "2.01(자산 취득·처분 완료) 항목은 거래 대상과 규모를 담습니다. 거래 금액과 손익 반영 시점이 원문에서 확인할 항목입니다.",
+    "2.03": "2.03(직접 금융채무 발생) 항목은 조달 금액과 조건을 담습니다. 금리·만기가 재무비용 해석의 기준입니다.",
+    "3.01": "3.01(상장 유지 요건 미충족 통지) 항목은 통지 사유와 시정 기간을 담습니다. 거래 정지·상장폐지 가능성이 확인할 항목입니다.",
+    "4.02": "4.02(이전 재무제표 신뢰 불가) 항목은 재작성 대상 기간과 사유를 담습니다. 회계 처리 변경 범위가 확인할 항목입니다.",
+    "5.01": "5.01(통제권 변경) 항목은 새 최대주주와 지분율을 담습니다. 경영진 교체 여부가 확인할 항목입니다.",
+    "5.02": "5.02(임원·이사 선임 또는 사임) 항목은 인사와 사유를 담습니다. 후임·권한 변화가 확인할 항목입니다.",
+    "7.01": "7.01(Regulation FD) 항목은 기업이 선택 공개한 정보를 담습니다. 공개 경로와 내용이 확인할 항목입니다.",
+    "8.01": "8.01(기타 주요 사건) 항목은 위 항목에 속하지 않는 주요 사항을 담습니다. 사건의 성격과 규모가 확인할 항목입니다.",
+    "10-Q": "10-Q는 분기 재무제표와 경영진 논의(MD&A)를 담습니다. 매출·영업이익·현금흐름의 직전 분기 대비 변화가 확인할 항목입니다.",
+    "10-K": "10-K는 연간 재무제표와 사업 구조·위험 요인을 담습니다. 부문별 매출과 위험 요인 문구의 전년 대비 변화가 확인할 항목입니다.",
+    "8-K": "8-K는 주요 사건을 수시로 공시하는 서식입니다. 신고 항목과 첨부 서류가 원문에서 확인할 항목입니다.",
 }
 
 
@@ -198,19 +418,26 @@ def sec_post(company: dict, filing: dict, verified_at: str) -> dict:
         published = datetime.fromisoformat(acceptance.replace("Z", "+00:00")).astimezone(config.KST)
     published_label = config.fmt_kst(published, "%Y-%m-%d %H:%M") if published else f"{filing_date} (접수일)"
 
-    summary = [
-        f"{company['name']}({company['ticker']})가 {filing_date} 미 SEC에 {form}({form_ko})를 제출했습니다.",
-        f"접수번호 {filing.get('accessionNumber')} · 회계기준일 {report_date}"
-        + (f" · 신고 항목: {', '.join(item_labels)}" if item_labels else ""),
-        f"{form}는 {form_desc} 공개 시각은 {published_label} KST입니다.",
-    ]
+    name_ko = company.get("name_ko") or company["name"]
     impact_key = form
     if form == "8-K" and items:
         for code in items:
             if code in SEC_IMPACT:
                 impact_key = code
                 break
-    name_ko = company.get("name_ko") or company["name"]
+    detail = SEC_DETAIL.get(impact_key) or SEC_DETAIL.get(form) or SEC_DETAIL["8-K"]
+    access_line = (
+        f"접수번호 {filing.get('accessionNumber')} · 회계기준일 {report_date}"
+        + (f" · 신고 항목: {', '.join(item_labels)}" if item_labels else "")
+        + f" · 접수 시각 {published_label} KST"
+    )
+    summary = [
+        f"{company['name']}({company['ticker']})가 {filing_date} 미 SEC에 {form}({form_ko})를 제출했습니다.",
+        access_line,
+        detail,
+    ]
+    sector = company.get("sector") or "미국주식"
+    sector_phrase = f"{sector} 업종" if sector != "미국주식" else "미국주식 종목"
     return {
         "title": f"{name_ko}({company['ticker']}), {form} {form_ko} 제출 ({filing_date})",
         "category": "us-stock",
@@ -220,10 +447,15 @@ def sec_post(company: dict, filing: dict, verified_at: str) -> dict:
         "source_hash": sha256_url(sec_index_url(company["cik"], filing["accessionNumber"])),
         "verified_at": verified_at,
         "summary_lines": summary,
-        "market_impact": SEC_IMPACT.get(impact_key, SEC_IMPACT.get(form, "개별 기업 공시로, 해당 종목과 동종 업종 심리에 영향을 줄 수 있습니다.")),
-        "tags": list(dict.fromkeys([company["ticker"], "나스닥", "미국주식", company["sector"], "공시"])),
+        "market_impact": (
+            f"{name_ko}({company['ticker']}){subject_particle(name_ko)} {sector_phrase}으로, 이 공시가 같은 업종 종목과 "
+            f"나스닥 성장주 수급에 영향을 줄 수 있습니다. "
+            + SEC_IMPACT.get(impact_key, SEC_IMPACT.get(form, "개별 기업 공시로, 해당 종목과 동종 업종 심리에 영향을 줄 수 있습니다."))
+        ),
+        "tags": list(dict.fromkeys([company["ticker"], "나스닥", "미국주식", sector, "공시"])),
         "published_at": config.iso_kst(published) if published else None,
         "topic": "earnings" if form == "8-K" and "2.02" in items else "filing",
+        "importance": sec_importance(form, items),
     }
 
 
@@ -241,6 +473,20 @@ def dart_post(row: dict, verified_at: str) -> dict:
         from datetime import datetime
 
         published = datetime.strptime(rcept_dt, "%Y%m%d").replace(tzinfo=config.KST)
+    if "정기" in report or "사업보고서" in report or "분기보고서" in report or "반기보고서" in report:
+        detail = ("정기보고서는 직전 보고서 대비 매출·영업이익과 재무 상태 변화를 담습니다. "
+                  "부문별 실적과 부채비율 변화가 원문에서 확인할 항목입니다.")
+        impact = (f"국내 상장사 {corp}의 정기보고서로, 같은 업종 종목과 코스피 수급에 "
+                  f"영향을 줄 수 있습니다. 매출·영업이익의 직전 보고서 대비 변화가 확인 포인트입니다.")
+    elif "주요사항" in report:
+        detail = ("주요사항보고서는 공시 사유와 금액·일정을 담습니다. "
+                  "거래 금액과 이사회 결의일이 원문에서 확인할 항목입니다.")
+        impact = (f"{corp}의 주요사항보고서로, 자본·지배구조 변화가 해당 종목과 업종 수급에 "
+                  f"영향을 줄 수 있습니다. 공시 사유와 금액이 확인 포인트입니다.")
+    else:
+        detail = "공시 유형과 첨부 문서가 원문에서 확인할 항목입니다."
+        impact = (f"국내 상장사 {corp}의 공시로, 해당 종목과 업종 수급에 영향을 줄 수 있습니다. "
+                  f"공시 유형({report})에 따라 확인할 항목이 달라집니다.")
     return {
         "title": f"{corp} {report}",
         "category": "kr-stock",
@@ -252,12 +498,13 @@ def dart_post(row: dict, verified_at: str) -> dict:
         "summary_lines": [
             f"{corp}가 금융감독원 전자공시(DART)에 「{report}」을 공시했습니다.",
             f"접수번호 {rcept_no} · 접수일 {rcept_dt}",
-            "DART 공시 목록 API에서 기업명·보고서명·접수번호를 직접 확인했습니다. 세부 내용은 원문에서 확인하세요.",
+            detail,
         ],
-        "market_impact": "국내 상장사의 공시로, 해당 종목과 업종 수급에 영향을 줄 수 있습니다. 내용의 성격은 원문에서 확인이 필요합니다.",
+        "market_impact": impact,
         "tags": list(dict.fromkeys([corp, "국내주식", "공시"])),
         "published_at": config.iso_kst(published) if published else None,
         "topic": "filing",
+        "importance": dart_importance(report),
     }
 
 
@@ -271,6 +518,9 @@ TOPIC_HOOKS = {
     "payments": ("결제 업권 영향", ["연준", "지급결제", "수수료", "핀테크", "은행"]),
     "regulation": ("규제 변화 체크", ["연준", "금융규제", "자본규제", "은행주", "리스크"]),
     "general-macro": ("매크로 참고", ["연준", "매크로", "미국경제", "금리", "시장"]),
+    "discount-rate-minutes": ("할인율·유동성 참고", ["연준", "할인율", "유동성", "은행", "금리"]),
+    "loan-thresholds": ("규제 기준 체크", ["연준", "규제", "대출", "은행", "기준금액"]),
+    "appraisal-exemption": ("모기지 기준 체크", ["연준", "모기지", "감정평가", "주택담보대출", "규제"]),
     "earnings": ("실적 공시 3줄", ["실적", "공시", "미국주식", "SEC", "8-K", "어닝"]),
     "filing": ("공시 원문 3줄", ["공시", "SEC", "미국주식", "기업분석", "원문"]),
 }
@@ -369,6 +619,19 @@ TELEGRAM_CTA = {
         "시장에 영향을 줄 수 있는 공식 자료를 빠르게 받아보시려면 텔레그램 채널을 구독해 주세요.",
         "발표 원문과 확인 시각을 함께 담아 텔레그램으로 전해드립니다.",
     ],
+    "discount-rate-minutes": [
+        "할인율 의사록은 은행 조달 비용을 읽는 참고 자료입니다. 이런 공식 문서는 텔레그램에서 요약해 전해드립니다.",
+        "지역연준 권고와 반대 의견까지 확인한 요약을 텔레그램 채널에서 받아보실 수 있습니다.",
+        "유동성 관련 공식 자료가 나올 때마다 핵심만 정리해 텔레그램에 올립니다.",
+    ],
+    "loan-thresholds": [
+        "규제 면제 기준 금액 같은 실무 발표도 원문 기준으로 정리해 텔레그램에 올립니다.",
+        "은행·대출 업권 제도 변화를 놓치지 않도록 텔레그램 알림을 활용해 보세요.",
+    ],
+    "appraisal-exemption": [
+        "모기지 감정평가 기준 변경은 주택담보대출 실무에 바로 닿습니다. 공식 발표는 텔레그램에서 요약해 전해드립니다.",
+        "대출 규제의 기준 금액 변화를 원문 기준으로 정리해 텔레그램에 올립니다.",
+    ],
     "earnings": [
         "실적 공시는 숫자보다 먼저 확인한 사람이 유리합니다. 원문 확인 직후 핵심을 텔레그램으로 보내드립니다.",
         "분기 실적이 나오는 날에는 알림 속도가 중요합니다. 클레어덱스 텔레그램에서 실시간으로 받아보세요.",
@@ -422,6 +685,18 @@ WEB_CTA = {
         "매크로 지표와 공식 일정은 클레어덱스 웹에서 한 화면에 정리해 볼 수 있습니다.",
         "더 깊은 해설과 지난 발표 아카이브는 클레어덱스 인사이트에서 확인하세요.",
         "관심 자산을 등록하면 관련 속보만 모아 클레어덱스 웹에서 받아보실 수 있습니다.",
+    ],
+    "discount-rate-minutes": [
+        "금리·유동성 지표는 클레어덱스 웹의 시장 지표 위젯에서 함께 볼 수 있습니다.",
+        "관련 공식 문서 원문 링크는 클레어덱스 아카이브에 정리해 두었습니다.",
+    ],
+    "loan-thresholds": [
+        "규제·정책 변화가 업권에 미치는 영향은 클레어덱스 인사이트에서 더 자세히 다룹니다.",
+        "관련 공식 문서 원문은 클레어덱스 웹의 자료실에 모아 두었습니다.",
+    ],
+    "appraisal-exemption": [
+        "모기지·주택담보대출 규제 변화는 클레어덱스 인사이트에서 더 자세히 다룹니다.",
+        "관련 공식 문서 원문은 클레어덱스 웹의 자료실에 모아 두었습니다.",
     ],
     "earnings": [
         "실적 발표의 세부 수치와 비교는 클레어덱스 웹의 공시 아카이브에서 확인하실 수 있습니다.",
