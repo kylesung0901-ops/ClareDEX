@@ -293,7 +293,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--gold-deep); font-weight: 600; font-size: 11px;
   letter-spacing: .04em; margin-right: 2px;
 }
-.impact-line span::after { content: "·"; margin-left: 5px; opacity: .7; }
+.impact-line span::after { content: " ·"; margin-right: 5px; opacity: .7; }
 .feed-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   margin-top: 16px; font-size: 11.5px; color: var(--faint);
