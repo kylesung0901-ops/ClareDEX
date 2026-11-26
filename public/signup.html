@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>무료 가입 · 본인인증 · 클레어덱스</title>
-<meta name="description" content="이메일과 휴대폰 인증 한 번으로 내 관심자산 속보와 3초 요약 전문을 받아보세요. 광고·스팸 없이 고른 자산의 공식 발표만 전합니다.">
+<title>휴대폰 1개로 무료 시작 · 야간 S등급 비상벨 · 클레어덱스</title>
+<meta name="description" content="관심자산을 고르면 최근 공식 공시와 다가오는 S등급 일정을 가입 전에 바로 보여드립니다. 가입은 휴대폰 인증번호 한 단계로 끝납니다. 광고·리딩방 전화 0건.">
 <meta name="robots" content="index, follow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20261126a">
+<link rel="stylesheet" href="assets/style.css?v=20261126b">
 </head>
 <body>
 
@@ -34,120 +34,136 @@
   <div class="col">
 
     <div class="auth-head">
-      <span class="eyebrow">FREE · EMAIL + PHONE VERIFIED</span>
-      <h1>내 관심자산 속보만, 가장 먼저</h1>
+      <span class="eyebrow">VALUE FIRST · 휴대폰 1단계 · FREE</span>
+      <h1>가입 전에 먼저 보세요<br>내 종목 3초 브리핑</h1>
       <span class="hero-rule" aria-hidden="true"></span>
-      <p class="lead">공식 원문을 확인한 시각과 중요도(S/A/B)를 그대로 남기고, 내 자산에 의미 있는 소식만 골라 전합니다. 결제 정보는 필요하지 않습니다.</p>
+      <p class="lead">관심자산을 고르면 최근 공식 공시와 다가오는 S등급 일정이 바로 뜹니다. 마음에 들면 휴대폰 번호 하나로 비상벨을 켜세요. 결제 정보는 필요하지 않습니다.</p>
       <p class="req-note" id="requestNote" hidden></p>
     </div>
 
     <section class="auth-card" aria-live="polite">
-      <!-- step 1 — 이메일·휴대폰 본인인증 -->
+
+      <!-- ───────────── 1단계 · 가치 먼저: 관심자산 + 3초 리포트 미리보기 ───────────── -->
       <div id="step1">
-        <div class="auth-steps" aria-hidden="true"><span class="step-dot on"></span><span class="step-dot"></span></div>
-        <h2>본인인증으로 시작하기</h2>
-        <p class="hint">이메일과 휴대폰 인증을 모두 마치면 가입됩니다. 인증번호는 5분간 유효합니다.</p>
-
-        <div class="social-row">
-          <button class="btn-social" type="button" data-social="kakao">카카오로 시작하기 <span class="soon">준비 중</span></button>
-          <button class="btn-social" type="button" data-social="google">Google로 시작하기 <span class="soon">준비 중</span></button>
+        <div class="vf-step-head">
+          <span class="vf-badge">STEP 1 · 3초</span>
+          <span class="vf-step-note">가입 없이 먼저 보기</span>
         </div>
-
-        <div class="divider">또는 이메일로</div>
-
-        <form id="signupForm" novalidate>
-          <!-- 1. 이메일 인증 -->
-          <div class="field">
-            <label for="email">이메일 <span style="color:var(--faint);font-weight:400">(Gmail 등 본인 메일)</span></label>
-            <div class="verify-row">
-              <input id="email" name="email" type="email" inputmode="email" placeholder="you@gmail.com" autocomplete="email" required>
-              <button class="btn-code" type="button" id="sendEmailBtn" data-default-label="인증번호 발송">인증번호 발송</button>
-            </div>
-            <div class="err" id="emailErr"></div>
-          </div>
-
-          <div class="field" id="emailCodeWrap" hidden>
-            <label for="emailCode">이메일 인증번호 6자리</label>
-            <div class="verify-row">
-              <input id="emailCode" name="emailCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
-              <button class="btn-code" type="button" id="verifyEmailBtn">확인</button>
-            </div>
-            <div class="err" id="emailCodeErr"></div>
-            <div class="otp-box" id="emailDelivery" hidden></div>
-          </div>
-
-          <!-- 2. 성함 또는 닉네임 -->
-          <div class="field">
-            <label for="name">성함 또는 닉네임</label>
-            <input id="name" name="name" type="text" placeholder="예) 홍길동 / 코인덕후" maxlength="40" autocomplete="nickname" required>
-            <div class="err" id="nameErr"></div>
-          </div>
-
-          <!-- 3. 휴대폰 인증 -->
-          <div class="field">
-            <label for="phone">휴대폰 번호</label>
-            <div class="verify-row">
-              <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="010-1234-5678" autocomplete="tel" required>
-              <button class="btn-code" type="button" id="sendSmsBtn" data-default-label="인증번호 발송">인증번호 발송</button>
-            </div>
-            <div class="err" id="phoneErr"></div>
-            <div class="hint-inline" id="phoneHint">이메일 인증을 먼저 마치면 문자 인증을 보낼 수 있습니다.</div>
-          </div>
-
-          <div class="field" id="smsCodeWrap" hidden>
-            <label for="smsCode">문자 인증번호 6자리</label>
-            <div class="verify-row">
-              <input id="smsCode" name="smsCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
-              <button class="btn-code" type="button" id="verifySmsBtn">확인</button>
-            </div>
-            <div class="err" id="smsCodeErr"></div>
-            <div class="otp-box" id="smsDelivery" hidden></div>
-          </div>
-
-          <!-- 4. 마케팅 활용 동의 (선택) -->
-          <div class="consent">
-            <div class="consent-row">
-              <label for="marketing"><input type="checkbox" id="marketing" name="marketing"> 마케팅 활용 동의</label>
-              <button class="btn-view" type="button" id="viewConsent" aria-haspopup="dialog">[보기]</button>
-            </div>
-            <p class="consent-fine">선택 항목입니다. 동의하지 않아도 가입과 속보 수신은 그대로 가능합니다.</p>
-          </div>
-
-          <button class="btn btn-gold btn-block" type="submit" id="signupBtn" style="margin-top:16px">이메일·휴대폰 인증을 마쳐 주세요</button>
-          <p class="auth-fine">가입 후 관심자산을 고르는 다음 단계로 이동합니다. 인증번호는 5분간 유효합니다.</p>
-        </form>
-
-        <p class="auth-aside-note">이미 계정이 있다면, 같은 이메일로 다시 인증해 관심자산을 수정할 수 있습니다.</p>
-      </div>
-
-      <!-- step 2 — 관심자산 -->
-      <div id="step2" hidden>
-        <div class="auth-steps" aria-hidden="true"><span class="step-dot on"></span><span class="step-dot on"></span></div>
         <h2>어떤 자산을 보시나요?</h2>
-        <p class="hint" id="watchHint">3개 이상 고르면 타임라인이 가장 쓸모 있어집니다. 나중에 언제든 바꿀 수 있어요.</p>
+        <p class="hint">고르는 즉시 그 자산의 최근 공식 공시와 다가오는 S등급 일정을 보여드립니다. 여러 개를 골라도 됩니다.</p>
         <div class="watch-grid" id="watchGrid" role="group" aria-label="관심자산 선택"></div>
-        <div class="watch-count" id="watchCount"><b>0</b>개 선택 · 3개 이상을 권장합니다</div>
-        <button class="btn btn-gold btn-block" id="watchBtn" disabled>알림 설정 완료 →</button>
-        <button class="btn btn-ghost btn-block" id="skipBtn" style="margin-top:8px;padding:12px;font-size:13px">나중에 고를게요</button>
+        <div class="watch-count" id="watchCount"><b>0</b>개 선택 · 하나만 골라도 바로 보여드립니다</div>
+
+        <div class="brief-card" id="briefCard">
+          <div class="brief-head">
+            <b>가입 전 미리 보는 내 종목 3초 브리핑</b>
+            <span id="briefLabel"></span>
+          </div>
+          <p class="brief-empty" id="briefEmpty">자산을 고르면 최근 공식 공시와 다가오는 S등급 일정이 여기에 바로 뜹니다.</p>
+          <div id="briefBody" hidden>
+            <p class="brief-sub">최근 공식 공시 · 원문 확인</p>
+            <ul class="brief-list" id="briefPosts"></ul>
+            <p class="brief-sub" id="briefEventSub">다가오는 S등급 일정</p>
+            <ul class="brief-list" id="briefEvents"></ul>
+          </div>
+        </div>
       </div>
 
-      <!-- step 3 — 완료 -->
+      <!-- ───────────── 2단계 · 휴대폰 1단계: 야간 기습 공시 비상벨 ───────────── -->
+      <div id="step2" class="alarm-block">
+        <div class="alarm-card">
+          <div class="vf-step-head">
+            <span class="vf-badge alarm">STEP 2 · 휴대폰 1단계</span>
+            <span class="vf-step-note">인증번호 6자리면 끝</span>
+          </div>
+          <h2 class="alarm-title">잠든 사이 내 종목 S등급 기습 공시,<br>3초 결론으로 깨워드립니다</h2>
+          <p class="alarm-sub">밤사이 터진 공식 발표도 확인 즉시 3줄 요약과 한 줄 결론으로 문자에 담아 보냅니다.</p>
+          <p class="trust-badges">🔒 리딩방·광고 전화 0건 보증 · 평소엔 절대 안 보냅니다 · 원클릭 수신 해지</p>
+
+          <form id="bellForm" novalidate>
+            <div class="field">
+              <label for="phone">휴대폰 번호</label>
+              <div class="verify-row">
+                <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="010-1234-5678" autocomplete="tel" required>
+                <button class="btn-code" type="button" id="sendSmsBtn" data-default-label="인증번호 발송">인증번호 발송</button>
+              </div>
+              <div class="err" id="phoneErr"></div>
+              <div class="hint-inline">숫자만 입력해도 됩니다. 인증번호는 5분간 유효합니다.</div>
+            </div>
+
+            <div class="field" id="smsCodeWrap" hidden>
+              <label for="smsCode">인증번호 6자리</label>
+              <div class="verify-row">
+                <input id="smsCode" name="smsCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
+                <button class="btn-code" type="button" id="verifySmsBtn">확인</button>
+              </div>
+              <div class="err" id="smsCodeErr"></div>
+              <div class="otp-box" id="smsDelivery" hidden></div>
+            </div>
+
+            <!-- 선택: 이메일로도 받기 (기본 화면에서는 접혀 있음) -->
+            <details class="optional-email" id="emailToggle">
+              <summary>이메일로도 받기 (선택)</summary>
+              <div class="optional-body">
+                <p class="hint-inline">같은 알림을 메일로도 받고 싶을 때만 추가하세요. 인증번호 확인이 필요하며, 비워 두면 휴대폰으로만 받습니다.</p>
+                <div class="field">
+                  <label for="email">이메일</label>
+                  <div class="verify-row">
+                    <input id="email" name="email" type="email" inputmode="email" placeholder="you@gmail.com" autocomplete="email">
+                    <button class="btn-code" type="button" id="sendEmailBtn" data-default-label="인증번호 발송">인증번호 발송</button>
+                  </div>
+                  <div class="err" id="emailErr"></div>
+                </div>
+                <div class="field" id="emailCodeWrap" hidden>
+                  <label for="emailCode">이메일 인증번호 6자리</label>
+                  <div class="verify-row">
+                    <input id="emailCode" name="emailCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
+                    <button class="btn-code" type="button" id="verifyEmailBtn">확인</button>
+                  </div>
+                  <div class="err" id="emailCodeErr"></div>
+                  <div class="otp-box" id="emailDelivery" hidden></div>
+                </div>
+              </div>
+            </details>
+
+            <div class="consent">
+              <div class="consent-row">
+                <label for="marketing"><input type="checkbox" id="marketing" name="marketing"> 마케팅 활용 동의</label>
+                <button class="btn-view" type="button" id="viewConsent" aria-haspopup="dialog">[보기]</button>
+              </div>
+              <p class="consent-fine">선택 항목입니다. 동의하지 않아도 비상벨과 속보 수신은 그대로 가능합니다.</p>
+            </div>
+
+            <button class="btn btn-gold btn-block" type="submit" id="signupBtn" style="margin-top:16px" disabled>휴대폰 인증을 마치면 비상벨이 켜집니다</button>
+            <p class="auth-fine">휴대폰 번호는 본인 확인과 알림 발송에만 사용합니다. 광고·리딩방 전화나 제3자 판매에는 쓰지 않습니다. 언제든 원클릭으로 해지할 수 있습니다.</p>
+          </form>
+        </div>
+      </div>
+
+      <!-- ───────────── 완료: 예약된 알림 + 12월 S등급 일정 ───────────── -->
       <div id="step3" class="success-panel" hidden>
         <div class="success-icon" aria-hidden="true">✓</div>
-        <h2>준비됐습니다<span id="whoName"></span></h2>
-        <p>이메일·휴대폰 본인인증이 완료되어 회원으로 등록되었습니다.<br>발표 직후 알림은 텔레그램에서 가장 빠릅니다.</p>
+        <h2>비상벨이 켜졌습니다</h2>
+        <p>가입이 완료되었습니다. 고른 자산에 S등급 급변이 확인되면 3초 결론으로 문자를 보내드립니다.</p>
         <div class="watch-summary" id="watchSummary"></div>
+
+        <div class="reserved-card">
+          <p class="reserved-head">내 알림 예약 · 관심자산 + 12월 S등급 일정</p>
+          <ul class="reserved-list" id="reservedList"></ul>
+          <p class="reserved-fine" id="reservedFine">일정 시각은 각 기관의 공식 일정 원문에서 확인한 KST 기준입니다.</p>
+        </div>
+
         <a class="btn btn-gold btn-block" href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener">텔레그램 채널 열기 ↗</a>
         <a class="btn btn-ghost btn-block" href="./#breaking" style="margin-top:8px;padding:12px;font-size:13.5px">내 관심자산 속보 보러가기 →</a>
-        <p class="auth-fine" id="successEmail" style="margin-top:16px"></p>
+        <p class="auth-fine" id="successMeta" style="margin-top:16px"></p>
       </div>
     </section>
 
     <ul class="auth-benefits">
-      <li><b>내 관심자산 속보 알림</b> — BTC·ETH·NVDA·AAPL·나스닥·코스피·삼성전자·연준·금리 중 고른 자산의 공식 발표만 모아 알려드립니다.</li>
-      <li><b>3초 요약 전문</b> — 3줄 요약과 시장 영향 문장을 가입 즉시 모두 읽습니다.</li>
-      <li><b>S등급 긴급 속보</b> — FOMC·CPI·고용·빅테크 실적처럼 파급력 큰 발표를 가장 먼저 확인합니다.</li>
-      <li>이메일·휴대폰 번호는 본인 확인과 알림 발송에만 사용하며, 광고·스팸 발송이나 제3자 판매에 쓰지 않습니다.</li>
+      <li><b>야간 S등급 비상벨</b> — FOMC·CPI·고용·빅테크 공시처럼 파급력 큰 발표를 잠든 사이에도 문자로 먼저 알려드립니다.</li>
+      <li><b>3초 결론</b> — 3줄 요약과 시장 영향 한 줄을 문자에 담아, 열자마자 판단이 끝납니다.</li>
+      <li><b>평소엔 조용합니다</b> — 고른 자산의 S등급 급변과 예약한 공식 일정에만 문자가 갑니다. 광고·리딩방 전화는 0건입니다.</li>
+      <li>휴대폰 번호(그리고 선택한 경우 이메일)는 본인 확인과 알림 발송에만 사용하며, 광고·스팸 발송이나 제3자 판매에 쓰지 않습니다.</li>
     </ul>
   </div>
 </main>
@@ -187,8 +203,9 @@
 
       <h4>1. 수집·이용 항목</h4>
       <ul>
-        <li>필수(가입 시): 이메일 주소, 휴대폰 번호, 성함 또는 닉네임</li>
-        <li>선택(마케팅 활용 시): 관심자산 선택 정보, 서비스 이용 기록, 접속 일시·IP·기기 정보, 광고성 정보 수신 동의/철회 이력</li>
+        <li>필수(가입 시): 휴대폰 번호</li>
+        <li>선택(가입 시): 이메일 주소, 관심자산 선택 정보</li>
+        <li>선택(마케팅 활용 시): 서비스 이용 기록, 접속 일시·IP·기기 정보, 광고성 정보 수신 동의/철회 이력</li>
       </ul>
 
       <h4>2. 이용 목적</h4>
@@ -244,7 +261,7 @@
       <h4>6. 광고성 정보 전송 방법 및 수신 거부</h4>
       <ul>
         <li>전송 매체: 이메일, 문자메시지(SMS/LMS), 앱 알림. 광고성 정보임을 제목·본문 앞부분에 명시합니다.</li>
-        <li>전송 시간: 오전 9시 이전 또는 오후 9시 이후에는 사전 동의 없이 광고성 문자를 보내지 않습니다.</li>
+        <li>전송 시간: 오전 9시 이전 또는 오후 9시 이후에는 사전 동의 없이 광고성 문자를 보내지 않습니다. (단, S등급 급변 비상벨 알림은 신청한 정보성 알림으로 시각과 무관하게 발송됩니다.)</li>
         <li>수신 거부: 각 메시지의 수신거부 안내 또는 문의처(AdminContact@claredex.com)로 요청 시 즉시 처리합니다.</li>
       </ul>
 
@@ -268,17 +285,32 @@
   const MEMBER_KEY = "claredex_member";
   const LOCAL_USERS = "claredex_users";
 
-  /* config.WATCHLIST_ASSETS 와 같은 목록·같은 순서 */
+  /* config.WATCHLIST_ASSETS 와 같은 목록 (수정 시 두 곳을 함께 바꾼다) */
   const ASSETS = [
     { key: "BTC", sub: "비트코인" },
-    { key: "ETH", sub: "이더리움" },
     { key: "NVDA", sub: "엔비디아" },
     { key: "AAPL", sub: "애플" },
-    { key: "나스닥", sub: "미국 기술주" },
-    { key: "코스피", sub: "국내 대형주" },
+    { key: "연준·금리", sub: "FOMC·CPI" },
     { key: "삼성전자", sub: "국내 반도체" },
-    { key: "연준·금리", sub: "FOMC·CPI" }
+    { key: "SK하이닉스", sub: "HBM·메모리" },
+    { key: "ETH", sub: "이더리움" },
+    { key: "TSLA", sub: "테슬라" },
+    { key: "나스닥", sub: "미국 기술주" },
+    { key: "코스피", sub: "국내 대형주" }
   ];
+  /* 공식 원문 태그 → 관심자산 매칭 (3초 브리핑 필터) */
+  const ASSET_TAGS = {
+    BTC: ["BTC", "비트코인"],
+    ETH: ["ETH", "이더리움"],
+    NVDA: ["NVDA", "엔비디아"],
+    AAPL: ["AAPL", "애플"],
+    TSLA: ["TSLA", "테슬라"],
+    "삼성전자": ["삼성전자"],
+    "SK하이닉스": ["SK하이닉스", "하이닉스"],
+    "나스닥": ["나스닥"],
+    "코스피": ["코스피"],
+    "연준·금리": ["연준", "금리", "FOMC", "CPI", "PCE"]
+  };
   /* 공식 일정 알림(signup.html?watch=FOMC) → 관심자산 매핑 (config.EVENT_WATCH_ALIASES 와 같은 규칙) */
   const EVENT_ALIAS = {
     FOMC: { asset: "연준·금리", label: "FOMC 회의 결과" },
@@ -288,7 +320,15 @@
     "고용보고서": { asset: "연준·금리", label: "미 고용보고서" },
     "무역수지": { asset: "연준·금리", label: "무역수지" }
   };
+  /* 캘린더를 불러오지 못했을 때 쓰는 12월 S등급 일정 (calendar.json 과 같은 값) */
+  const FALLBACK_S_EVENTS = [
+    { title: "미 11월 고용보고서(실업률·비농업 고용)", org: "미 노동통계국(BLS)", datetime_kst: "2026-12-04T22:30:00+09:00", importance: "S", watch: "고용보고서" },
+    { title: "FOMC 회의 결과 발표", org: "미 연방준비제도(Fed)", datetime_kst: "2026-12-10T04:00:00+09:00", importance: "S", watch: "FOMC" },
+    { title: "미 11월 소비자물가지수(CPI)", org: "미 노동통계국(BLS)", datetime_kst: "2026-12-10T22:30:00+09:00", importance: "S", watch: "CPI" }
+  ];
+
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const IMP = { S: "긴급", A: "주요", B: "일반" };
 
   function resolveWatch(raw) {
     const key = String(raw || "").trim();
@@ -300,12 +340,14 @@
     return null;
   }
   const REQUEST = resolveWatch(new URLSearchParams(location.search).get("watch"));
-  const FROM = (new URLSearchParams(location.search).get("from") || "").trim();
   const selected = new Set();
   if (REQUEST) selected.add(REQUEST.asset);
 
-  const flow = { email: "", phone: "", emailVerified: false, phoneVerified: false, previewMode: false };
+  const flow = { phone: "", phoneVerified: false, email: "", emailVerified: false, previewMode: false };
   let cooldownTimers = {};
+  const digits = (v) => String(v || "").replace(/[^0-9]/g, "");
+  let EVENTS = [];
+  let POSTS = [];
 
   function toast(msg) {
     const el = $("#toast");
@@ -348,16 +390,143 @@
     return data;
   }
 
+  /* API 가 없으면(GitHub Pages 미리보기) public/data/*.json 스냅샷으로 대체 */
+  async function getJSON(apiPath, snapshotPath) {
+    let lastErr;
+    for (const url of [apiPath, snapshotPath]) {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) { lastErr = new Error(url + " → HTTP " + res.status); continue; }
+        const ctype = res.headers.get("content-type") || "";
+        if (!ctype.includes("json")) { lastErr = new Error(url + " → JSON 아님"); continue; }
+        const data = await res.json();
+        if (data && data.ok === false) { lastErr = new Error(url + " → ok:false"); continue; }
+        return data;
+      } catch (err) { lastErr = err; }
+    }
+    throw lastErr || new Error("데이터를 불러오지 못했습니다");
+  }
+
   /* 관심자산/일정에서 넘어온 watch 값을 화면 맨 위에 1줄로 안내한다 */
   function renderRequest() {
     const note = $("#requestNote");
     if (!REQUEST) { note.hidden = true; return; }
     note.hidden = false;
     note.innerHTML = REQUEST.kind === "event"
-      ? `요청하신 <b>${esc(REQUEST.label)}</b> 발표 알림 · <b>${esc(REQUEST.asset)}</b> 속보로 함께 받습니다`
-      : `요청하신 <b>${esc(REQUEST.label)}</b> 속보 · 인증을 마치면 바로 알림이 설정됩니다`;
+      ? `요청하신 <b>${esc(REQUEST.label)}</b> 발표 · <b>${esc(REQUEST.asset)}</b> 비상벨로 함께 켜드립니다`
+      : `요청하신 <b>${esc(REQUEST.label)}</b> 속보 · 비상벨을 켜면 S등급 급변을 문자로 보내드립니다`;
   }
   renderRequest();
+
+  /* ------------------------------------------------------------- 관심자산 */
+  function renderWatch() {
+    const grid = $("#watchGrid");
+    grid.innerHTML = ASSETS.map((a) => `
+      <button type="button" class="watch-opt" data-key="${esc(a.key)}" aria-pressed="${selected.has(a.key)}">
+        <b>${esc(a.key)}</b><span>${esc(a.sub)}</span>
+      </button>`).join("");
+    grid.querySelectorAll(".watch-opt").forEach((el) => {
+      el.addEventListener("click", () => {
+        const k = el.dataset.key;
+        if (selected.has(k)) selected.delete(k); else selected.add(k);
+        el.setAttribute("aria-pressed", selected.has(k));
+        updateCount();
+        renderBrief();
+      });
+    });
+    updateCount();
+  }
+
+  function updateCount() {
+    const n = selected.size;
+    $("#watchCount").innerHTML = `<b>${n}</b>개 선택 · ${n ? (n >= 3 ? "좋아요, 맞춤 비상벨이 넓어집니다" : "하나만 골라도 바로 보여드립니다") : "하나만 골라도 바로 보여드립니다"}`;
+  }
+
+  /* ---------------------------------------------------- 3초 브리핑(가입 전) */
+  function assetOfEvent(e) {
+    if (!e) return null;
+    const w = e.watch || e.id || "";
+    if (EVENT_ALIAS[w]) return EVENT_ALIAS[w].asset;
+    const hit = ASSETS.find((a) => a.key === w);
+    return hit ? hit.key : null;
+  }
+
+  function matchPost(post, key) {
+    const tags = (post.tags || []).map((t) => String(t).toUpperCase());
+    const needles = (ASSET_TAGS[key] || [key]).map((t) => String(t).toUpperCase());
+    return needles.some((t) => tags.includes(t));
+  }
+
+  function mdhm(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
+    const g = (t) => (p.find((x) => x.type === t) || {}).value || "";
+    return `${g("month")}/${g("day")} ${g("hour")}:${g("minute")}`;
+  }
+  function dday(iso) {
+    const d = new Date(iso).getTime();
+    if (isNaN(d)) return "";
+    const days = Math.ceil((d - Date.now()) / 86400000);
+    return days <= 0 ? "D-DAY" : `D-${days}`;
+  }
+  function gradeBadge(p) {
+    const lv = ["S", "A", "B"].includes(p && p.importance) ? p.importance : "B";
+    return `<span class="mini-grade g-${lv}">${lv}</span>`;
+  }
+
+  function renderBrief() {
+    const keys = Array.from(selected);
+    const label = $("#briefLabel");
+    const empty = $("#briefEmpty");
+    const body = $("#briefBody");
+    label.textContent = keys.length ? keys.join(" · ") : "";
+    if (!keys.length) {
+      empty.hidden = false;
+      body.hidden = true;
+      return;
+    }
+    empty.hidden = true;
+    body.hidden = false;
+
+    const posts = POSTS.filter((p) => keys.some((k) => matchPost(p, k))).slice(0, 2);
+    const todayEvents = (EVENTS.length ? EVENTS : []).filter((e) => new Date(e.datetime_kst).getTime() > Date.now()
+      && (e.importance || "A") === "S");
+    let events = todayEvents.filter((e) => keys.includes(assetOfEvent(e))).slice(0, 2);
+    const eventSub = $("#briefEventSub");
+    if (!events.length) {
+      events = todayEvents.slice(0, 2);
+      eventSub.textContent = events.length ? "다음 S등급 일정 (관심자산 공통)" : "다가오는 S등급 일정";
+    } else {
+      eventSub.textContent = "다가오는 S등급 일정";
+    }
+
+    $("#briefPosts").innerHTML = posts.length ? posts.map((p) => `
+      <li>
+        <a href="${esc(p.source_url)}" target="_blank" rel="noopener">${gradeBadge(p)} ${esc(p.title)}</a>
+        <span class="brief-meta">출처 ${esc(p.source_name || "공식 원문")} · ${esc(mdhm(p.verified_at))} KST 확인</span>
+      </li>`).join("")
+      : `<li class="brief-none">아직 이 자산의 공식 공시가 없습니다. 새 공시가 확인되면 비상벨로 먼저 보내드립니다.</li>`;
+
+    $("#briefEvents").innerHTML = events.length ? events.map((e) => `
+      <li>
+        <span class="brief-dday">${esc(dday(e.datetime_kst))}</span>
+        <span class="brief-ev"><b>${esc(e.title)}</b><span class="brief-meta">${esc(e.org || "")} · ${esc(mdhm(e.datetime_kst))} KST</span></span>
+      </li>`).join("")
+      : `<li class="brief-none">예정된 S등급 일정이 없습니다. 새 일정이 확인되면 알려드립니다.</li>`;
+  }
+
+  async function loadContent() {
+    try {
+      const data = await getJSON("/api/posts?limit=60", "data/posts.json");
+      POSTS = data.posts || [];
+    } catch (e) { POSTS = []; }
+    try {
+      const cal = await getJSON("/api/calendar", "data/calendar.json");
+      EVENTS = cal.events || [];
+    } catch (e) { EVENTS = []; }
+    renderBrief();
+  }
 
   /* ------------------------------------------------------------- OTP 공통 */
   function startCooldown(btnId, seconds) {
@@ -421,7 +590,59 @@
     setMsg(msgId, err.message);
   }
 
-  /* ------------------------------------------------------- 이메일 인증 */
+  /* ------------------------------------------------------- 휴대폰 인증 */
+  $("#sendSmsBtn").addEventListener("click", async () => {
+    const phone = $("#phone").value.trim();
+    setMsg("#phoneErr", "");
+    if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone.replace(/[\s-]/g, ""))) {
+      setMsg("#phoneErr", "휴대폰 번호를 정확히 입력해 주세요. 예) 010-1234-5678");
+      $("#phone").focus(); return;
+    }
+    const btn = $("#sendSmsBtn");
+    btn.disabled = true; btn.textContent = "발송 중…";
+    try {
+      const data = await apiCall("/api/auth/send-sms-otp", { phone: phone });
+      $("#smsCodeWrap").hidden = false;
+      showDelivery("#smsDelivery", data);
+      setMsg("#phoneErr", data.message || "인증번호 문자를 보냈습니다.", true);
+      $("#smsCode").focus();
+      startCooldown("#sendSmsBtn", data.retry_after || 30);
+      if (!data.sent) toast("문자 발송 채널이 설정되지 않아 테스트용 인증번호를 표시했습니다.");
+    } catch (err) {
+      if (err.network) flow.previewMode = true;
+      handleSendError(err, "#sendSmsBtn", "#phoneErr");
+    }
+  });
+
+  $("#verifySmsBtn").addEventListener("click", async () => {
+    const phone = $("#phone").value.trim();
+    const code = $("#smsCode").value.trim();
+    setMsg("#smsCodeErr", "");
+    if (!/^\d{6}$/.test(code)) { setMsg("#smsCodeErr", "인증번호 6자리를 입력해 주세요."); return; }
+    const btn = $("#verifySmsBtn");
+    btn.disabled = true; btn.textContent = "확인 중…";
+    const email = flow.emailVerified ? flow.email : undefined;
+    try {
+      await apiCall("/api/auth/verify-sms-otp", { phone: phone, code: code, email: email });
+      flow.phone = digits(phone); flow.phoneVerified = true;
+      $("#smsCodeWrap").hidden = true;
+      stopCooldown("#sendSmsBtn", "인증 완료");
+      $("#phoneErr").innerHTML = '<span class="verified-pill">✓ 휴대폰 인증 완료 · 번호를 바꾸면 다시 인증해야 합니다</span>';
+      setMsg("#smsCodeErr", "휴대폰 인증이 완료되었습니다.", true);
+      updateSubmitState();
+      $("#signupBtn").focus();
+    } catch (err) {
+      setMsg("#smsCodeErr", err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = "확인";
+    }
+  });
+
+  /* --------------------------------------------- 이메일 인증 (선택 · 접힘) */
+  $("#emailToggle").addEventListener("toggle", () => {
+    if ($("#emailToggle").open) setTimeout(() => $("#email").focus(), 60);
+  });
+
   $("#sendEmailBtn").addEventListener("click", async () => {
     const email = $("#email").value.trim().toLowerCase();
     setMsg("#emailErr", "");
@@ -437,9 +658,7 @@
       setMsg("#emailErr", data.message || "인증번호를 보냈습니다.", true);
       $("#emailCode").focus();
       startCooldown("#sendEmailBtn", data.retry_after || 30);
-      if (!data.sent) toast("발송 채널이 설정되지 않아 테스트용 인증번호를 표시했습니다.");
     } catch (err) {
-      if (err.network) flow.previewMode = true;
       handleSendError(err, "#sendEmailBtn", "#emailErr");
     }
   });
@@ -455,13 +674,9 @@
       await apiCall("/api/auth/verify-email-otp", { email: email, code: code });
       flow.email = email; flow.emailVerified = true;
       setMsg("#emailCodeErr", "이메일 인증이 완료되었습니다.", true);
-      $("#email").readOnly = true;
       $("#emailCodeWrap").hidden = true;
       stopCooldown("#sendEmailBtn", "인증 완료");
-      $("#emailErr").innerHTML = '<span class="verified-pill">✓ 이메일 인증 완료</span>';
-      $("#phoneHint").textContent = "문자 인증번호를 받아 휴대폰 인증을 마쳐 주세요.";
-      updateSubmitState();
-      $("#phone").focus();
+      $("#emailErr").innerHTML = '<span class="verified-pill">✓ 이메일 인증 완료 · 문자와 함께 메일로도 받습니다</span>';
     } catch (err) {
       setMsg("#emailCodeErr", err.message);
     } finally {
@@ -469,68 +684,37 @@
     }
   });
 
-  /* ------------------------------------------------------- 휴대폰 인증 */
-  $("#sendSmsBtn").addEventListener("click", async () => {
-    const phone = $("#phone").value.trim();
-    setMsg("#phoneErr", "");
-    if (!flow.emailVerified) {
-      setMsg("#phoneErr", "이메일 인증을 먼저 완료해 주세요.");
-      toast("이메일 인증을 먼저 완료해 주세요.");
-      $("#email").focus();
-      return;
-    }
-    if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone.replace(/\s/g, ""))) {
-      setMsg("#phoneErr", "휴대폰 번호를 정확히 입력해 주세요. 예) 010-1234-5678");
-      $("#phone").focus(); return;
-    }
+  /* 인증 후 번호·이메일을 고치면 인증을 다시 받게 한다 */
+  $("#phone").addEventListener("input", () => {
+    if (!flow.phoneVerified) return;
+    if (digits($("#phone").value) === flow.phone) return;
+    flow.phone = "";
+    flow.phoneVerified = false;
+    $("#phoneErr").textContent = "";
+    $("#smsCodeWrap").hidden = true;
     const btn = $("#sendSmsBtn");
-    btn.disabled = true; btn.textContent = "발송 중…";
-    try {
-      const data = await apiCall("/api/auth/send-sms-otp", { email: flow.email, phone: phone });
-      $("#smsCodeWrap").hidden = false;
-      showDelivery("#smsDelivery", data);
-      setMsg("#phoneErr", data.message || "인증번호 문자를 보냈습니다.", true);
-      $("#smsCode").focus();
-      startCooldown("#sendSmsBtn", data.retry_after || 30);
-      if (!data.sent) toast("문자 발송 채널이 설정되지 않아 테스트용 인증번호를 표시했습니다.");
-    } catch (err) {
-      handleSendError(err, "#sendSmsBtn", "#phoneErr");
-    }
+    btn.disabled = false;
+    btn.textContent = btn.dataset.defaultLabel || "인증번호 발송";
+    updateSubmitState();
   });
-
-  $("#verifySmsBtn").addEventListener("click", async () => {
-    const phone = $("#phone").value.trim();
-    const code = $("#smsCode").value.trim();
-    setMsg("#smsCodeErr", "");
-    if (!/^\d{6}$/.test(code)) { setMsg("#smsCodeErr", "인증번호 6자리를 입력해 주세요."); return; }
-    const btn = $("#verifySmsBtn");
-    btn.disabled = true; btn.textContent = "확인 중…";
-    try {
-      await apiCall("/api/auth/verify-sms-otp", { email: flow.email, phone: phone, code: code });
-      flow.phone = phone.replace(/\s/g, ""); flow.phoneVerified = true;
-      $("#phone").readOnly = true;
-      $("#smsCodeWrap").hidden = true;
-      stopCooldown("#sendSmsBtn", "인증 완료");
-      $("#phoneErr").innerHTML = '<span class="verified-pill">✓ 휴대폰 인증 완료</span>';
-      setMsg("#smsCodeErr", "휴대폰 인증이 완료되었습니다.", true);
-      updateSubmitState();
-      $("#name").focus();
-    } catch (err) {
-      setMsg("#smsCodeErr", err.message);
-    } finally {
-      btn.disabled = false; btn.textContent = "확인";
-    }
+  $("#email").addEventListener("input", () => {
+    if (!flow.emailVerified) return;
+    if ($("#email").value.trim().toLowerCase() === flow.email) return;
+    flow.email = "";
+    flow.emailVerified = false;
+    $("#emailErr").textContent = "";
+    $("#emailCodeWrap").hidden = true;
+    const btn = $("#sendEmailBtn");
+    btn.disabled = false;
+    btn.textContent = btn.dataset.defaultLabel || "인증번호 발송";
   });
 
   /* ------------------------------------------------------- 제출 준비 상태 */
   function updateSubmitState() {
-    const nameOk = $("#name").value.trim().length > 0;
-    const ready = flow.emailVerified && flow.phoneVerified && nameOk;
     const btn = $("#signupBtn");
-    btn.disabled = !ready;
-    btn.textContent = ready ? "인증 완료 · 가입하기 →" : "이메일·휴대폰 인증을 마쳐 주세요";
+    btn.disabled = !flow.phoneVerified;
+    btn.textContent = flow.phoneVerified ? "야간 S등급 비상벨 켜기 →" : "휴대폰 인증을 마치면 비상벨이 켜집니다";
   }
-  $("#name").addEventListener("input", updateSubmitState);
   updateSubmitState();
 
   /* ------------------------------------------------------- 동의 모달 */
@@ -555,135 +739,113 @@
     toast("마케팅 활용 동의를 선택했습니다.");
   });
 
-  document.querySelectorAll("[data-social]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      toast("카카오·구글 로그인은 정식 오픈 시 연결됩니다. 지금은 이메일·휴대폰 인증으로 가입할 수 있어요.");
-    });
-  });
-
   /* ------------------------------------------------------- 가입 제출 */
-  $("#signupForm").addEventListener("submit", async (e) => {
+  $("#bellForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = $("#email").value.trim().toLowerCase();
-    const name = $("#name").value.trim();
     const phone = $("#phone").value.trim();
-    setMsg("#nameErr", "");
-    if (!name) { setMsg("#nameErr", "성함 또는 닉네임을 입력해 주세요."); $("#name").focus(); return; }
-    if (!flow.emailVerified) { setMsg("#emailErr", "이메일 인증을 완료해 주세요."); return; }
-    if (!flow.phoneVerified) { setMsg("#phoneErr", "휴대폰 인증을 완료해 주세요."); return; }
+    const emailRaw = $("#email").value.trim().toLowerCase();
+    setMsg("#phoneErr", ""); setMsg("#emailErr", "");
+    if (!flow.phoneVerified) {
+      setMsg("#phoneErr", "휴대폰 인증을 먼저 완료해 주세요.");
+      $("#phone").focus(); return;
+    }
+    if (digits(phone) !== flow.phone) {
+      flow.phoneVerified = false;
+      setMsg("#phoneErr", "번호가 바뀌었습니다. 새 번호로 인증번호를 받아 주세요.");
+      updateSubmitState();
+      return;
+    }
+    if (emailRaw && !flow.emailVerified) {
+      $("#emailToggle").open = true;
+      setMsg("#emailErr", "이메일 인증을 마쳐 주세요. 이메일 없이 가입하려면 입력란을 비워 두세요.");
+      $("#email").focus(); return;
+    }
+    const payload = {
+      phone: phone,
+      watchlist: Array.from(selected),
+      marketing_agreed: $("#marketing").checked,
+      provider: flow.emailVerified ? "email" : "phone"
+    };
+    if (flow.emailVerified) payload.email = flow.email;
 
     const btn = $("#signupBtn");
-    btn.disabled = true; btn.textContent = "가입 처리 중…";
+    btn.disabled = true; btn.textContent = "비상벨 켜는 중…";
     try {
-      const data = await apiCall("/api/signup", {
-        email: email, name: name, phone: phone, provider: "email",
-        marketing_agreed: $("#marketing").checked
-      });
-      afterSignup(data.user || {}, name, email);
+      const data = await apiCall("/api/signup", payload);
+      afterSignup(data.user || {}, payload);
     } catch (err) {
       if (err.network) {
         flow.previewMode = true;
         const users = readLocalUsers();
-        users[email] = { email: email, name: name, phone: phone, provider: "email", watchlist: Array.from(selected) };
+        const key = flow.emailVerified ? flow.email : phone;
+        users[key] = { email: flow.emailVerified ? flow.email : null, phone: phone, provider: payload.provider, watchlist: payload.watchlist };
         writeLocalUsers(users);
-        afterSignup(users[email], name, email);
+        afterSignup(users[key], payload);
         return;
       }
       const d = err.data || {};
       if (d.code === "verification_required") {
-        if (!d.email_verified) setMsg("#emailErr", "이메일 인증이 만료되었습니다. 다시 인증해 주세요.");
-        if (!d.phone_verified) setMsg("#phoneErr", "휴대폰 인증이 만료되었습니다. 다시 인증해 주세요.");
-        flow.emailVerified = !!d.email_verified;
         flow.phoneVerified = !!d.phone_verified;
+        setMsg("#phoneErr", d.phone_verified ? "" : err.message);
+        if (!d.email_verified && emailRaw) setMsg("#emailErr", "이메일 인증이 만료되었습니다. 다시 인증해 주세요.");
+      } else if (d.code === "phone_mismatch") {
+        setMsg("#phoneErr", err.message);
+      } else {
+        setMsg("#phoneErr", err.message);
       }
-      if (d.code === "phone_mismatch") setMsg("#phoneErr", err.message);
-      setMsg("#nameErr", err.message);
       toast(err.message);
       btn.disabled = false;
       updateSubmitState();
     }
   });
 
-  function afterSignup(user, name, email) {
+  function afterSignup(user, payload) {
+    const list = (user && user.watchlist && user.watchlist.length ? user.watchlist : payload.watchlist) || [];
     try {
-      sessionStorage.setItem("claredex_email", email);
+      if (flow.emailVerified) sessionStorage.setItem("claredex_email", flow.email);
       localStorage.setItem(MEMBER_KEY, JSON.stringify({
-        email: email, name: name, verified: !flow.previewMode, at: new Date().toISOString()
+        email: flow.emailVerified ? flow.email : null,
+        phone: payload.phone,
+        watchlist: list,
+        verified: !flow.previewMode,
+        at: new Date().toISOString()
       }));
-    } catch (e) { /* 저장 실패는 무시 */ }
-    (user && user.watchlist ? user.watchlist : []).forEach((a) => selected.add(a));
-    if (REQUEST) selected.add(REQUEST.asset);
-    /* 요청받은 관심자산(예: 일정 알림)은 기존 관심자산에 더해서 바로 등록한다 */
-    if (REQUEST && !flow.previewMode) {
-      apiCall("/api/watchlist", { email: email, watchlist: Array.from(selected) }).catch(() => {});
-    }
-    $("#step1").hidden = true;
-    $("#step2").hidden = false;
-    renderWatch();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    toast(flow.previewMode ? "정적 미리보기라 이 브라우저에만 저장했습니다." : "본인인증 가입이 완료되었습니다!");
-  }
-
-  /* ------------------------------------------------------- 관심자산 단계 */
-  function renderWatch() {
-    const grid = $("#watchGrid");
-    grid.innerHTML = ASSETS.map((a) => `
-      <button type="button" class="watch-opt" data-key="${esc(a.key)}" aria-pressed="${selected.has(a.key)}">
-        <b>${esc(a.key)}</b><span>${esc(a.sub)}</span>
-      </button>`).join("");
-    grid.querySelectorAll(".watch-opt").forEach((el) => {
-      el.addEventListener("click", () => {
-        const k = el.dataset.key;
-        if (selected.has(k)) selected.delete(k); else selected.add(k);
-        el.setAttribute("aria-pressed", selected.has(k));
-        updateCount();
-      });
-    });
-    if (REQUEST) {
-      $("#watchHint").innerHTML = `요청하신 <b>${esc(REQUEST.label)}</b> 알림은 <b>${esc(REQUEST.asset)}</b> 속보로 함께 받습니다 · 나중에 언제든 바꿀 수 있어요.`;
-    }
-    updateCount();
-  }
-
-  function updateCount() {
-    const n = selected.size;
-    $("#watchCount").innerHTML = `<b>${n}</b>개 선택 · ${n >= 3 ? "좋아요, 이제 맞춤 속보가 쌓입니다" : "3개 이상을 권장합니다"}`;
-    $("#watchBtn").disabled = n === 0;
-  }
-
-  async function saveWatchlist(skip) {
-    const list = skip ? [] : Array.from(selected);
-    const email = flow.email || $("#email").value.trim().toLowerCase();
-    try {
-      if (list.length && !flow.previewMode) {
-        await apiCall("/api/watchlist", { email: email, watchlist: list });
-      }
       if (list.length) localStorage.setItem(WATCH_KEY, JSON.stringify(list));
-      showSuccess(list);
-    } catch (ex) {
-      toast(ex.message);
-    }
+    } catch (e) { /* 저장 실패는 무시 */ }
+    showSuccess(list, payload);
   }
 
-  function showSuccess(list) {
+  /* ------------------------------------------------------- 완료 화면 */
+  function showSuccess(list, payload) {
+    $("#step1").hidden = true;
     $("#step2").hidden = true;
     $("#step3").hidden = false;
-    const name = $("#name").value.trim();
-    $("#whoName").textContent = name ? ", " + name + "님" : "!";
     $("#watchSummary").innerHTML = list.length
       ? list.map((a) => `<span>★ ${esc(a)}</span>`).join("")
-      : "<span>관심자산은 나중에 등록할 수 있어요</span>";
-    $("#successEmail").textContent = flow.previewMode
-      ? flow.email + " · 정적 미리보기라 서버 전송 없이 이 브라우저에만 저장되었습니다."
-      : flow.email + " · 이메일·휴대폰 본인인증 완료" + ($("#marketing").checked ? " · 마케팅 활용 동의" : "");
+      : "<span>관심자산은 나중에 추가할 수 있어요</span>";
+
+    const usingFallback = !EVENTS.length;
+    const pool = (EVENTS.length ? EVENTS : FALLBACK_S_EVENTS)
+      .filter((e) => new Date(e.datetime_kst).getTime() > Date.now() && (e.importance || "A") === "S")
+      .slice(0, 3);
+    $("#reservedList").innerHTML = pool.length ? pool.map((e) => `
+      <li>
+        <span class="reserved-when">${esc(mdhm(e.datetime_kst))}<em>${esc(e.org || "")}</em></span>
+        <span class="reserved-title">${esc(e.title)} <span class="brief-dday">${esc(dday(e.datetime_kst))}</span></span>
+      </li>`).join("")
+      : `<li class="brief-none">등록된 S등급 일정을 불러오지 못했습니다. 사이트의 공식 일정에서 확인할 수 있습니다.</li>`;
+    $("#reservedFine").textContent = usingFallback
+      ? "일정 데이터를 불러오지 못해 공식 일정표(calendar.json) 기준으로 표시합니다. 시각은 KST입니다."
+      : "일정 시각은 각 기관의 공식 일정 원문에서 확인한 KST 기준이며, 기관 사정에 따라 변경될 수 있습니다.";
+
+    $("#successMeta").textContent = flow.previewMode
+      ? "정적 미리보기라 서버 전송 없이 이 브라우저에만 저장되었습니다."
+      : (flow.emailVerified
+          ? `${flow.email} · ${payload.phone} · 휴대폰·이메일 인증 완료` + ($("#marketing").checked ? " · 마케팅 활용 동의" : "")
+          : `${payload.phone} · 휴대폰 인증 완료 (이메일 없이 가입)` + ($("#marketing").checked ? " · 마케팅 활용 동의" : ""));
     window.scrollTo({ top: 0, behavior: "smooth" });
+    toast(flow.previewMode ? "정적 미리보기라 이 브라우저에만 저장했습니다." : "비상벨이 켜졌습니다!");
   }
-
-  $("#watchBtn").addEventListener("click", () => saveWatchlist(false));
-  $("#skipBtn").addEventListener("click", () => saveWatchlist(true));
-
-  const saved = sessionStorage.getItem("claredex_email");
-  if (saved) $("#email").value = saved;
 
   /* 정적 호스팅 미리보기 감지 */
   (async function detectPreview() {
@@ -696,10 +858,13 @@
       const note = document.createElement("p");
       note.className = "auth-fine";
       note.style.cssText = "margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);color:#8A1C1C";
-      note.innerHTML = "<b>정적 미리보기 모드</b> · 서버가 연결되지 않아 본인인증(이메일·문자)은 실제로 동작하지 않습니다.";
+      note.innerHTML = "<b>정적 미리보기 모드</b> · 서버가 연결되지 않아 본인인증(문자)은 실제로 동작하지 않습니다. 브리핑은 저장된 스냅샷으로 보여드립니다.";
       $("#step1").appendChild(note);
     }
   })();
+
+  renderWatch();
+  loadContent();
 })();
 </script>
 </body>

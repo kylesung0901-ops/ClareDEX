@@ -76,10 +76,11 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 ## DB 스키마 (`data/claredex.db`)
 
 - **posts** — id, title, category, source_name, source_grade, source_url, `source_hash UNIQUE`, verified_at, summary_lines(JSON, 3줄), market_impact, tags(JSON), image_path, is_member_early, created_at, **published_at**(원문 발표 시각, 추가), **topic**(초안 생성용 주제 키, 추가), **status**(`published` / `hidden` — 운영자 공개·숨김)
-- **users** — id, email UNIQUE, name, provider, watchlist(JSON), created_at, **status**(`active` / `paused`), **phone**(휴대폰, 정규화 `010-1234-5678`), **email_verified**, **phone_verified**, **marketing_agreed**, **marketing_agreed_at**(최초 동의 시각)
+- **users** — id, **email UNIQUE(NULL 허용 — 휴대폰 단독 가입)**, name, provider(`email`/`phone`/`kakao`/`google`/`naver`), watchlist(JSON), created_at, **status**(`active` / `paused`), **phone**(휴대폰, 정규화 `010-1234-5678`, 인덱스), **email_verified**, **phone_verified**, **marketing_agreed**, **marketing_agreed_at**(최초 동의 시각). 예전 DB(email NOT NULL)는 기동 시 자동으로 NULL 허용 테이블로 옮겨지고 값·id·가입일은 그대로 보존됩니다.
 - **naver_drafts** — id, post_id UNIQUE, seo_title, keywords(JSON 5~8), body_html, body_text, telegram_cta, web_cta, image_path, created_at
 - **auth_otp** — 본인인증 인증번호(채널 `email`/`sms`, 대상, 코드 **해시**, 발송 시각, 만료, 시도 횟수, 소비 시각). 코드 평문은 저장하지 않습니다.
 - **signup_verification** — 이메일별 인증 통과 상태(휴대폰, 이메일 인증 시각, 휴대폰 인증 시각). 인증 후 30분 안에만 가입 가능.
+- **phone_auth_state** — 휴대폰 번호별 인증 통과 상태(인증 시각, 갱신 시각). 이메일 없이 가입하는 1단계 퍼널의 기준이며 인증 후 30분 안에만 가입 가능.
 - **naver_publish** — 네이버 발행 이력(draft_id, post_id, status, url, message, attempted_at, published_at)
 
 `published_at`·`topic` 은 brief 의 필수 컬럼에 더해 사실 보존과 초안 품질을 위해 추가한 컬럼입니다.
@@ -89,7 +90,7 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 | Method | Path | 설명 |
 |---|---|---|
 | GET | `/` | 메인 (티커·히어로·오늘의 한 장·카운트다운·속보 타임라인·컴플라이언스 푸터) |
-| GET | `/signup.html`, `/signup` | 10초 가입 + 관심자산 온보딩 (기존 404 경로 복구) |
+| GET | `/signup.html`, `/signup` | 가치 먼저 · 휴대폰 1단계 가입 퍼널 (관심자산 → 3초 브리핑 → 휴대폰 OTP) |
 | GET | `/admin`, `/admin/` | 운영자 전용 관리자 콘솔 (미로그인 시 로그인 게이트, `noindex`·`no-store`) |
 | GET | `/admin/admin.css`, `/admin/app.js` | 콘솔 전용 자산 |
 | GET | `/api/ticker` | BTC KRW/USD, 김치프리미엄, 공포탐욕, 롱숏, USD/KRW, ETH. 실패 시 `data/market_cache.json` 폴백(`stale: true`) |
@@ -100,8 +101,8 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 | GET | `/api/auth/channels` | 본인인증 발송 채널 상태(SMTP/Resend·SMS 설정 여부, 샌드박스 여부) |
 | POST | `/api/auth/send-email-otp` | `{email}` → 6자리 인증번호 발송(5분 유효, 30초 재발송 대기) |
 | POST | `/api/auth/verify-email-otp` | `{email, code}` → 이메일 인증 통과 |
-| POST | `/api/auth/send-sms-otp` | `{email, phone}` → 휴대폰 인증번호 발송(이메일 인증 선행) |
-| POST | `/api/auth/verify-sms-otp` | `{email, phone, code}` → 휴대폰 인증 통과 |
+| POST | `/api/auth/send-sms-otp` | `{phone, email?}` → 휴대폰 인증번호 발송 (**이메일 없이도 가능**, 이메일 인증 선행 없음) |
+| POST | `/api/auth/verify-sms-otp` | `{phone, code, email?}` → 휴대폰 인증 통과(번호 기준 `phone_auth_state` 기록) |
 | GET | `/api/admin/session` | 현재 운영자 세션 상태 `{authenticated, password_source}` |
 | GET | `/api/admin/overview` | KPI · 14일 가입 추이 · 카테고리/출처 분포 · 최근 가입/글 · 수집기 상태 |
 | GET | `/api/admin/users?q=&provider=&status=&limit=&offset=` | 회원 목록 + 전체 건수 |
@@ -112,15 +113,15 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 | POST | `/api/admin/posts/delete` | `{id}` 글 삭제(연결 초안 포함) |
 | POST | `/api/admin/collect` | 수집기 + 초안 생성 백그라운드 실행 (`202`, 실행 중 `409`) |
 | POST | `/api/admin/change-password` | `{current_password, new_password, confirm_password}` → `data/admin_auth.json` 해시 갱신 |
-| POST | `/api/signup` | `{email, name, phone, marketing_agreed, provider, watchlist}` → **이메일+휴대폰 인증 필수**, users 저장 (201). 미인증 403 |
-| POST | `/api/watchlist` | `{email, watchlist}` → 관심자산 갱신 |
+| POST | `/api/signup` | `{phone, watchlist, email?, name?, marketing_agreed?, provider?}` → **휴대폰 인증 필수 · 이메일·이름 선택**. users 저장 + 관심자산 즉시 저장 (201). 미인증 403 · 인증 번호 불일치 403 `phone_mismatch` |
+| POST | `/api/watchlist` | `{email\|phone, watchlist}` → 관심자산 갱신 (이메일 없는 휴대폰 단독 회원은 `phone`) |
 | POST | `/api/admin/login` | `{password}` → 200 + `Set-Cookie: claredex_admin=…` (틀리면 401) |
 | POST | `/api/admin/logout` | 세션 폐기 + 쿠키 만료 (`Max-Age=0`) |
 
 ## 화면
 
-- **메인 (TUPL 톤 · 오프화이트 `#FAF8F4` · 720px 단일 컬럼)** — 시장 지표 티커(항목별 출처 표기) → 히어로 → **오늘의 한 장**(다크 카드 1장, 최근 72시간 S등급 우선 · `전문 확인하고 알림 받기 →` 는 글 태그에 따라 `signup.html?watch=BTC|NVDA|AAPL|연준·금리` 로 연결) → 주요 속보 캐러셀 → 최신 속보(관심자산 1초 미리보기 BTC·NVDA·AAPL·연준·금리, S/A/B·카테고리 필터, 3줄 요약·시장 영향 한 줄·`공식 원문 ↗`) → 공식 일정(KST 카운트다운·D-day·S/A/B 배지·`이 일정 발표 알림 받기 →`) → 무료/Pro 안내 → 컴플라이언스 푸터.
-- **회원가입 (540px 단일 컬럼 카드)** — 카카오/구글 버튼(정식 오픈 전 "준비 중" 안내) + **이메일 인증번호 → 성함/닉네임(필수) → 휴대폰 인증번호**(`/api/auth/send-sms-otp`·`verify-sms-otp`) → 「마케팅 활용 동의」 체크박스 + 옆의 `[보기]` → 관심자산 8종(BTC·ETH·NVDA·AAPL·나스닥·코스피·삼성전자·연준·금리) → 완료 화면. `?watch=FOMC` 처럼 일정에서 넘어오면 `config.EVENT_WATCH_ALIASES` 규칙으로 해당 관심자산을 자동 선택하고 화면 위에 1줄로 안내합니다. `[보기]`는 수집·이용 항목, 이용 목적, 제3자 제공(받는 자/목적/항목/보유기간), 보유·이용 기간, 동의 거부 권리·불이익, 전송 방법·수신 거부를 담은 모달을 엽니다. 동의는 선택이며 거부해도 가입·속보 수신은 가능합니다.
+- **메인 (TUPL 톤 · 오프화이트 `#FAF8F4` · 720px 단일 컬럼)** — 시장 지표 티커(항목별 출처 표기) → 히어로 → **오늘의 한 장**(다크 카드 1장, 최근 72시간 S등급 우선 · `내 종목 야간 S등급 비상벨 켜기 →` 는 글 태그에 따라 `signup.html?watch=BTC|NVDA|AAPL|연준·금리` 로 연결) → 주요 속보 캐러셀 → 최신 속보(관심자산 1초 미리보기 BTC·NVDA·AAPL·연준·금리, S/A/B·카테고리 필터, 3줄 요약·시장 영향 한 줄·`공식 원문 ↗`) → 공식 일정(KST 카운트다운·D-day·S/A/B 배지·`이 일정 발표 알림 받기 →`) → 무료/Pro 안내 → 컴플라이언스 푸터.
+- **회원가입 (540px 단일 컬럼 카드 · 가치 먼저, 휴대폰 1개만 마지막에)** — **1단계** 관심자산 칩 10종(BTC·NVDA·AAPL·연준·금리·삼성전자·SK하이닉스·ETH·TSLA·나스닥·코스피)을 고르면 `/api/posts`·`/api/calendar` 에서 그 자산의 최근 공식 공시 1~2건과 다가오는 S등급 일정을 즉시 보여줍니다(가입 전 미리 보는 3초 브리핑). **2단계**는 「잠든 사이 내 종목 S등급 기습 공시, 3초 결론으로 깨워드립니다」 + 「🔒 리딩방·광고 전화 0건 보증 · 평소엔 절대 안 보냅니다 · 원클릭 수신 해지」 배지 아래 **휴대폰 번호 + 인증번호 6자리 한 단계**(`/api/auth/send-sms-otp`·`verify-sms-otp`)로 끝납니다. 이메일은 접힌 「이메일로도 받기(선택)」에서만 받고, 성함·닉네임 입력과 카카오·구글(준비 중) 버튼은 없습니다. 「마케팅 활용 동의」는 체크박스 + `[보기]` 모달(수집·이용 항목, 목적, 제3자 제공, 보유 기간, 거부 권리·불이익, 전송 방법·수신 거부)이며 선택 사항입니다. 완료 화면에는 방금 예약된 관심자산과 **12월 S등급 일정(고용보고서 12/4 · FOMC 12/10 · CPI 12/10)** 카드가 뜹니다. `?watch=FOMC` 처럼 일정에서 넘어오면 `config.EVENT_WATCH_ALIASES` 규칙으로 해당 관심자산을 자동 선택하고 화면 위에 1줄로 안내합니다.
 - **운영자 페이지(/admin)** — 비밀번호 로그인 게이트 → 초안 목록, 제목/서식 유지 본문/HTML/태그/이미지 링크 복사, 미리보기·HTML·텍스트 탭, 로그아웃. 정적 프리뷰에서는 초안 대신 비공개 안내를 표시합니다.
 
 ## 공식 일정(카운트다운) 데이터
@@ -145,11 +146,12 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 ## 검증 결과 (요약)
 
-`python3 verify.py` → **171/171 통과**
+`python3 verify.py` → **188/188 통과**
 - 3개 테이블·필수 컬럼(중요도 `posts.importance` 포함), `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 9개 썸네일 1200×630 PNG
 - 중요도: 모든 글 S/A/B 유효값 + 라벨, `content.fed_post` 생성 시 등급 계산, `posts.importance` 저장·재조회, `/api/posts?importance=S` 필터
 - 공식 일정: `calendar.json` 정규화(중요도·라벨·기관·원문 링크), watch→관심자산 매핑, 발표 시각 오름차순, `/api/calendar` 응답
-- 가입 화면: 관심자산 목록 = `config.WATCHLIST_ASSETS`, 일정→관심자산 매핑 = `config.EVENT_WATCH_ALIASES`, `?watch=` 자동 선택, 실제 OTP API 6개 엔드포인트 연동, 540px 단일 컬럼
+- 가입 화면: 관심자산 목록 = `config.WATCHLIST_ASSETS`, 일정→관심자산 매핑 = `config.EVENT_WATCH_ALIASES`, `?watch=` 자동 선택, 실제 OTP·가입 API 연동, 카카오·구글(준비 중)·성함 필수 입력 제거, 3초 브리핑·비상벨 카피·12월 S등급 일정 카드, 540px 단일 컬럼
+- 메인 CTA: `내 종목 야간 S등급 비상벨 켜기 →` · `고른 자산 S등급 급변 시 문자로 바로 받기 (광고 전화 0건) →` · `30초 만에 무료 비상벨 켜기 →`
 - 메인: `오늘의 한 장` CTA 의 `watchKeyForPost` 연결, 관심자산 칩 4종, 화면 순서(티커→히어로→오늘의 한 장→최신 속보)
 - 글 1건당 초안 1건, 키워드 5~8, 텔레그램/웹 링크·고지·이미지 링크 포함, CTA 최대 유사도 0.40
 - HTTP: `/`, `/signup.html`, `/signup`, `/admin`·`/admin/`(관리자 콘솔 200·`no-store`·`noindex`), `/admin/admin.css`·`/admin/app.js`, `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q·importance), `/api/stats`, `/api/calendar` 200 / `/admin-blog.html`·`/admin-blog` 404
@@ -160,6 +162,7 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 - 수집 작업: 스텁 단계로 시작→완료 상태 파일 기록, 30초 내 재실행 거부
 - 정적 프리뷰: `export_static.py` 가 `public/data/naver-drafts.json` 을 만들지 않음, `posts.json`·`calendar.json` 에 중요도 포함, `stats.json` 생성, 숨김 글 미포함, `public/admin` 에 비밀번호·DB 파일 없음
 - POST `/api/signup` 201 → `/api/watchlist` 200 → SQLite 저장 확인, 같은 이메일 재가입 시 관심자산 보존, 잘못된 이메일 400, 미지원 자산 4xx, 없는 경로 404, 상위 경로 403, 테스트 서버 정상 종료
+- 휴대폰 1단계: 이메일 없이 `send-sms-otp` → `verify-sms-otp` → `POST /api/signup` 201(이메일 NULL·provider=phone·관심자산 저장), 휴대폰 기준 `/api/watchlist` 200, 관리자 회원 목록에서 이메일 없는 회원 검색·표시(UNIQUE·목록 안 깨짐)
 
 ## GitHub Pages 정적 프리뷰
 

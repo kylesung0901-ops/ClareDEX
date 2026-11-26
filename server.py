@@ -11,10 +11,10 @@ public/ 정적 파일 + JSON API.
   GET  /api/auth/channels    본인인증 발송 채널 상태 (SMTP/Resend/SMS 설정 여부·샌드박스 여부)
   POST /api/auth/send-email-otp   {email}            이메일 인증번호 발송
   POST /api/auth/verify-email-otp {email, code}      이메일 인증번호 확인
-  POST /api/auth/send-sms-otp     {email, phone}     휴대폰 인증번호 발송 (이메일 인증 선행)
-  POST /api/auth/verify-sms-otp   {email, phone, code}  휴대폰 인증번호 확인
-  POST /api/signup           {email, name, phone, marketing_agreed, watchlist}  (이메일+휴대폰 인증 필수)
-  POST /api/watchlist        {email, watchlist}
+  POST /api/auth/send-sms-otp     {phone, email?}    휴대폰 인증번호 발송 (이메일 없이도 가능)
+  POST /api/auth/verify-sms-otp   {phone, code, email?}  휴대폰 인증번호 확인
+  POST /api/signup           {phone, watchlist, email?, name?, marketing_agreed?}  (휴대폰 인증 필수 · 이메일·이름은 선택)
+  POST /api/watchlist        {email|phone, watchlist}
 
 운영자 API (모두 세션 쿠키 필요 · 미로그인 401)
   GET  /api/admin/session            현재 운영자 세션 상태
@@ -66,7 +66,7 @@ import collector  # noqa: E402
 import db  # noqa: E402
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
-PROVIDERS = {"email", "kakao", "google", "naver"}
+PROVIDERS = {"email", "phone", "kakao", "google", "naver"}
 TICKER_TTL = 20.0
 _ticker_lock = threading.Lock()
 _ticker_cache: dict | None = None
@@ -696,9 +696,18 @@ class Handler(BaseHTTPRequestHandler):
             result = authflow.verify(authflow.CHANNEL_SMS, phone, code, email=email)
 
         if result.get("ok"):
-            if route.endswith("verify-email-otp") or route.endswith("verify-sms-otp"):
+            if route.endswith("verify-email-otp"):
                 with db.session() as conn:
                     result["verification"] = authflow.verification_state(conn, email)
+            elif route.endswith("verify-sms-otp"):
+                # 휴대폰 인증은 번호 기준 상태를 돌려준다(이메일 없이 가입하는 흐름 포함).
+                with db.session() as conn:
+                    state = authflow.phone_state(conn, phone)
+                    if email:
+                        email_state = authflow.verification_state(conn, email)
+                        state["email"] = email_state.get("email")
+                        state["email_verified"] = email_state.get("email_verified")
+                    result["verification"] = state
             self._send_json(result, 200)
             return
 
@@ -1037,25 +1046,22 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if route == "/api/signup":
-            email = str(body.get("email", "")).strip().lower()
+            # 휴대폰 1단계 가입: email·name 은 선택이다(휴대폰 OTP 하나로 가입 완료).
+            email = str(body.get("email", "") or "").strip().lower() or None
             raw_name = body.get("name")
             name = (str(raw_name).strip() if raw_name is not None else "") or None
             phone = authflow.normalize_phone(body.get("phone"))
             raw_provider = body.get("provider")
-            provider = ((str(raw_provider).strip().lower() if raw_provider is not None else "email")
-                        or "email")
+            provider = ((str(raw_provider).strip().lower() if raw_provider is not None else "")
+                        or ("email" if email else "phone"))
             watchlist = body.get("watchlist") or []
             # 동의 여부를 보내지 않은 요청(관심자산만 수정 등)은 기존 동의 이력을 지우지 않는다.
             raw_marketing = body.get("marketing_agreed")
             marketing_agreed = None if raw_marketing is None else bool(raw_marketing)
-            if not EMAIL_RE.match(email):
+            if email and not EMAIL_RE.match(email):
                 self._send_json({"ok": False, "error": "이메일 형식을 확인해 주세요."}, 400)
                 return
-            if not name:
-                self._send_json({"ok": False, "code": "name_required",
-                                 "error": "성함 또는 닉네임을 입력해 주세요."}, 400)
-                return
-            if len(name) > 40:
+            if name and len(name) > 40:
                 self._send_json({"ok": False, "code": "name_too_long",
                                  "error": "성함 또는 닉네임은 40자 이내로 입력해 주세요."}, 400)
                 return
@@ -1079,17 +1085,28 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 return
             with db.session() as conn:
-                state = authflow.verification_state(conn, email)
-            if not state["email_verified"] or not state["phone_verified"]:
+                if email:
+                    state = authflow.verification_state(conn, email)
+                else:
+                    state = {"email_verified": False, "phone_verified": False, "phone": None}
+                # 휴대폰 인증은 번호 기준으로도 확인한다(이메일 없이 가입하는 흐름).
+                pstate = authflow.phone_state(conn, phone)
+            email_ok = bool(state["email_verified"])
+            # 휴대폰 인증은 번호 기준(1단계 퍼널) 기록을 먼저 보고, 예전 이메일 기준 기록도 호환한다.
+            phone_ok = bool(pstate["phone_verified"]) or bool(
+                state["phone_verified"] and state.get("phone") == phone
+            )
+            # 이메일을 함께 보냈다면 그 이메일도 인증돼 있어야 저장한다.
+            if email and not email_ok:
                 self._send_json({
                     "ok": False,
                     "code": "verification_required",
-                    "error": "이메일과 휴대폰 본인인증을 모두 마쳐야 가입할 수 있습니다.",
-                    "email_verified": state["email_verified"],
-                    "phone_verified": state["phone_verified"],
+                    "error": "이메일 인증을 마쳐야 이메일을 함께 등록할 수 있습니다. 인증 없이 가입하려면 이메일을 비워 주세요.",
+                    "email_verified": False,
+                    "phone_verified": bool(phone_ok),
                 }, 403)
                 return
-            if state.get("phone") and state["phone"] != phone:
+            if state.get("phone") and state["phone"] != phone and not pstate["phone_verified"]:
                 self._send_json({
                     "ok": False,
                     "code": "phone_mismatch",
@@ -1097,22 +1114,35 @@ class Handler(BaseHTTPRequestHandler):
                     "phone_masked": authflow.masked_phone(state["phone"]),
                 }, 403)
                 return
+            if not phone_ok:
+                self._send_json({
+                    "ok": False,
+                    "code": "verification_required",
+                    "error": "휴대폰 본인인증을 먼저 마쳐 주세요.",
+                    "email_verified": bool(email_ok),
+                    "phone_verified": False,
+                }, 403)
+                return
             with db.session() as conn:
-                existing = db.get_user(conn, email)
-                # 이미 가입한 이메일을 다시 진행할 때 빈 목록으로 기존 관심자산을 지우지 않는다.
+                existing = (db.get_user(conn, email) if email else None) or db.get_user_by_phone(conn, phone)
+                # 이미 가입한 회원을 다시 진행할 때 빈 목록으로 기존 관심자산을 지우지 않는다.
                 effective = watchlist if (watchlist or not existing) else None
                 user = db.upsert_user(
                     conn, email=email, name=name, provider=provider, watchlist=effective,
-                    phone=phone, email_verified=True, phone_verified=True,
+                    phone=phone, email_verified=bool(email_ok), phone_verified=True,
                     marketing_agreed=marketing_agreed,
                 )
-            self._send_json({"ok": True, "user": user, "next": "/signup?step=watchlist"}, 201)
+            self._send_json({"ok": True, "user": user, "next": "/?reserved=1"}, 201)
             return
 
         if route == "/api/watchlist":
-            email = str(body.get("email", "")).strip().lower()
+            email = str(body.get("email", "") or "").strip().lower() or None
+            phone = authflow.normalize_phone(body.get("phone"))
             watchlist = body.get("watchlist")
-            if not EMAIL_RE.match(email):
+            if not email and not phone:
+                self._send_json({"ok": False, "error": "이메일 또는 휴대폰 번호가 필요합니다."}, 400)
+                return
+            if email and not EMAIL_RE.match(email):
                 self._send_json({"ok": False, "error": "이메일 형식을 확인해 주세요."}, 400)
                 return
             if not isinstance(watchlist, list):
@@ -1123,10 +1153,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"ok": False, "error": "지원하지 않는 관심자산입니다.", "unknown": unknown}, 400)
                 return
             with db.session() as conn:
-                if not db.get_user(conn, email):
-                    self._send_json({"ok": False, "error": "가입된 이메일이 아닙니다."}, 404)
+                user = (db.get_user(conn, email) if email else None) or db.get_user_by_phone(conn, phone)
+                if not user:
+                    self._send_json({"ok": False, "error": "가입된 회원이 아닙니다."}, 404)
                     return
-                user = db.set_watchlist(conn, email, watchlist)
+                user = db.set_watchlist_by_id(conn, int(user["id"]), watchlist)
             self._send_json({"ok": True, "user": user})
             return
 

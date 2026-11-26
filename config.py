@@ -42,7 +42,9 @@ HTTP_USER_AGENT = "ClareDEX/1.0 (AdminContact@claredex.com)"
 HTTP_TIMEOUT = 12
 
 # 관심자산 (회원 온보딩 / API 검증)
-WATCHLIST_ASSETS = ["BTC", "ETH", "나스닥", "코스피", "삼성전자", "NVDA", "AAPL", "연준·금리"]
+# TSLA·SK하이닉스는 1단계 휴대폰 가입 퍼널의 대표 칩으로 추가했다. 기존 목록 순서는 그대로 두어
+# 이미 저장된 회원의 관심자산이 바뀌지 않는다.
+WATCHLIST_ASSETS = ["BTC", "ETH", "나스닥", "코스피", "삼성전자", "SK하이닉스", "NVDA", "AAPL", "TSLA", "연준·금리"]
 
 # 공식 일정 알림 신청(signup.html?watch=FOMC) → 관심자산 매핑.
 # 일정은 별도 구독 목록을 만들지 않고, 그 발표를 다루는 관심자산 알림으로 함께 설정한다.
