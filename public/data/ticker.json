@@ -1,38 +1,38 @@
 {
   "ok": true,
   "stale": true,
-  "generated_at": "2026-11-26T14:34:23+09:00",
+  "generated_at": "2026-11-26T14:36:08+09:00",
   "items": [
     {
       "key": "btc_krw",
       "label": "BTC/KRW",
-      "value": 82785000.0,
-      "display": "82,785,000원",
-      "delta": 0.95,
+      "value": 82824000.0,
+      "display": "82,824,000원",
+      "delta": 1.0,
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-26T14:34:21+09:00"
+      "as_of": "2026-11-26T14:36:02+09:00"
     },
     {
       "key": "btc_usd",
       "label": "BTC/USD",
-      "value": 61017.03,
-      "display": "$61,017",
+      "value": 61055.63,
+      "display": "$61,056",
       "source": "Binance.US",
       "source_url": "https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT",
-      "as_of": "2026-11-26T14:34:23+09:00"
+      "as_of": "2026-11-26T14:36:08+09:00"
     },
     {
       "key": "kimchi_premium",
       "label": "김치프리미엄",
-      "value": 1.02,
-      "display": "+1.02%",
-      "delta": 1.02,
+      "value": 1.0,
+      "display": "+1.00%",
+      "delta": 1.0,
       "delta_unit": "%",
       "source": "업비트·Binance.US·USD/KRW",
       "source_url": "https://www.claredex.com/",
-      "as_of": "2026-11-26T14:34:23+09:00",
+      "as_of": "2026-11-26T14:36:08+09:00",
       "note": "업비트 BTC 원화가 ÷ (BTC/USD × USD/KRW) − 1"
     },
     {
@@ -72,15 +72,15 @@
       "delta_unit": "%",
       "source": "업비트",
       "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",
-      "as_of": "2026-11-26T14:34:23+09:00"
+      "as_of": "2026-11-26T14:36:08+09:00"
     }
   ],
   "values": {
-    "btc_krw": 82785000.0,
+    "btc_krw": 82824000.0,
     "eth_krw": 2308000.0,
-    "btc_usd": 61017.03,
+    "btc_usd": 61055.63,
     "usdkrw": 1343.042517,
-    "kimchi_premium": 1.0208055066195376,
+    "kimchi_premium": 1.0044999073691718,
     "long_pct": 71.98879551820728,
     "fear_greed": 11
   },
