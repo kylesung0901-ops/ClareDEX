@@ -300,9 +300,9 @@ def server_checks(port: int) -> None:
 
         status, headers, raw = http(base + "/signup.html")
         signup_html = raw.decode("utf-8", "replace")
-        check(status == 200 and "휴대폰 번호" in signup_html
+        check(status == 200 and "비상벨 받을 번호" in signup_html
               and "id=\"smsCode\"" in signup_html and "인증번호 6자리" in signup_html,
-              "GET /signup.html → 200 · 휴대폰 번호 + 인증번호 6자리 한 단계", f"HTTP {status}")
+              "GET /signup.html → 200 · 비상벨 받을 번호 + 인증번호 6자리 한 단계", f"HTTP {status}")
         check("data-social" not in signup_html and "준비 중" not in signup_html
               and "카카오로 시작하기" not in signup_html and "Google로 시작하기" not in signup_html,
               "가입 화면: 카카오·구글 (준비 중) 버튼 제거")
@@ -336,6 +336,43 @@ def server_checks(port: int) -> None:
               and "리딩방" not in signup_html and "광고 전화 0건" not in signup_html
               and "trust-badges" not in signup_html,
               "2단계: 야간 기습 공시 비상벨 카피 (스팸 보증 배지 제거)")
+
+        # --- 2단계 카피: 방어적 변명 제거 → '받는 곳' 중심
+        check("<label for=\"phone\">비상벨 받을 번호</label>" in signup_html
+              and 'data-default-label="번호 확인"' in signup_html
+              and ">번호 확인</button>" in signup_html
+              and "내가 고른 조건으로 비상벨 켜기" in signup_html
+              and "휴대폰 인증을 마치면 비상벨이 켜집니다" not in signup_html
+              and "광고 전화나 제3자 판매에는 쓰지 않습니다" not in signup_html
+              and "앱 설치 없이 문자로만 받으며, 원할 때 언제든 바로 끌 수 있습니다." in signup_html,
+              "2단계 카피: 비상벨 받을 번호 · 번호 확인 · 내가 고른 조건으로 비상벨 켜기 (방어적 문구 제거)")
+        check("커뮤니티·뉴스가 돌기 전, 내가 정한 기준선만 조용히 짚어드립니다." in signup_html
+              and "잠든 사이 내 종목" in signup_html,
+              "STEP 2 서브카피: 잠든 사이 · 커뮤니티·뉴스가 돌기 전 기준선")
+
+        # --- 내 폰에 도착할 문자 미리보기 (관심자산 + 타점 조건 실시간 반영)
+        form_at = signup_html.find('id="bellForm"')
+        preview_at = signup_html.find('id="smsPreview"')
+        phone_at = signup_html.find('id="phone"')
+        check(0 < form_at < preview_at < phone_at,
+              "문자 미리보기 카드가 번호 입력란 바로 위 (가입 폼 안)",
+              f"form={form_at} preview={preview_at} phone={phone_at}")
+        check("📩 내 폰에 도착할 비상벨 예시" in signup_html and "방금 전" in signup_html
+              and "[클레어덱스]" in signup_html
+              and "앱 설치도, 텔레그램 무음에 묻힐 걱정도 없이" in signup_html,
+              "문자 미리보기: 제목 · 최근 시각 · [클레어덱스] 본문 · 부연 한 줄")
+        check("function renderSmsPreview" in signup_html and "function smsAssetLabel" in signup_html
+              and signup_html.count("renderSmsPreview()") >= 3
+              and "SMS_VALUE_PLACEHOLDER" in signup_html
+              and "alertRule.metric" in signup_html and "Array.from(selected)" in signup_html,
+              "문자 미리보기: 관심자산·타점 조건을 바꾸면 바로 갱신되는 JS",
+              f"renderSmsPreview 호출 {signup_html.count('renderSmsPreview()')}곳")
+        check("smsLine1" in signup_html and "smsLine2" in signup_html
+              and "도착 보장" not in signup_html and "몇 분 전 도착" not in signup_html,
+              "문자 미리보기: 도착 보장·과장 수치 없이 예시로 표기")
+        check(".sms-preview" in css and ".sms-bubble" in css
+              and "border-radius: 14px 14px 14px 4px" in css,
+              "문자 미리보기: 문자 말풍선 카드 스타일 (공용 CSS)")
         check("12월 S등급 일정" in signup_html and "고용보고서" in signup_html
               and "FOMC 회의 결과 발표" in signup_html and "소비자물가지수(CPI)" in signup_html,
               "가입 완료 화면: 내 관심자산 + 12월 S등급 일정(고용보고서·FOMC·CPI) 카드")
