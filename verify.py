@@ -282,9 +282,10 @@ def server_checks(port: int) -> None:
         check("S 긴급" in html and 'imp(p) === "S"' in html,
               "긴급(S) 속보 우선 노출 (오늘의 한 장 선택 기준)")
         check("내 종목 야간 S등급 비상벨 켜기" in html
-              and "고른 자산 S등급 급변 시 문자로 바로 받기 (광고 전화 0건)" in html
+              and "고른 자산 S등급 급변 시 문자로 바로 받기" in html
+              and "광고 전화 0건" not in html
               and "30초 만에 무료 비상벨 켜기" in html,
-              "메인 CTA 카피: 0-스팸·야간 비상벨 톤 (Featured·전환바·Free 카드)")
+              "메인 CTA 카피: 야간 비상벨 톤 (Featured·전환바·Free 카드)")
 
         status, headers, raw = http(base + "/signup.html")
         signup_html = raw.decode("utf-8", "replace")
@@ -303,8 +304,9 @@ def server_checks(port: int) -> None:
               and "/api/posts?limit=60" in signup_html and "/api/calendar" in signup_html,
               "1단계: 관심자산 선택 → 최근 공시 · S등급 일정 즉시 미리보기 연동")
         check("잠든 사이 내 종목 S등급 기습 공시" in signup_html and "3초 결론" in signup_html
-              and "리딩방·광고 전화 0건 보증" in signup_html and "원클릭 수신 해지" in signup_html,
-              "2단계: 야간 기습 공시 비상벨 카피 + 스팸 불안 제거 배지")
+              and "리딩방" not in signup_html and "광고 전화 0건" not in signup_html
+              and "trust-badges" not in signup_html,
+              "2단계: 야간 기습 공시 비상벨 카피 (스팸 보증 배지 제거)")
         check("12월 S등급 일정" in signup_html and "고용보고서" in signup_html
               and "FOMC 회의 결과 발표" in signup_html and "소비자물가지수(CPI)" in signup_html,
               "가입 완료 화면: 내 관심자산 + 12월 S등급 일정(고용보고서·FOMC·CPI) 카드")
