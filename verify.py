@@ -209,19 +209,33 @@ def server_checks(port: int) -> None:
         status, headers, raw = http(base + "/")
         html = raw.decode("utf-8", "replace")
         check(status == 200 and "text/html" in headers.get("Content-Type", ""), "GET / → 200 text/html", f"HTTP {status}")
-        check("공식 원문 기반 실시간 속보" in html and "내 관심자산 속보 무료로 받기" in html,
-              "메인 히어로·CTA 문구 포함")
-        check("실시간 속보" in html and "공식 원문 보기" in html, "타임라인 섹션 마크업 포함")
+        # --- TUPL 스타일 단일 컬럼 UI (히어로 → 다크 카드 → 캐러셀 → 최신 속보 → 일정 → 가입 안내)
+        check("OFFICIAL BREAKING" in html and "공식 원문으로 읽는 오늘의 시장" in html
+              and "오늘의 시장, 공식 원문 3초 결론" in html,
+              "히어로: 라벨 → 헤드라인 → 골드 구분선 → 서브카피")
+        check(html.count("<h1") == 1, "h1은 히어로 한 곳뿐", f"h1 {html.count('<h1')}개")
+        check('class="col"' in html and 'class="side"' not in html and 'class="layout"' not in html,
+              "단일 컬럼 레이아웃 (사이드바·2단 그리드 없음)")
+        check('id="featured"' in html and 'id="featuredTitle"' in html and 'id="featuredBody"' in html
+              and 'featured-label' in html,
+              "다크 네이비 '오늘의 한 장' 카드 1장")
 
-        flash_tag = ""
-        if 'id="flashSignup"' in html:
-            start = html.rfind("<", 0, html.index('id="flashSignup"'))
-            end = html.index(">", html.index('id="flashSignup"')) + 1
-            flash_tag = html[start:end]
-        check(bool(flash_tag) and "signup.html" in flash_tag and "aria-disabled" not in flash_tag,
-              "긴급 속보 '바로 가입하기' 버튼 활성 (aria-disabled 없음)", flash_tag[:120])
-        check("badge-imp" in html and "badge-s" in html and "id=\"eventList\"" in html,
-              "중요도 배지 · 공식 일정 목록 마크업")
+        cta_tag = ""
+        if 'id="featuredCta"' in html:
+            start = html.rfind("<", 0, html.index('id="featuredCta"'))
+            end = html.index(">", html.index('id="featuredCta"')) + 1
+            cta_tag = html[start:end]
+        check(bool(cta_tag) and "signup.html" in cta_tag and "aria-disabled" not in cta_tag,
+              "피처드 CTA → signup.html 활성 (aria-disabled 없음)", cta_tag[:120])
+        check('id="carousel"' in html and 'id="carouselTrack"' in html and 'id="carouselDots"' in html,
+              "주요 속보 캐러셀 + 점 인디케이터")
+        check(all(label in html for label in ("S 긴급", "미국주식", "국내주식", "매크로")),
+              "속보 필터 칩 (전체·S 긴급·미국주식·국내주식·코인·매크로)")
+        check('id="feed"' in html and 'class="feed-item' in html and "공식 원문 ↗" in html,
+              "최신 속보 카드: 라벨·제목·요약·시각+원문 링크")
+        check("badge-imp" in html and "badge-s" in html and "id=\"eventList\"" in html
+              and 'id="cdClock"' in html,
+              "중요도 라벨 · 카운트다운 · 공식 일정 목록 마크업")
         check("id=\"plans\"" in html and "PRO" in html and "무지연 속보" in html,
               "무료 회원 혜택 · Pro 플랜 안내")
         check("id=\"countLine\"" in html and "오늘 확인" in html, "오늘 확인 건수 표기")
@@ -232,6 +246,8 @@ def server_checks(port: int) -> None:
               "GET /signup.html → 200 (휴대폰 인증 흐름)", f"HTTP {status}")
         check('id="phone"' in signup_html and 'id="code"' in signup_html and "관심자산" in signup_html,
               "회원가입: 번호 입력 → 인증번호 → 관심자산 단계")
+        check('class="col"' in signup_html and "auth-card" in signup_html and 'class="layout"' not in signup_html,
+              "회원가입도 오프화이트 단일 컬럼 (auth-card)")
         status, _, raw = http(base + "/signup")
         check(status == 200 and "휴대폰" in raw.decode("utf-8", "replace"), "GET /signup (기존 404 경로) → 200")
 
