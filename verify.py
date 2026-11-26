@@ -12,12 +12,14 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -118,6 +120,48 @@ def db_checks() -> None:
     dirty = [p["id"] for p in posts if any(b in p["market_impact"] for b in banned)]
     check(not dirty, "컴플라이언스 금지 표현 없음", f"위반 {dirty}" if dirty else "매수·매도 권유 표현 없음")
 
+    # ---- 중요도(S/A/B) 분류 · 저장 경로
+    check("importance" in post_cols, "posts.importance 컴럼 (S/A/B)")
+    levels = {str(p.get("importance") or "") for p in posts}
+    check(bool(levels) and levels <= set(config.IMPORTANCE_LEVELS),
+          "모든 글에 유효한 중요도(S/A/B)", str(sorted(levels)))
+
+    import content  # noqa: E402  (수집 글 생성과 같은 경로로 검사)
+
+    fixture = content.fed_post(
+        {"title": "Federal Reserve issues FOMC statement",
+         "link": f"https://www.federalreserve.gov/newsevents/pressreleases/verify-fomc-{int(time.time())}.htm"},
+        config.iso_kst(),
+    )
+    check(fixture.get("importance") in config.IMPORTANCE_LEVELS,
+          "수집 글 생성에 중요도 포함 (content.fed_post)", str(fixture.get("importance")))
+    fixture["created_at"] = config.iso_kst()
+    fixture["is_member_early"] = False
+    post_id, created = db.insert_post(conn, fixture)
+    stored_level = None
+    if post_id:
+        stored_level = conn.execute("SELECT importance FROM posts WHERE id = ?", (post_id,)).fetchone()[0]
+        conn.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+        conn.commit()
+    check(created and stored_level == fixture["importance"],
+          "posts.importance 저장·재조회", f"#{post_id} → {stored_level}")
+
+    # ---- 공식 일정(calendar.json) 정규화
+    check(config.CALENDAR_PATH == config.BASE_DIR / "calendar.json" and config.CALENDAR_PATH.exists(),
+          "공식 일정은 저장소 루트 calendar.json (버전 관리)", str(config.CALENDAR_PATH))
+    calendar = config.load_calendar()
+    cal_events = calendar.get("events") or []
+    check(len(cal_events) >= 5, "공식 일정 로드", f"{len(cal_events)}건")
+    bad_cal = [e.get("id") for e in cal_events
+               if e.get("importance") not in config.IMPORTANCE_LEVELS
+               or not e.get("importance_label") or not e.get("org")
+               or not str(e.get("source_url") or "").startswith("http")]
+    check(not bad_cal, "일정 정규화: 중요도·라벨·기관·공식 원문 링크",
+          str(bad_cal[:5]) if bad_cal else f"{len(cal_events)}건 정상")
+    unmapped = [e.get("id") for e in cal_events
+                if e.get("watch") and config.EVENT_WATCH_ALIASES.get(e["watch"]) not in config.WATCHLIST_ASSETS]
+    check(not unmapped, "일정 watch 값이 관심자산으로 모두 매핑", str(unmapped) if unmapped else "모두 매핑됨")
+
     img_bad = []
     for p in posts:
         path = config.PUBLIC_DIR / (p["image_path"] or "").lstrip("/")
@@ -201,25 +245,60 @@ def server_checks(port: int) -> None:
         status, headers, raw = http(base + "/")
         html = raw.decode("utf-8", "replace")
         check(status == 200 and "text/html" in headers.get("Content-Type", ""), "GET / → 200 text/html", f"HTTP {status}")
-        check("공식 원문 기반 실시간 속보" in html and "내 관심자산 속보 무료로 받기" in html,
-              "메인 히어로·CTA 문구 포함")
-        check("실시간 속보" in html and "공식 원문 보기" in html, "타임라인 섹션 마크업 포함")
-        check("flash-card" in html and "긴급 속보" in html and "flash-title" in html,
-              "메인 최상단 긴급 속보 섹션")
-        check("펼치기" in html and "바로 가입하기" in html,
-              "펼치기 → 바로 가입하기 버튼")
-        check("mask-image" in (config.PUBLIC_DIR / "assets" / "style.css").read_text(encoding="utf-8"),
-              "하단 3/5 페이드 (mask-image 그라데이션)")
-        flash_pos = html.find("flash-card")
+        check("공식 원문으로 읽는 오늘의 시장" in html and "무료 가입" in html,
+              "메인 히어로·가입 CTA 문구 포함")
+        check("최신 속보" in html and "공식 원문 ↗" in html, "타임라인(최신 속보) 섹션 마크업 포함")
+        check('class="featured"' in html and 'id="featured"' in html and "오늘의 한 장" in html,
+              "메인 '오늘의 한 장' 카드")
+        check('id="featuredCta"' in html and "function watchKeyForPost" in html
+              and "signup.html?from=featured&watch=" in html,
+              "오늘의 한 장 CTA → signup.html?watch= 관심자산 연결")
+        watch_keys = re.findall(r'\{ key: "([^"]+)", tags:', html)
+        check(watch_keys == ["BTC", "NVDA", "AAPL", "연준·금리"]
+              and all(k in config.WATCHLIST_ASSETS for k in watch_keys),
+              "관심자산 칩 = BTC·NVDA·AAPL·연준·금리 (config.WATCHLIST_ASSETS 포함)", str(watch_keys))
+        css = (config.PUBLIC_DIR / "assets" / "style.css").read_text(encoding="utf-8")
+        check("--paper: #faf8f4" in css or "--paper:#faf8f4" in css,
+              "TUPL 톤 오프화이트 배경 (#FAF8F4)")
+        check(".auth-card" in css and "max-width: 540px" in css,
+              "가입 화면 540px 단일 컬럼 카드")
+        check(".feed-item.is-s" in css and ".badge-s" in css,
+              "S등급 강조 스타일 (is-s · badge-s)")
+        ticker_pos = html.find('class="ticker"')
         hero_pos = html.find('class="hero"')
-        check(0 < flash_pos < hero_pos, "긴급 속보가 히어로보다 위에 배치")
+        featured_pos = html.find('id="featured"')
+        latest_pos = html.find('id="breaking"')
+        check(0 < ticker_pos < hero_pos < featured_pos < latest_pos,
+              "첫 화면 순서: 시장지표 → 히어로 → 오늘의 한 장 → 최신 속보",
+              f"ticker={ticker_pos} hero={hero_pos} featured={featured_pos} latest={latest_pos}")
+        check("S 긴급" in html and 'imp(p) === "S"' in html,
+              "긴급(S) 속보 우선 노출 (오늘의 한 장 선택 기준)")
 
         status, headers, raw = http(base + "/signup.html")
         signup_html = raw.decode("utf-8", "replace")
         check(status == 200 and "성함 또는 닉네임" in signup_html, "GET /signup.html → 200", f"HTTP {status}")
         check("인증번호 발송" in signup_html and "이메일 인증번호 6자리" in signup_html
               and "문자 인증번호 6자리" in signup_html,
-              "회원가입: 이메일·훈대폰 OTP 입력란")
+              "회원가입: 이메일·휴대폰 OTP 입력란")
+        endpoints = ("/api/auth/send-email-otp", "/api/auth/verify-email-otp",
+                     "/api/auth/send-sms-otp", "/api/auth/verify-sms-otp", "/api/signup", "/api/watchlist")
+        missing = [e for e in endpoints if e not in signup_html]
+        check(not missing, "가입 화면이 실제 본인인증·가입 API 와 연동", ", ".join(missing) or "6개 엔드포인트")
+        signup_assets = re.findall(r'\{ key: "([^"]+)", sub:', signup_html)
+        check(len(signup_assets) == len(set(signup_assets))
+              and set(signup_assets) == set(config.WATCHLIST_ASSETS),
+              "가입 화면 관심자산 목록 = config.WATCHLIST_ASSETS", str(signup_assets))
+        m = re.search(r"const EVENT_ALIAS = \{(.*?)\n  \};", signup_html, re.S)
+        alias_block = m.group(1) if m else ""
+        alias_map = dict(re.findall(r'"?([^"\s:,]+)"?\s*:\s*\{ asset: "([^"]+)"', alias_block))
+        check(alias_map == config.EVENT_WATCH_ALIASES,
+              "가입 화면 일정→관심자산 매핑 = config.EVENT_WATCH_ALIASES",
+              str(alias_map) if alias_map != config.EVENT_WATCH_ALIASES else "6개 일정 매핑 일치")
+        check("REQUEST.asset" in signup_html and "selected.add(REQUEST.asset)" in signup_html
+              and "requestNote" in signup_html,
+              "signup.html?watch= 관심자산 자동 체크·안내")
+        check('class="auth-grid"' not in signup_html and "auth-shell" in signup_html,
+              "가입 화면 단일 컬럼 (auth-grid 2단 제거)")
         consent_pos = signup_html.find("마케팅 활용 동의")
         check(consent_pos > 0 and "[보기]" in signup_html
               and "광고·마케팅 활용 및 제3자 제공 동의" in signup_html,
@@ -272,15 +351,39 @@ def server_checks(port: int) -> None:
         first = (posts.get("posts") or [{}])[0]
         check(all(k in first for k in ("title", "summary_lines", "market_impact", "tags", "source_url", "verified_at")),
               "글 응답 필드 완전성")
+        levels = [p.get("importance") for p in posts.get("posts") or []]
+        check(all(lv in config.IMPORTANCE_LEVELS for lv in levels)
+              and all(p.get("importance_label") for p in posts.get("posts") or []),
+              "모든 글에 importance(S/A/B) + 라벨", str(sorted(set(levels)) or "없음"))
 
         status, _, raw = http(base + "/api/posts?category=macro")
         macro = json.loads(raw)
         check(status == 200 and macro["posts"] and all(p["category"] == "macro" for p in macro["posts"]),
               "GET /api/posts?category=macro 필터")
 
-        status, _, raw = http(base + "/api/posts?q=FOMC")
+        status, _, raw = http(base + "/api/posts?importance=S")
+        s_only = json.loads(raw)
+        check(status == 200 and s_only.get("count", 0) >= 1
+              and all(p.get("importance") == "S" for p in s_only.get("posts") or []),
+              "GET /api/posts?importance=S 필터", f"{s_only.get('count')}건")
+
+        # 검색어는 실제 데이터에 있는 태그로 검증한다(시드 데이터에 따라 달라지지 않게).
+        needle = (first.get("tags") or ["연준"])[0]
+        status, _, raw = http(base + "/api/posts?q=" + urllib.parse.quote(str(needle)))
         q = json.loads(raw)
-        check(status == 200 and q.get("count", 0) >= 1, "GET /api/posts?q=FOMC 검색", f"{q.get('count')}건")
+        check(status == 200 and q.get("count", 0) >= 1, f"GET /api/posts?q={needle} 검색", f"{q.get('count')}건")
+        status, _, raw = http(base + "/api/posts?q=" + urllib.parse.quote("zzz-no-such-term"))
+        none = json.loads(raw)
+        check(status == 200 and none.get("count") == 0, "GET /api/posts?q=없는말 → 0건", f"{none.get('count')}건")
+
+        status, _, raw = http(base + "/api/stats")
+        stats = json.loads(raw)
+        check(status == 200 and isinstance(stats.get("today"), dict) and isinstance(stats.get("recent"), dict)
+              and isinstance(stats.get("today", {}).get("count"), int)
+              and isinstance(stats.get("recent", {}).get("count"), int)
+              and stats.get("total") == posts.get("count"),
+              "GET /api/stats → 오늘·최근 확인 건수",
+              f"오늘 {stats.get('today', {}).get('count')}건 · 전체 {stats.get('total')}건")
 
         status, _, raw = http(base + "/api/admin/session")
         sess = json.loads(raw)
@@ -462,7 +565,20 @@ def server_checks(port: int) -> None:
 
         status, _, raw = http(base + "/api/calendar")
         cal = json.loads(raw)
-        check(status == 200 and len(cal.get("events", [])) >= 1, "GET /api/calendar → 200", f"{len(cal.get('events', []))}건")
+        events = cal.get("events") or []
+        check(status == 200 and len(events) >= 1, "GET /api/calendar → 200", f"{len(events)}건")
+        bad_events = [e.get("id") for e in events
+                      if e.get("importance") not in config.IMPORTANCE_LEVELS
+                      or not e.get("importance_label")
+                      or not str(e.get("source_url") or "").startswith("http")
+                      or not e.get("datetime_kst")]
+        check(not bad_events, "일정 API: 중요도·라벨·공식 원문 링크·발표 시각",
+              str(bad_events[:5]) if bad_events else f"{len(events)}건 정상")
+        unmapped = [e.get("id") for e in events
+                    if e.get("watch") and config.EVENT_WATCH_ALIASES.get(e["watch"]) not in config.WATCHLIST_ASSETS]
+        check(not unmapped, "일정 watch 값 → 관심자산 매핑", str(unmapped) if unmapped else "모두 매핑됨")
+        times = [config.parse_kst(e["datetime_kst"]) for e in events if e.get("datetime_kst")]
+        check(times == sorted(times), "일정 API: 발표 시각 오름차순")
 
         # ------------------------------------------------ 본인인증(이메일·휴대폰) 가입
         status, _, raw = http(base + "/api/auth/channels")
@@ -539,15 +655,15 @@ def server_checks(port: int) -> None:
               "마케팅 활용 동의 + 동의 시각 저장", str(user.get("marketing_agreed_at")))
 
         status, _, raw = http(base + "/api/watchlist", "POST",
-                              {"email": email, "watchlist": ["BTC", "ETH", "나스닥", "NVDA"]})
+                              {"email": email, "watchlist": ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"]})
         wl = json.loads(raw)
-        check(status == 200 and wl.get("ok") and len(wl["user"]["watchlist"]) == 4,
-              "POST /api/watchlist → 200 저장", f"HTTP {status}")
+        check(status == 200 and wl.get("ok") and len(wl["user"]["watchlist"]) == 6,
+              "POST /api/watchlist → 200 저장 (AAPL·연준·금리 포함)", f"HTTP {status} · {wl.get('user', {}).get('watchlist')}")
 
         status, _, raw = http(base + "/api/signup", "POST",
                               {"email": email, "name": "검증", "phone": phone, "provider": "email", "watchlist": []})
         again = json.loads(raw)
-        check(status == 201 and len(again["user"]["watchlist"]) == 4,
+        check(status == 201 and len(again["user"]["watchlist"]) == 6,
               "같은 이메일 재가입 시 관심자산 보존", str(again["user"]["watchlist"]))
 
         with db.session() as conn:
@@ -560,7 +676,7 @@ def server_checks(port: int) -> None:
             conn.execute("DELETE FROM signup_verification WHERE email = ?", (email,))
             conn.execute("DELETE FROM auth_otp WHERE email = ?", (email,))
             conn.commit()
-        check(stored == ["BTC", "ETH", "나스닥", "NVDA"], "관심자산 SQLite 저장 확인", str(stored))
+        check(stored == ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"], "관심자산 SQLite 저장 확인", str(stored))
         check(flags == (phone, 1, 1, 1), "본인인증·마케팅 동의 SQLite 저장 확인", str(flags))
 
         status, _, raw = http(base + "/api/signup", "POST", {"email": "not-an-email"})
@@ -659,6 +775,20 @@ def static_checks() -> None:
               "public/data/naver-drafts.json 내보내지 않음 (공개 호스팅 차단)",
               str(drafts_snapshot) if drafts_snapshot.exists() else "파일 없음")
         check((config.PUBLIC_DIR / "data" / "posts.json").exists(), "public/data/posts.json 정상 생성")
+        stats_snapshot = config.PUBLIC_DIR / "data" / "stats.json"
+        check(stats_snapshot.exists(), "public/data/stats.json 정상 생성 (오늘·최근 건수)", str(stats_snapshot))
+        if stats_snapshot.exists():
+            export_stats = json.loads(stats_snapshot.read_text(encoding="utf-8"))
+            check(isinstance(export_stats.get("today"), dict) and isinstance(export_stats.get("recent"), dict),
+                  "stats.json: today·recent 구조")
+        cal_snap = config.PUBLIC_DIR / "data" / "calendar.json"
+        check(cal_snap.exists(), "public/data/calendar.json 정상 생성")
+        if cal_snap.exists():
+            cal_data = json.loads(cal_snap.read_text(encoding="utf-8"))
+            cal_list = cal_data.get("events") or []
+            check(bool(cal_list) and all(e.get("importance") in config.IMPORTANCE_LEVELS
+                                          and e.get("importance_label") for e in cal_list),
+                  "calendar.json 스냅샷에 중요도(S/A/B) 포함", f"{len(cal_list)}건")
 
     index_html = (config.PUBLIC_DIR / "index.html").read_text(encoding="utf-8")
     signup_html = (config.PUBLIC_DIR / "signup.html").read_text(encoding="utf-8")
@@ -680,6 +810,12 @@ def static_checks() -> None:
     snap = json.loads((config.PUBLIC_DIR / "data" / "posts.json").read_text(encoding="utf-8"))
     check(snap.get("count") <= published, "posts.json 스냅샷에 숨김 글 미포함",
           f"{snap.get('count')}/{published}")
+    snap_posts = snap.get("posts") or []
+    check(all(p.get("importance") in config.IMPORTANCE_LEVELS and p.get("importance_label")
+              for p in snap_posts),
+          "posts.json 스냅샷에 importance·라벨 포함", f"{len(snap_posts)}건")
+    check(bool(snap_posts) and all(k in snap_posts[0] for k in ("importance", "category_label")),
+          "posts.json: 정적 화면용 필드(importance·category_label)")
 
 
 def free_port(preferred: int = 8765) -> int:

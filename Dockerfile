@@ -21,6 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -m playwright install --with-deps chromium || echo "WARN: playwright chromium 설치 실패 — 네이버 발행은 playwright_missing 으로 기록됩니다"
 
 COPY config.py db.py authflow.py collector.py content.py thumbnail.py naver_drafts.py naver_publish.py export_static.py server.py verify.py ./
+COPY calendar.json ./calendar.json
 COPY public ./public
 COPY collect.sh ./collect.sh
 

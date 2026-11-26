@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>클레어덱스 | 공식 원문 기반 실시간 속보, 내 자산 영향까지 3초 요약</title>
-<meta name="description" content="연준·SEC·DART·업비트 공식 원문을 확인 즉시 3줄 요약과 시장 영향 한 줄로 전합니다. 확인 시각과 출처를 함께 남기는 실시간 속보 플랫폼, 클레어덱스.">
+<title>클레어덱스 | 공식 원문 속보, 오늘의 시장 3초 결론</title>
+<meta name="description" content="연준·BLS·BEA·SEC·DART 공식 원문을 확인 즉시 중요도(S/A/B)와 3줄 요약·시장 영향 한 줄로 전합니다. 휴대폰 인증 한 번으로 내 관심자산 속보를 받으세요.">
 <meta property="og:title" content="클레어덱스 | 공식 원문 기반 실시간 속보">
 <meta property="og:description" content="찌라시 없이 공식 출처와 확인 시각만. 발표 확인 즉시 3줄 요약과 시장 영향 한 줄.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20261125e">
+<link rel="stylesheet" href="assets/style.css?v=20261126a">
 </head>
 <body>
 
@@ -20,239 +20,166 @@
     <a class="brand" href="./" aria-label="클레어덱스 홈">
       <span class="brand-mark" aria-hidden="true"></span>
       <span class="brand-name">CLAREDEX</span>
-      <span class="brand-sub">Investment Journal</span>
     </a>
     <nav class="main-nav" aria-label="주요 메뉴">
       <a href="#breaking">실시간 속보</a>
-      <a href="#onepage">오늘의 한 장</a>
-      <a href="https://www.claredex.com/" target="_blank" rel="noopener">인사이트</a>
       <a href="#calendar">공식 일정</a>
+      <a href="#plans">Pro 안내</a>
     </nav>
     <div class="header-actions">
-      <a class="link-quiet" href="signup.html">로그인</a>
-      <a class="btn btn-dark btn-sm" href="signup.html">무료 시작하기</a>
+      <a class="link-quiet" href="signup.html">휴대폰 인증</a>
+      <a class="btn btn-gold btn-sm" href="signup.html">무료 가입</a>
     </div>
   </div>
 </header>
 
-<!-- 실시간 지표 티커 -->
+<!-- 시장 지표: 얇은 한 줄 -->
 <div class="ticker" aria-label="실시간 시장 지표">
   <div class="wrap ticker-inner" id="ticker" role="list">
-    <div class="ticker-live"><span class="live-dot" aria-hidden="true"></span>LIVE</div>
-    <div class="tick tick-skeleton"><span class="tick-label">BTC/KRW</span><span class="tick-value">—</span></div>
-    <div class="tick tick-skeleton"><span class="tick-label">BTC/USD</span><span class="tick-value">—</span></div>
-    <div class="tick tick-skeleton"><span class="tick-label">김치프리미엄</span><span class="tick-value">—</span></div>
-    <div class="tick tick-skeleton"><span class="tick-label">공포탐욕</span><span class="tick-value">—</span></div>
-    <div class="tick tick-skeleton"><span class="tick-label">BTC 롱/숏</span><span class="tick-value">—</span></div>
+    <span class="ticker-live" aria-hidden="true"><span class="live-dot"></span>LIVE</span>
+    <span class="tick tick-skeleton" role="listitem"><b>BTC/KRW</b> 불러오는 중…</span>
   </div>
 </div>
 
-<!-- 모바일 섹션 내비 (900px 이하) -->
-<nav class="mobile-nav" aria-label="모바일 섹션 메뉴">
-  <a href="#flash">긴급 속보</a>
-  <a href="#breaking">실시간 속보</a>
-  <a href="#onepage">오늘의 한 장</a>
-  <a href="#calendar">공식 일정</a>
-</nav>
-
-<main>
-  <!-- ============================================================ 최상단 긴급 속보
-       · 지금 가장 먼저 확인된 공식 원문을 메인 최상단에 올린다
-       · 내용 하단 3/5(약 60%)는 그라데이션으로 서서히 사라진다
-       · 「펼치기」를 누르면 전문이 열리고 「바로 가입하기」가 활성화된다 -->
-  <section class="flash" id="flash" aria-labelledby="flashTitle">
-    <div class="wrap">
-      <article class="flash-card" id="flashCard" data-expanded="false">
-        <div class="flash-rail">
-          <span class="flash-tag"><span class="live-dot" aria-hidden="true"></span>긴급 속보</span>
-          <span class="flash-meta" id="flashMeta">공식 원문 확인 중…</span>
-        </div>
-        <h1 class="flash-title" id="flashTitle">지금 가장 먼저 확인된 공식 원문을 불러오고 있습니다.</h1>
-        <div class="flash-content" id="flashContent">
-          <p class="flash-lead" id="flashLead"></p>
-          <ul class="flash-lines" id="flashLines"></ul>
-          <div class="flash-impact" id="flashImpact" hidden><b>시장 영향</b><span></span></div>
-          <p class="flash-source" id="flashSource" hidden></p>
-        </div>
-        <div class="flash-actions">
-          <p class="flash-note" id="flashNote">속보 전문은 「펼치기」로 확인할 수 있고, 가입하면 바로 읽을 수 있습니다.</p>
-          <div class="flash-btns">
-            <button class="flash-more" id="flashMore" type="button" aria-expanded="false" aria-controls="flashContent">펼치기</button>
-            <a class="btn flash-signup is-locked" id="flashSignup" href="signup.html?from=flash" aria-disabled="true" tabindex="-1">바로 가입하기 →</a>
-          </div>
-        </div>
-      </article>
-    </div>
-  </section>
+<main class="col">
 
   <!-- 히어로 -->
-  <section class="hero">
-    <div class="wrap hero-grid">
-      <div>
-        <span class="eyebrow"><span class="bar" aria-hidden="true"></span>공식 원문 · 실시간 속보</span>
-        <h1 class="hero-title">공식 원문 기반 실시간 속보,<br>내 자산 영향까지 <em>3초 요약</em></h1>
-        <p class="hero-sub">찌라시 없이 공식 출처와 확인 시각만 담았습니다. 발표가 확인되는 즉시 3줄 요약과 시장 영향 한 줄을 전해드립니다.</p>
-        <div class="hero-actions">
-          <a class="btn btn-dark btn-lg" href="signup.html">내 관심자산 속보 무료로 받기 →</a>
-          <a class="btn btn-ghost" href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener">텔레그램 실시간 채널 ↗</a>
-        </div>
-        <div class="hero-trust">
-          <span><b>연준</b> 보도자료</span>
-          <span><b>SEC EDGAR</b> 공시</span>
-          <span><b>업비트</b> 시세</span>
-          <span><b>BLS·BEA</b> 발표 일정</span>
-          <span>원문 확인 시각 표기</span>
-        </div>
-      </div>
+  <section class="hero" aria-labelledby="heroTitle">
+    <span class="eyebrow">OFFICIAL BREAKING</span>
+    <h1 id="heroTitle">공식 원문으로 읽는 오늘의 시장</h1>
+    <span class="hero-rule" aria-hidden="true"></span>
+    <p class="hero-sub">오늘의 시장, 공식 원문 3초 결론</p>
+  </section>
 
-      <aside class="verify-card" aria-label="가장 최근 확인된 원문">
-        <div class="verify-head">
-          <span>Latest verified</span>
-          <span class="stamp">원문 확인</span>
-        </div>
-        <p class="verify-title" id="verifyTitle">최신 공식 원문을 불러오는 중입니다.</p>
-        <div class="verify-meta" id="verifyMeta"><span>잠시만 기다려 주세요.</span></div>
-        <div class="verify-line"></div>
-        <div class="verify-foot">
-          <span style="color:var(--muted)">출처와 확인 시각을 함께 표기합니다</span>
-          <a id="verifyLink" href="#breaking">타임라인 보기 →</a>
-        </div>
-      </aside>
+  <!-- 오늘의 한 장 (다크 카드 1장) -->
+  <section class="featured" id="featured" aria-labelledby="featuredTitle">
+    <p class="featured-label" id="featuredMeta">오늘의 한 장 · 확인 중</p>
+    <h2 id="featuredTitle">지금 가장 먼저 확인된 공식 원문을 불러오고 있습니다.</h2>
+    <p class="featured-body" id="featuredBody">발표가 확인되는 즉시 3줄 요약과 시장 영향 한 줄로 정리해 드립니다.</p>
+    <a class="btn btn-gold" id="featuredCta" href="signup.html?from=featured">자세히 보기 →</a>
+  </section>
+
+  <!-- 주요 속보 캐러셀 -->
+  <section class="carousel-block" aria-labelledby="carouselLabel">
+    <p class="section-label" id="carouselLabel">주요 속보</p>
+    <div class="carousel" id="carousel">
+      <div class="carousel-track" id="carouselTrack">
+        <article class="story-card">
+          <p class="story-label">확인 중</p>
+          <h3>주요 속보를 불러오고 있습니다.</h3>
+          <p class="story-excerpt">잠시만 기다려 주세요.</p>
+          <p class="story-time">—</p>
+        </article>
+      </div>
+      <div class="carousel-dots" id="carouselDots" role="tablist" aria-label="주요 속보 넘기기"></div>
     </div>
   </section>
 
-  <!-- 2열 핵심 존 -->
-  <section class="core" id="onepage">
-    <div class="wrap core-grid">
-      <article class="card onepage">
-        <div class="card-head">
-          <span class="card-label">Today’s one page</span>
-          <span class="badge badge-gold" id="onepageBadge">오늘의 한 장</span>
-        </div>
-        <h2 id="onepageTitle">오늘 확인된 공식 원문을 한 장으로 정리합니다.</h2>
-        <p id="onepageBody">가장 최근에 확인한 공식 발표를 바탕으로, 오늘 시장이 봐야 할 한 줄을 정리해 드립니다.</p>
-        <div class="onepage-foot">
-          <span id="onepageMeta">—</span>
-          <a href="#breaking">타임라인에서 원문 보기 →</a>
-        </div>
-      </article>
+  <!-- 최신 속보 -->
+  <section class="latest" id="breaking" aria-labelledby="latestLabel">
+    <div class="latest-head">
+      <p class="section-label" id="latestLabel">최신 속보</p>
+      <p class="latest-meta" id="countLine">오늘 확인 <strong>0</strong>건</p>
+    </div>
 
-      <article class="card countdown" id="calendar">
-        <span class="card-label">Next official release · KST</span>
-        <h2 class="countdown-event" id="cdTitle">공식 일정 불러오는 중</h2>
-        <div class="countdown-org" id="cdOrg">—</div>
-        <div class="countdown-clock" id="cdClock">D-00 00:00:00<small>KST</small></div>
-        <div class="countdown-sub" id="cdLocal">—</div>
-        <div class="countdown-foot">
-          <span id="cdNote">공식 일정 원문에서 확인한 시각입니다.</span>
-          <a id="cdLink" href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener">공식 일정 ↗</a>
-        </div>
-      </article>
+    <!-- 관심자산 1초 미리보기: 로그인 없이 한 번 눌러 공식 원문만 보기 -->
+    <div class="watch-strip">
+      <p class="watch-strip-label">관심자산</p>
+      <div class="watch-chips" id="watchChips" role="group" aria-label="관심자산 빠른 보기">
+        <button class="watch-chip" type="button" data-watch="BTC" aria-pressed="false">BTC</button>
+        <button class="watch-chip" type="button" data-watch="NVDA" aria-pressed="false">NVDA</button>
+        <button class="watch-chip" type="button" data-watch="AAPL" aria-pressed="false">AAPL</button>
+        <button class="watch-chip" type="button" data-watch="연준·금리" aria-pressed="false">연준·금리</button>
+      </div>
+    </div>
+
+    <a class="convert-bar" id="convertBar" href="signup.html" hidden>
+      <span class="convert-main" id="convertText">선택하신 속보, 발표 즉시 휴대폰으로 받기 →</span>
+      <span class="convert-count" id="convertCount"></span>
+    </a>
+
+    <div class="filters" role="group" aria-label="속보 필터">
+      <button class="chip" type="button" data-category="all" aria-pressed="true">전체</button>
+      <button class="chip chip-s" type="button" data-importance="S" aria-pressed="false"><span class="imp-dot" aria-hidden="true"></span>S 긴급</button>
+      <button class="chip" type="button" data-importance="A" aria-pressed="false">A 주요</button>
+      <button class="chip" type="button" data-importance="B" aria-pressed="false">B 일반</button>
+      <button class="chip" type="button" data-category="us-stock" aria-pressed="false">미국주식</button>
+      <button class="chip" type="button" data-category="kr-stock" aria-pressed="false">국내주식</button>
+      <button class="chip" type="button" data-category="coin" aria-pressed="false">코인</button>
+      <button class="chip" type="button" data-category="macro" aria-pressed="false">매크로</button>
+    </div>
+
+    <div class="feed" id="feed" aria-live="polite">
+      <div class="feed-empty">공식 원문을 확인하는 중입니다…</div>
     </div>
   </section>
 
-  <!-- 실시간 속보 -->
-  <section class="breaking" id="breaking">
-    <div class="wrap">
-      <div class="section-head">
-        <div>
-          <span class="eyebrow"><span class="bar" aria-hidden="true"></span>Breaking · 실시간 속보</span>
-          <h2>지금 확인된 공식 원문</h2>
-        </div>
-        <div class="section-meta">
-          <div><strong id="kstClock">--:--:--</strong> KST</div>
-          <div>오늘 확인 <strong id="postCount">0</strong>건 · 1차 공식·공시 소스</div>
-        </div>
+  <!-- 공식 일정 -->
+  <section class="schedule" id="calendar" aria-labelledby="scheduleLabel">
+    <p class="section-label" id="scheduleLabel">공식 일정 · KST</p>
+
+    <div class="next-event">
+      <h3 class="next-title" id="cdTitle">공식 일정 불러오는 중</h3>
+      <div class="next-row">
+        <p class="next-org" id="cdOrg">기관 공식 일정 확인 중</p>
+        <p class="next-clock" id="cdClock">D-00 00:00:00</p>
       </div>
+      <p class="next-check" id="cdCheck" hidden><span id="cdCheckText"></span><a id="cdWatch" href="signup.html?watch=FOMC">이 일정 발표 알림 받기 →</a></p>
+      <p class="next-sub"><span id="cdNote">공식 일정 원문에서 확인한 시각입니다.</span> <a id="cdLink" href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener">공식 일정 ↗</a></p>
+    </div>
 
-      <div class="layout">
-        <div>
-          <div class="filters" role="group" aria-label="속보 필터">
-            <button class="chip" data-category="all" aria-pressed="true">전체</button>
-            <button class="chip" data-watch="1" aria-pressed="false"><span class="star">★</span> 내 관심자산</button>
-            <button class="chip" data-category="coin" aria-pressed="false">코인</button>
-            <button class="chip" data-category="kr-stock" aria-pressed="false">국내주식</button>
-            <button class="chip" data-category="us-stock" aria-pressed="false">미국주식</button>
-            <button class="chip" data-category="macro" aria-pressed="false">매크로·공시</button>
-            <label class="search">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-              <span class="sr-only">속보 검색</span>
-              <input id="q" type="search" placeholder="키워드·종목 검색 (예: FOMC, NVDA)" autocomplete="off">
-            </label>
-          </div>
+    <ul class="event-list" id="eventList">
+      <li class="event-empty">공식 일정을 불러오는 중입니다…</li>
+    </ul>
+  </section>
 
-          <div class="feed" id="feed" aria-live="polite">
-            <div class="feed-empty">공식 원문을 확인하는 중입니다…</div>
-          </div>
-
-          <div class="gate-card">
-            <p><strong>지난 속보는 아카이브에서 검색하세요</strong>본인인증으로 가입하면 속보 전문과 관심자산 알림을 바로 받아볼 수 있습니다.</p>
-            <a class="btn btn-dark" href="signup.html">무료 가입 →</a>
-          </div>
-        </div>
-
-        <aside class="side">
-          <div class="card side-card">
-            <h3>내 관심자산만 모아보기</h3>
-            <p>등록한 자산과 연결된 공식 발표만 타임라인에 남깁니다.</p>
-            <div class="asset-chips" aria-hidden="true">
-              <span>BTC</span><span>ETH</span><span>나스닥</span><span>코스피</span><span>삼성전자</span><span>NVDA</span>
-            </div>
-            <a class="btn btn-dark btn-block btn-sm" href="signup.html">관심자산 등록하기 →</a>
-          </div>
-
-          <div class="card side-card dark">
-            <h3>발표 직후 첫 요약은<br>텔레그램으로</h3>
-            <p>공식 원문을 확인하는 즉시 3줄 요약을 보내드립니다. 채널 @Clare_PerpDEX</p>
-            <a class="tg-btn" href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener">텔레그램 채널 열기 ↗</a>
-          </div>
-
-          <div class="card side-card">
-            <h3 style="font-size:15px">수집하는 공식 소스</h3>
-            <ul class="sources">
-              <li><a href="https://www.federalreserve.gov/feeds/press_all.xml" target="_blank" rel="noopener">미 연준 보도자료 RSS</a><span class="grade">1차 공식</span></li>
-              <li><a href="https://www.sec.gov/edgar" target="_blank" rel="noopener">SEC EDGAR 공시</a><span class="grade">전자공시</span></li>
-              <li><a href="https://www.bls.gov/schedule/" target="_blank" rel="noopener">BLS 발표 일정</a><span class="grade">1차 공식</span></li>
-              <li><a href="https://www.bea.gov/news/schedule" target="_blank" rel="noopener">BEA 발표 일정</a><span class="grade">1차 공식</span></li>
-              <li><a href="https://upbit.com" target="_blank" rel="noopener">업비트 시세 API</a><span class="grade">거래소</span></li>
-              <li><a href="https://dart.fss.or.kr" target="_blank" rel="noopener">OpenDART (키 연동 시)</a><span class="grade">전자공시</span></li>
-            </ul>
-          </div>
-
-          <div class="note-card">
-            수치는 원문에서 확인한 값만 사용하며, 해석 문구는 정보 제공 목적의 참고 의견입니다. 투자 판단의 책임은 투자자 본인에게 있습니다.
-          </div>
-        </aside>
+  <!-- 무료 vs Pro -->
+  <section class="plans" id="plans" aria-labelledby="plansTitle">
+    <p class="section-label">가입 안내</p>
+    <div class="plan-card">
+      <div class="plan-col">
+        <span class="plan-tag">FREE · 휴대폰 인증</span>
+        <h3 id="plansTitle">관심자산 알림 + 3초 요약</h3>
+        <ul>
+          <li>내 관심자산 실시간 알림 (최대 3개)</li>
+          <li>3줄 요약과 시장 영향 문장 전문</li>
+          <li>S등급 긴급 속보 알림</li>
+          <li>이번 주 공식 일정 캘린더</li>
+        </ul>
+        <a class="btn btn-gold" href="signup.html?from=plans">무료로 시작하기 →</a>
+      </div>
+      <div class="plan-col pro">
+        <span class="plan-tag">PRO · 출시 준비 중</span>
+        <h3>무지연 속보 + 공시 즉시 분석</h3>
+        <ul>
+          <li>무지연 속보 (수집 즉시 전달)</li>
+          <li>공시 즉시 분석 (SEC 8-K·10-Q · DART)</li>
+          <li>무제한 관심자산</li>
+          <li>개인 텔레그램 봇 · 카카오 알림톡</li>
+        </ul>
+        <p class="plan-fine">가격과 출시 일정은 확정되는 대로 공지합니다. 무료 회원은 계속 무료입니다.</p>
       </div>
     </div>
   </section>
 </main>
 
 <footer class="site-footer">
-  <div class="wrap">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <a class="brand" href="./" style="margin-bottom:14px">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span class="brand-name">CLAREDEX</span>
-        </a>
-        <p>정보의 출처부터, 판단의 근거까지. 공식 일정과 원문을 바탕으로 코인과 주식 시장을 차분하게 읽습니다.</p>
-      </div>
-      <div class="footer-col">
-        <h4>공식 자료</h4>
-        <a href="https://www.federalreserve.gov/" target="_blank" rel="noopener">미 연방준비제도</a>
-        <a href="https://www.sec.gov/edgar" target="_blank" rel="noopener">SEC EDGAR</a>
-        <a href="https://www.bls.gov/" target="_blank" rel="noopener">미 노동통계국(BLS)</a>
-        <a href="https://dart.fss.or.kr/" target="_blank" rel="noopener">금융감독원 DART</a>
-        <a href="https://ecos.bok.or.kr/" target="_blank" rel="noopener">한국은행 ECOS</a>
-      </div>
-      <div class="footer-col">
-        <h4>클레어덱스</h4>
-        <a href="signup.html">무료 회원가입</a>
-        <a href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener">텔레그램 채널</a>
-        <a href="https://www.claredex.com/" target="_blank" rel="noopener">claredex.com</a>
-      </div>
+  <div class="col">
+    <div class="footer-top">
+      <a class="brand" href="./" aria-label="클레어덱스 홈">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">CLAREDEX</span>
+      </a>
+      <p class="footer-line">정보의 출처부터, 판단의 근거까지.</p>
     </div>
+    <p class="footer-links">
+      <a href="https://www.federalreserve.gov/" target="_blank" rel="noopener">미 연준</a>
+      <a href="https://www.sec.gov/edgar" target="_blank" rel="noopener">SEC EDGAR</a>
+      <a href="https://www.bls.gov/" target="_blank" rel="noopener">BLS</a>
+      <a href="https://dart.fss.or.kr/" target="_blank" rel="noopener">DART</a>
+      <a href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener">텔레그램</a>
+      <a href="signup.html">무료 가입</a>
+    </p>
     <p class="compliance">
       클레어덱스가 제공하는 모든 정보는 공식 원문을 확인해 요약한 참고 자료이며, 특정 종목·자산의 매수·매도 권유 또는 수익 보장이 아닙니다.
       투자 판단과 그 결과에 대한 책임은 투자자 본인에게 있습니다. 인용한 수치와 일정은 각 기관의 공식 발표를 기준으로 하며, 발표 시각은 기관 사정에 따라 변경될 수 있습니다.
@@ -269,12 +196,11 @@
   "use strict";
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
-  const state = { category: "all", q: "", watchOnly: false, posts: [], firstRender: true };
-  const WATCH_KEY = "claredex_watchlist";
+  const state = { category: "all", importance: null, posts: [], featured: null, watch: null };
 
   /* 정적 호스팅(GitHub Pages) 대응: API 가 없으면 public/data/*.json 스냅샷으로 대체 */
-  const API = { ticker: "/api/ticker", posts: "/api/posts?limit=60", calendar: "/api/calendar" };
-  const SNAPSHOT = { ticker: "data/ticker.json", posts: "data/posts.json", calendar: "data/calendar.json" };
+  const API = { ticker: "/api/ticker", posts: "/api/posts?limit=60", calendar: "/api/calendar", stats: "/api/stats" };
+  const SNAPSHOT = { ticker: "data/ticker.json", posts: "data/posts.json", calendar: "data/calendar.json", stats: "data/stats.json" };
 
   async function getJSON(apiPath, snapshotPath) {
     let lastErr;
@@ -292,38 +218,67 @@
     throw lastErr || new Error("데이터를 불러오지 못했습니다");
   }
 
-  const assetPath = (p) => String(p || "").replace(/^\/+/, "");
-
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const num = (n) => new Intl.NumberFormat("ko-KR").format(n);
+  const IMP = { S: "긴급", A: "주요", B: "일반" };
+  const imp = (p) => (p && IMP[p.importance] ? p.importance : "B");
+  const catLabel = (p) => p.category_label || p.category || "";
 
-  function getWatchlist() {
-    try { const v = JSON.parse(localStorage.getItem(WATCH_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; }
-  }
+  /* 관심자산 1초 미리보기 — 로그인 없이 원문 태그로 걸러본다. key 는 signup.html?watch= 값과 같다. */
+  const WATCHES = [
+    { key: "BTC", tags: ["BTC", "비트코인"] },
+    { key: "NVDA", tags: ["NVDA", "엔비디아"] },
+    { key: "AAPL", tags: ["AAPL", "애플"] },
+    { key: "연준·금리", tags: ["연준", "금리", "FOMC", "CPI", "PCE"] }
+  ];
+  const watchByKey = (key) => WATCHES.find((w) => w.key === key) || null;
 
-  function relTime(iso) {
-    const t = new Date(iso).getTime();
-    if (!t) return "확인";
-    const diff = Math.max(0, (Date.now() - t) / 1000);
-    if (diff < 60) return "방금 확인";
-    if (diff < 3600) return Math.floor(diff / 60) + "분 전 확인";
-    if (diff < 86400) return Math.floor(diff / 3600) + "시간 전 확인";
-    return Math.floor(diff / 86400) + "일 전 확인";
-  }
   function absTime(iso) {
     const d = new Date(iso);
-    if (isNaN(d.getTime())) return "—";
-    const parts = new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", hour12: false
-    }).formatToParts(d);
-    const pick = (t) => (parts.find((x) => x.type === t) || {}).value || "";
-    return `${pick("year")}.${pick("month")}.${pick("day")} ${pick("hour")}:${pick("minute")}`;
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).replace(/\.$/, "");
   }
   function hm(iso) {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "";
     return d.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+  function kstDate(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+  }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function mdhm(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
+    const get = (t) => (parts.find((x) => x.type === t) || {}).value || "";
+    return `${get("month")}.${get("day")} ${get("hour")}:${get("minute")}`;
+  }
+  function shortDate(ymd) {
+    if (!ymd) return "";
+    const [y, m, d] = String(ymd).split("-");
+    return `${m}.${d}`;
+  }
+
+  /* 요약 문단: 반복되는 안내문과 메타 줄은 덜어내고 2~3문장으로 */
+  function bodyText(p, maxLines) {
+    const lines = (p.summary_lines || []).filter(Boolean);
+    const clean = lines.filter((l) => !/공식 보도자료를 공개했습니다|공식 발표를 확인했습니다/.test(l)
+      && !/^원문 제목:/.test(l) && !/^접수번호/.test(l)
+      && !/세부 내용과 수치는 원문에서 확인하세요|세부 내용은 원문에서 확인하세요|내용의 성격은 원문에서 확인이 필요합니다/.test(l));
+    const pick = (clean.length ? clean : lines).slice(0, maxLines || 3);
+    return pick.join(" ");
+  }
+
+  /* 등급 라벨: S만 은은한 레드 포인트 */
+  function gradeTag(p) {
+    const lv = imp(p);
+    const cls = { S: "badge-s", A: "badge-a", B: "badge-b" }[lv] || "badge-b";
+    return `<span class="grade-tag badge-imp ${cls}">${lv} ${IMP[lv]}</span>`;
+  }
+  function labelLine(p) {
+    return `<span class="card-label">${esc(catLabel(p))} <span class="dot" aria-hidden="true">·</span> ${gradeTag(p)}</span>`;
   }
 
   /* ------------------------------------------------ ticker */
@@ -334,262 +289,342 @@
       if (!data.items || !data.items.length) throw new Error("empty");
       const live = box.querySelector(".ticker-live");
       box.innerHTML = "";
-      box.appendChild(live);
-      data.items.forEach((it) => {
-        const el = document.createElement("div");
+      if (live) box.appendChild(live);
+      data.items.slice(0, 4).forEach((it) => {
+        const el = document.createElement("span");
         el.className = "tick";
         el.setAttribute("role", "listitem");
-        el.title = (it.source || "") + (it.as_of ? " · " + it.as_of : "") + (it.note ? " · " + it.note : "");
+        el.title = [it.source, it.as_of, it.note].filter(Boolean).join(" · ");
         const delta = typeof it.delta === "number" && it.key !== "kimchi_premium"
-          ? `<span class="delta ${it.delta > 0 ? "up" : it.delta < 0 ? "down" : ""}">${it.delta > 0 ? "+" : ""}${it.delta.toFixed(2)}%</span>`
+          ? ` <em class="${it.delta > 0 ? "up" : it.delta < 0 ? "down" : ""}">${it.delta > 0 ? "+" : ""}${it.delta.toFixed(2)}%</em>`
           : "";
-        el.innerHTML = `<span class="tick-label">${esc(it.label)} <span style="opacity:.55" title="${esc(it.source || "")}">· ${esc((it.source || "").replace(" 계정 비율", "").replace(" (일별 고시)", ""))}</span></span>
-                        <span class="tick-value">${esc(it.display)}${delta}</span>`;
+        el.innerHTML = `<b>${esc(it.label)}</b> ${esc(it.display)}${delta}`;
         box.appendChild(el);
       });
-      const note = document.createElement("div");
+      const note = document.createElement("span");
       note.className = "ticker-note";
-      const stamp = data.generated_at ? hm(data.generated_at) : "";
-      note.innerHTML = (data.stale ? '<span style="color:#ffb4a8">지연 표시</span> · ' : "") + stamp + " KST 기준";
+      note.textContent = (data.stale ? "지연 · " : "") + (data.generated_at ? hm(data.generated_at) + " KST" : "");
       box.appendChild(note);
     } catch (err) {
-      box.innerHTML = box.innerHTML.replace(/tick-skeleton/g, "tick");
+      box.innerHTML = '<span class="ticker-live"><span class="live-dot"></span>LIVE</span><span class="tick">시장 지표를 불러오지 못했습니다</span>';
     }
   }
 
-  /* ------------------------------------------------ posts */
+  /* ------------------------------------------------ featured (오늘의 한 장) */
+  function renderFeatured() {
+    if (!state.posts.length) return;
+    const recentS = state.posts.find((x) => imp(x) === "S" && (Date.now() - new Date(x.verified_at).getTime()) < 72 * 3600 * 1000);
+    const p = recentS || state.posts[0];
+    state.featured = p;
+    $("#featuredMeta").innerHTML = `오늘의 한 장 <span class="dot" aria-hidden="true">·</span> ${gradeTag(p)} <span class="dot" aria-hidden="true">·</span> 출처 ${esc(p.source_name || "공식 원문")} <span class="dot" aria-hidden="true">·</span> ${esc(mdhm(p.verified_at))} KST`;
+    $("#featuredTitle").textContent = p.title;
+    $("#featuredBody").textContent = bodyText(p, 3);
+    const cta = $("#featuredCta");
+    const watchKey = watchKeyForPost(p);
+    cta.href = watchKey
+      ? `signup.html?from=featured&watch=${encodeURIComponent(watchKey)}`
+      : "signup.html?from=featured";
+    cta.textContent = "전문 확인하고 알림 받기 →";
+    cta.title = watchKey ? `${watchKey} 속보 알림으로 이어집니다` : "무료 가입으로 이어집니다";
+    $("#featured").classList.toggle("is-s", imp(p) === "S");
+  }
+
+  /* ------------------------------------------------ carousel */
+  let slides = [];
+  let slideIndex = 0;
+  let carouselTimer = null;
+
+  function pickSlides() {
+    const out = [];
+    /* '오늘의 한 장'과 겹치지 않게 다른 원문을 우선 고른다 */
+    const rest = state.posts.filter((p) => p !== state.featured);
+    rest.filter((p) => imp(p) === "S").forEach((p) => { if (out.length < 3) out.push(p); });
+    rest.forEach((p) => { if (out.length < 3 && !out.includes(p)) out.push(p); });
+    return out;
+  }
+
+  function renderCarousel() {
+    slides = pickSlides();
+    const track = $("#carouselTrack");
+    const dots = $("#carouselDots");
+    if (!slides.length) return;
+    slideIndex = Math.min(slideIndex, slides.length - 1);
+    track.innerHTML = slides.map((p, i) => `
+      <article class="story-card${i === slideIndex ? " is-active" : ""}" ${i === slideIndex ? "" : "hidden"} data-importance="${esc(imp(p))}">
+        <p class="story-label">${labelLine(p)}</p>
+        <h3><a href="${esc(p.source_url)}" target="_blank" rel="noopener">${esc(p.title)}</a></h3>
+        <p class="story-excerpt">${esc(bodyText(p, 2))}</p>
+        <p class="story-time">출처 ${esc(p.source_name || "공식 원문")} <span class="dot" aria-hidden="true">·</span> <time datetime="${esc(p.verified_at)}" title="${esc(absTime(p.verified_at))} KST 확인">${esc(mdhm(p.verified_at))} KST</time></p>
+      </article>`).join("");
+    dots.innerHTML = slides.map((_, i) => `<button type="button" class="dot-btn${i === slideIndex ? " is-active" : ""}" role="tab" aria-selected="${i === slideIndex}" aria-label="${i + 1}번째 주요 속보" data-index="${i}"></button>`).join("");
+    $$(".dot-btn", dots).forEach((b) => b.addEventListener("click", () => showSlide(Number(b.dataset.index))));
+    startCarousel();
+  }
+
+  function showSlide(i) {
+    if (!slides.length) return;
+    slideIndex = (i + slides.length) % slides.length;
+    $$("#carouselTrack .story-card").forEach((el, idx) => {
+      const on = idx === slideIndex;
+      el.hidden = !on;
+      el.classList.toggle("is-active", on);
+    });
+    $$("#carouselDots .dot-btn").forEach((b, idx) => {
+      b.classList.toggle("is-active", idx === slideIndex);
+      b.setAttribute("aria-selected", String(idx === slideIndex));
+    });
+    startCarousel();
+  }
+
+  function startCarousel() {
+    clearInterval(carouselTimer);
+    if (slides.length < 2) return;
+    carouselTimer = setInterval(() => showSlide(slideIndex + 1), 7000);
+  }
+  const carouselEl = $("#carousel");
+  carouselEl.addEventListener("mouseenter", () => clearInterval(carouselTimer));
+  carouselEl.addEventListener("focusin", () => clearInterval(carouselTimer));
+  carouselEl.addEventListener("mouseleave", startCarousel);
+
+  /* ------------------------------------------------ feed */
   function matches(post) {
     if (state.category !== "all" && post.category !== state.category) return false;
-    if (state.watchOnly) {
-      const wl = getWatchlist();
-      if (!wl.length) return false;
-      const hay = (post.tags || []).join(" ") + " " + post.title;
-      if (!wl.some((a) => hay.includes(a))) return false;
-    }
-    if (state.q) {
-      const q = state.q.toLowerCase();
-      const hay = [post.title, (post.summary_lines || []).join(" "), post.market_impact, (post.tags || []).join(" ")].join(" ").toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
+    if (state.importance && imp(post) !== state.importance) return false;
+    if (state.watch && !matchWatch(post, state.watch)) return false;
     return true;
   }
+
+  function matchWatch(post, key) {
+    const w = watchByKey(key);
+    if (!w) return true;
+    const tags = (post.tags || []).map((t) => String(t).toUpperCase());
+    return w.tags.some((t) => tags.includes(t.toUpperCase()));
+  }
+
+  function watchCount(key) {
+    return state.posts.filter((p) => matchWatch(p, key)).length;
+  }
+
+  /* 글의 태그에서 대표 관심자산 키(BTC·NVDA·AAPL·연준·금리)를 고른다 — signup.html?watch= 값 */
+  function watchKeyForPost(post) {
+    const hit = WATCHES.find((w) => matchWatch(post, w.key));
+    return hit ? hit.key : null;
+  }
+
+  /* 선택 → 피드 위 1줄 전환 버튼 (signup.html?watch=<자산>) */
+  function renderWatch() {
+    $$("#watchChips .watch-chip").forEach((chip) => {
+      chip.setAttribute("aria-pressed", String(chip.dataset.watch === state.watch));
+      const n = watchCount(chip.dataset.watch);
+      chip.classList.toggle("is-empty", !!state.posts.length && n === 0);
+      chip.title = n ? `공식 원문 ${n}건` : "아직 확인된 공식 원문이 없습니다";
+    });
+    const bar = $("#convertBar");
+    if (!state.watch) {
+      bar.hidden = true;
+      return;
+    }
+    const n = watchCount(state.watch);
+    bar.hidden = false;
+    bar.href = `signup.html?watch=${encodeURIComponent(state.watch)}`;
+    $("#convertText").innerHTML = `선택하신 <b>${esc(state.watch)}</b> 속보, 발표 즉시 휴대폰으로 받기 <span class="convert-arrow" aria-hidden="true">→</span>`;
+    $("#convertCount").textContent = n ? `공식 원문 ${n}건` : "발표 대기";
+  }
+
+  function syncUrl() {
+    try {
+      const url = new URL(location.href);
+      if (state.watch) url.searchParams.set("watch", state.watch);
+      else url.searchParams.delete("watch");
+      history.replaceState(null, "", url);
+    } catch (e) { /* file:// 등 주소를 못 바꾸는 환경은 그대로 둔다 */ }
+  }
+
+  function setWatch(key) {
+    state.watch = key && watchByKey(key) ? key : null;
+    if (state.watch) {
+      state.category = "all";
+      state.importance = null;
+      $$(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.category === "all")));
+    }
+    renderWatch();
+    renderFeed();
+    syncUrl();
+  }
+
+  $$("#watchChips .watch-chip").forEach((chip) => {
+    chip.addEventListener("click", () => setWatch(chip.dataset.watch === state.watch ? null : chip.dataset.watch));
+  });
 
   function renderFeed() {
     const feed = $("#feed");
     const list = state.posts.filter(matches);
     if (!list.length) {
-      feed.innerHTML = `<div class="feed-empty">${state.watchOnly && !getWatchlist().length
-        ? "관심자산을 먼저 등록해 주세요. <a href='signup.html' style='color:var(--ink);text-decoration:underline'>무료 가입 →</a>"
-        : "조건에 맞는 속보가 없습니다. 필터를 바꿔 보세요."}</div>`;
+      if (state.watch) {
+        feed.innerHTML = `<div class="feed-empty">아직 확인된 ${esc(state.watch)} 공식 원문이 없습니다.<br>발표가 확인되는 즉시 휴대폰으로 받아보세요. <a href="signup.html?watch=${encodeURIComponent(state.watch)}">알림 신청 →</a></div>`;
+        return;
+      }
+      feed.innerHTML = '<div class="feed-empty">조건에 맞는 속보가 없습니다. 다른 필터를 골라 보세요.</div>';
       return;
     }
-    feed.innerHTML = list.map((p) => {
-      const fresh = p.is_member_early;
-      const tags = (p.tags || []).map((t) => `<a class="tag" href="#breaking" data-tag="${esc(t)}">#${esc(t)}</a>`).join("");
-      const summary = (p.summary_lines || []).map((l) => `<li>${esc(l)}</li>`).join("");
-      return `
-      <article class="feed-item ${state.firstRender ? "reveal" : ""} ${fresh ? "is-fresh" : ""}" data-category="${esc(p.category)}">
-        <div class="feed-meta">
-          <time datetime="${esc(p.verified_at)}" title="${esc(absTime(p.verified_at))} KST">${relTime(p.verified_at)}</time>
-          <span class="sep"></span>
-          <span class="badge badge-line">${esc(p.source_grade)}</span>
-          ${fresh ? '<span class="badge badge-gold">회원 조기 공개</span>' : ""}
-          <span>${esc(p.source_name)}</span>
-        </div>
-        <div class="feed-body">
-          <div>
-            <h3><a href="${esc(p.source_url)}" target="_blank" rel="noopener">${esc(p.title)}</a></h3>
-            <ul class="feed-summary">${summary}</ul>
-          </div>
-          ${p.image_path ? `<a class="feed-thumb" href="${esc(p.source_url)}" target="_blank" rel="noopener" aria-label="원문 보기"><img src="${esc(assetPath(p.image_path))}" alt="" loading="lazy" width="148" height="78"></a>` : ""}
-        </div>
-        <div class="impact"><b>시장 영향</b><span>${esc(p.market_impact)}</span></div>
+    feed.innerHTML = list.map((p) => `
+      <article class="feed-item${imp(p) === "S" ? " is-s" : ""}" data-importance="${esc(imp(p))}">
+        <p class="feed-label">${labelLine(p)}</p>
+        <h3><a href="${esc(p.source_url)}" target="_blank" rel="noopener">${esc(p.title)}</a></h3>
+        <p class="feed-body">${esc(bodyText(p, 3))}</p>
+        ${p.market_impact ? `<p class="impact-line"><span>시장 영향</span> ${esc(p.market_impact)}</p>` : ""}
         <div class="feed-foot">
-          ${tags}
-          <a class="source-link" href="${esc(p.source_url)}" target="_blank" rel="noopener">공식 원문 보기 ↗</a>
+          <span class="src-meta">출처 <b>${esc(p.source_name || "공식 원문")}</b> <span class="dot" aria-hidden="true">·</span> <time datetime="${esc(p.verified_at)}" title="${esc(absTime(p.verified_at))} KST 확인">${esc(mdhm(p.verified_at))} KST</time></span>
+          <a class="source-link" href="${esc(p.source_url)}" target="_blank" rel="noopener">공식 원문 ↗</a>
         </div>
-      </article>`;
-    }).join("");
-
-    state.firstRender = false;
-
-    $$(".tag", feed).forEach((a) => {
-      a.addEventListener("click", (e) => {
-        e.preventDefault();
-        $("#q").value = a.dataset.tag;
-        state.q = a.dataset.tag;
-        renderFeed();
-      });
-    });
-  }
-
-  function renderHero() {
-    const p = state.posts[0];
-    if (!p) return;
-    $("#verifyTitle").textContent = p.title;
-    $("#verifyMeta").innerHTML = `<span><b>${esc(p.source_name)}</b></span><span>${esc(p.source_grade)}</span><span>${relTime(p.verified_at)}</span>`;
-    $("#verifyLink").href = p.source_url;
-    $("#verifyLink").target = "_blank";
-    $("#verifyLink").rel = "noopener";
-    $("#verifyLink").textContent = "원문 보기 ↗";
-
-    const daily = state.posts.find((x) => x.source_grade === "1차 공식") || p;
-    $("#onepageTitle").textContent = daily.title;
-    $("#onepageBody").textContent = daily.market_impact;
-    $("#onepageMeta").textContent = `${daily.source_name} · ${absTime(daily.verified_at)} KST`;
-    const badge = $("#onepageBadge");
-    if (daily.is_member_early) badge.textContent = "회원 1시간 조기 공개";
-    else badge.textContent = "오늘의 한 장";
-  }
-
-  /* ------------------------------------------------- 최상단 긴급 속보 · 펼치기 */
-  const MEMBER_KEY = "claredex_member";
-  const flash = { expanded: false, unlocked: false, post: null };
-
-  function memberInfo() {
-    try {
-      const v = JSON.parse(localStorage.getItem(MEMBER_KEY) || "null");
-      return v && v.email ? v : null;
-    } catch (e) { return null; }
-  }
-
-  function setFlashExpanded(open, silent) {
-    const card = $("#flashCard");
-    const btn = $("#flashMore");
-    flash.expanded = !!open;
-    if (card) card.dataset.expanded = open ? "true" : "false";
-    if (btn) {
-      btn.textContent = open ? "접기" : "펼치기";
-      btn.setAttribute("aria-expanded", String(!!open));
-    }
-    if (open) unlockFlashSignup(silent);
-  }
-
-  function unlockFlashSignup(silent) {
-    const cta = $("#flashSignup");
-    const note = $("#flashNote");
-    if (!cta || flash.unlocked) return;
-    flash.unlocked = true;
-    cta.classList.remove("is-locked");
-    cta.classList.add("is-active");
-    cta.removeAttribute("aria-disabled");
-    cta.tabIndex = 0;
-    if (note) note.textContent = "가입하면 속보 전문과 내 관심자산 알림을 바로 받습니다.";
-    if (!silent) cta.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
-  function renderFlash() {
-    const urgent = state.posts.find((p) => p.is_member_early) || state.posts[0];
-    const title = $("#flashTitle");
-    if (!urgent) {
-      title.textContent = "지금은 확인된 긴급 속보가 없습니다.";
-      $("#flashMeta").textContent = "새 공식 원문이 확인되면 이 자리에 바로 올립니다.";
-      return;
-    }
-    flash.post = urgent;
-    title.textContent = urgent.title;
-    $("#flashMeta").textContent = `${relTime(urgent.verified_at)} · ${urgent.source_name} · ${urgent.source_grade}`;
-    const lines = urgent.summary_lines || [];
-    $("#flashLead").textContent = lines[0] || urgent.market_impact || "";
-    $("#flashLines").innerHTML = lines.slice(1).map((l) => `<li>${esc(l)}</li>`).join("");
-    const impact = $("#flashImpact");
-    if (urgent.market_impact) {
-      impact.querySelector("span").textContent = urgent.market_impact;
-      impact.hidden = false;
-    }
-    const src = $("#flashSource");
-    src.innerHTML = `원문 확인 ${esc(absTime(urgent.verified_at))} KST · ${esc(urgent.source_name)} · <a href="${esc(urgent.source_url)}" target="_blank" rel="noopener">공식 원문 보기 ↗</a>`;
-    src.hidden = false;
-
-    const member = memberInfo();
-    if (member && member.verified) {
-      setFlashExpanded(true, true);
-      flash.unlocked = true;
-      const cta = $("#flashSignup");
-      if (cta) {
-        cta.classList.remove("is-locked", "is-active");
-        cta.removeAttribute("aria-disabled");
-        cta.tabIndex = 0;
-        cta.href = "./#breaking";
-        cta.textContent = "내 관심자산 속보 보기 →";
-      }
-      $("#flashNote").textContent = `${member.name ? member.name + "님" : "회원"} · 본인인증 회원으로 전문이 열려 있습니다.`;
-      $("#flashMore").textContent = "접기";
-      $("#flashMore").setAttribute("aria-expanded", "true");
-      $("#flashCard").dataset.expanded = "true";
-    }
-  }
-
-  const flashMoreBtn = $("#flashMore");
-  if (flashMoreBtn) flashMoreBtn.addEventListener("click", () => setFlashExpanded(!flash.expanded));
-  const flashCta = $("#flashSignup");
-  if (flashCta) {
-    flashCta.addEventListener("click", (e) => {
-      if (flashCta.classList.contains("is-locked")) {
-        e.preventDefault();
-        $("#flashNote").textContent = "먼저 「펼치기」를 눌러 속보 전문을 확인해 주세요.";
-        setFlashExpanded(true);
-      }
-    });
+      </article>`).join("");
   }
 
   async function loadPosts() {
     try {
       const data = await getJSON(API.posts, SNAPSHOT.posts);
       state.posts = data.posts || [];
-      $("#postCount").textContent = state.posts.length;
-      renderFlash();
-      renderHero();
+      renderWatch();
+      renderFeatured();
+      renderCarousel();
       renderFeed();
     } catch (err) {
       $("#feed").innerHTML = '<div class="feed-empty">속보를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.</div>';
     }
   }
 
-  /* ------------------------------------------------ calendar */
+  /* ------------------------------------------------ 오늘 확인 건수 (KST 자정 기준) */
+  function renderCount(today, recent) {
+    const line = $("#countLine");
+    if (!line) return;
+    if (today && today.count) {
+      line.innerHTML = `오늘 확인 <strong>${today.count}</strong>건`;
+      return;
+    }
+    if (recent && recent.count) {
+      line.innerHTML = `오늘 확인 <strong>0</strong>건 <span class="recent-note">· 최근 확인 ${esc(shortDate(recent.date))} ${recent.count}건</span>`;
+      return;
+    }
+    line.innerHTML = "오늘 확인 <strong>0</strong>건";
+  }
+
+  function countFromPosts() {
+    const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+    const today = state.posts.filter((p) => kstDate(p.verified_at) === todayKey);
+    const older = state.posts.filter((p) => kstDate(p.verified_at) !== todayKey);
+    return {
+      today: { date: todayKey, count: today.length },
+      recent: older.length ? { date: kstDate(older[0].verified_at), count: older.length } : { date: null, count: 0 }
+    };
+  }
+
+  async function loadStats() {
+    try {
+      const data = await getJSON(API.stats, SNAPSHOT.stats);
+      renderCount(data.today, data.recent);
+    } catch (e) {
+      const local = countFromPosts();
+      renderCount(local.today, local.recent);
+    }
+  }
+
+  /* ------------------------------------------------ 공식 일정 */
   let events = [];
   let nextEvent = null;
+
+  function eventGrade(e) {
+    const lv = ["S", "A", "B"].includes(e.importance) ? e.importance : "A";
+    const cls = { S: "badge-s", A: "badge-a", B: "badge-b" }[lv];
+    return `<span class="grade-tag badge-imp ${cls}" title="${esc(e.importance_label || "")}">${lv}</span>`;
+  }
+
+  function watchHref(e) {
+    return `signup.html?watch=${encodeURIComponent(e.watch || e.id)}`;
+  }
+
+  function renderNext() {
+    if (!nextEvent) return;
+    $("#cdTitle").textContent = nextEvent.title;
+    $("#cdOrg").textContent = [nextEvent.org, nextEvent.local_time].filter(Boolean).join(" · ");
+    $("#cdNote").textContent = nextEvent.note || "공식 일정 원문에서 확인한 시각입니다.";
+    const link = $("#cdLink");
+    link.href = nextEvent.source_url;
+    const check = $("#cdCheck");
+    if (nextEvent.checkpoint) {
+      check.hidden = false;
+      $("#cdCheckText").textContent = nextEvent.checkpoint;
+      $("#cdWatch").href = watchHref(nextEvent);
+    } else {
+      check.hidden = true;
+    }
+    tickClock();
+  }
+
+  function renderSchedule() {
+    const list = $("#eventList");
+    const now = Date.now();
+    const upcoming = events.filter((e) => new Date(e.datetime_kst).getTime() > now).slice(0, 6);
+    if (!upcoming.length) {
+      list.innerHTML = '<li class="event-empty">예정된 공식 일정이 없습니다.</li>';
+      return;
+    }
+    list.innerHTML = upcoming.map((e) => {
+      const diff = new Date(e.datetime_kst).getTime() - now;
+      const days = Math.max(0, Math.floor(diff / 86400000));
+      const dday = days === 0 ? "D-DAY" : `D-${days}`;
+      const when = mdhm(e.datetime_kst);
+      const check = e.checkpoint
+        ? `<p class="ev-check"><span>${esc(e.checkpoint)}</span><a href="${watchHref(e)}">이 일정 발표 알림 받기 →</a></p>`
+        : "";
+      return `<li class="event" data-importance="${esc(e.importance || "A")}">
+        <div class="ev-row">
+          <span class="dday">${dday}</span>
+          <span class="ev-main"><b>${esc(e.title)}</b> <em>${esc(e.org)} · ${esc(e.local_time || "")}</em></span>
+          <span class="ev-when">${esc(when)}</span>
+          ${eventGrade(e)}
+        </div>
+        ${check}
+      </li>`;
+    }).join("");
+  }
+
   async function loadCalendar() {
     try {
       const data = await getJSON(API.calendar, SNAPSHOT.calendar);
       events = (data.events || []).slice().sort((a, b) => new Date(a.datetime_kst) - new Date(b.datetime_kst));
       nextEvent = events.find((e) => new Date(e.datetime_kst).getTime() > Date.now()) || events[events.length - 1];
-      if (!nextEvent) { $("#cdTitle").textContent = "등록된 공식 일정이 없습니다"; return; }
-      $("#cdTitle").textContent = nextEvent.title;
-      $("#cdOrg").textContent = nextEvent.org + " · " + nextEvent.local_time;
-      $("#cdNote").textContent = nextEvent.note || "공식 일정 원문에서 확인한 시각입니다.";
-      const link = $("#cdLink");
-      link.href = nextEvent.source_url;
-      tickClock();
+      if (!nextEvent) {
+        $("#cdTitle").textContent = "등록된 공식 일정이 없습니다";
+        $("#cdOrg").textContent = "일정이 등록되면 알려드립니다";
+        $("#cdClock").textContent = "";
+        $("#eventList").innerHTML = '<li class="event-empty">등록된 공식 일정이 없습니다.</li>';
+        return;
+      }
+      renderNext();
+      renderSchedule();
     } catch (e) {
       $("#cdTitle").textContent = "일정을 불러오지 못했습니다";
+      $("#cdOrg").textContent = "잠시 후 새로고침해 주세요";
+      $("#eventList").innerHTML = '<li class="event-empty">공식 일정을 불러오지 못했습니다.</li>';
     }
   }
-  function pad(n) { return String(n).padStart(2, "0"); }
+
   function tickClock() {
-    const now = new Date();
-    $("#kstClock").textContent = now.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour12: false });
     if (!nextEvent) return;
     const target = new Date(nextEvent.datetime_kst).getTime();
-    let diff = Math.floor((target - now.getTime()) / 1000);
+    let diff = Math.floor((target - Date.now()) / 1000);
     const clock = $("#cdClock");
     if (diff <= 0) {
-      clock.innerHTML = `발표 시각 경과<small>KST</small>`;
-      const upcoming = events.find((e) => new Date(e.datetime_kst).getTime() > now.getTime());
-      if (upcoming) {
-        nextEvent = upcoming;
-        $("#cdTitle").textContent = upcoming.title;
-        $("#cdOrg").textContent = upcoming.org + " · " + upcoming.local_time;
-        $("#cdNote").textContent = upcoming.note || "";
-        $("#cdLink").href = upcoming.source_url;
-      }
+      clock.textContent = "발표 시각 경과";
+      const upcoming = events.find((e) => new Date(e.datetime_kst).getTime() > Date.now());
+      if (upcoming) { nextEvent = upcoming; renderNext(); renderSchedule(); }
       return;
     }
     const d = Math.floor(diff / 86400); diff %= 86400;
     const h = Math.floor(diff / 3600); diff %= 3600;
     const m = Math.floor(diff / 60);
     const s = diff % 60;
-    clock.innerHTML = `D-${pad(d)} ${pad(h)}:${pad(m)}:${pad(s)}<small>KST</small>`;
+    clock.textContent = `D-${pad(d)} ${pad(h)}:${pad(m)}:${pad(s)}`;
   }
 
   /* ------------------------------------------------ filters */
@@ -598,23 +633,27 @@
       $$(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
       chip.setAttribute("aria-pressed", "true");
       state.category = chip.dataset.category || "all";
-      state.watchOnly = !!chip.dataset.watch;
+      state.importance = chip.dataset.importance || null;
+      state.watch = null;
+      renderWatch();
       renderFeed();
-      document.querySelector(".feed")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      syncUrl();
     });
-  });
-  let t;
-  $("#q").addEventListener("input", (e) => {
-    clearTimeout(t);
-    t = setTimeout(() => { state.q = e.target.value.trim(); renderFeed(); }, 180);
   });
 
   /* ------------------------------------------------ boot */
+  /* 공식 일정의 watch 값(FOMC·CPI·고용보고서 …)은 관심자산 키로 바꿔 걸러본다
+     (public/signup.html · config.EVENT_WATCH_ALIASES 와 같은 규칙) */
+  const WATCH_ALIAS = { FOMC: "연준·금리", CPI: "연준·금리", PCE: "연준·금리", GDP: "연준·금리", "고용보고서": "연준·금리", "무역수지": "연준·금리" };
+  const initialWatch = new URLSearchParams(location.search).get("watch");
+  const initialKey = initialWatch ? (watchByKey(initialWatch) ? initialWatch : WATCH_ALIAS[initialWatch]) : null;
+  if (initialKey && watchByKey(initialKey)) state.watch = initialKey;
   loadTicker();
-  loadPosts();
   loadCalendar();
+  loadPosts().then(loadStats);
   setInterval(loadTicker, 30000);
   setInterval(loadPosts, 60000);
+  setInterval(loadStats, 60000);
   setInterval(tickClock, 1000);
 })();
 </script>

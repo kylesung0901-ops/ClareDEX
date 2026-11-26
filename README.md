@@ -7,9 +7,10 @@
 collector.py      공식 소스 수집 → SQLite 저장 → 브랜드 썸네일 PNG 생성 → 시장지표 캐시
 naver_drafts.py   글마다 네이버 SEO 초안(제목·키워드·본문 HTML·CTA) 생성
 server.py         정적 파일 + JSON API 서버 (표준 라이브러리만 사용)
-verify.py         DB 무결성 + 실제 HTTP 108개 항목 자체 검증
+verify.py         DB 무결성 + 실제 HTTP 자체 검증 (171개 항목)
 public/           메인 · 회원가입 · 관리자 콘솔(/admin: 대시보드·회원·콘텐츠·수집기·블로그 초안·보안)
-data/             claredex.db, market_cache.json, calendar.json, admin_auth.json(비밀번호 해시), collector_state.json
+data/             claredex.db, market_cache.json, admin_auth.json(비밀번호 해시), collector_state.json
+calendar.json     공식 일정(기관 원문에서 확인한 발표 시각) — 저장소 루트에서 버전 관리, Dockerfile 로 이미지에 포함
 ```
 
 ## 실행 방법
@@ -92,9 +93,10 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 | GET | `/admin`, `/admin/` | 운영자 전용 관리자 콘솔 (미로그인 시 로그인 게이트, `noindex`·`no-store`) |
 | GET | `/admin/admin.css`, `/admin/app.js` | 콘솔 전용 자산 |
 | GET | `/api/ticker` | BTC KRW/USD, 김치프리미엄, 공포탐욕, 롱숏, USD/KRW, ETH. 실패 시 `data/market_cache.json` 폴백(`stale: true`) |
-| GET | `/api/posts?category=&tag=&q=&limit=` | 속보 목록 |
+| GET | `/api/posts?category=&tag=&q=&importance=&limit=` | 속보 목록 (importance=S/A/B 필터) |
 | GET | `/api/naver-drafts` | 초안 목록 (본문 HTML 포함) — **운영자 로그인 필요, 미로그인 401** |
-| GET | `/api/calendar` | KST 공식 일정 |
+| GET | `/api/calendar` | KST 공식 일정 (중요도 S/A/B·기관·공식 원문 링크 포함) |
+| GET | `/api/stats` | 오늘(KST 자정 기준)·최근 확인 건수, 전체 글 수 |
 | GET | `/api/auth/channels` | 본인인증 발송 채널 상태(SMTP/Resend·SMS 설정 여부, 샌드박스 여부) |
 | POST | `/api/auth/send-email-otp` | `{email}` → 6자리 인증번호 발송(5분 유효, 30초 재발송 대기) |
 | POST | `/api/auth/verify-email-otp` | `{email, code}` → 이메일 인증 통과 |
@@ -117,17 +119,14 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 ## 화면
 
-- **메인** — 다크 지표 티커(항목별 출처 표기) → **최상단 긴급 속보**(가장 최근 확인 원문, 하단 3/5 그라데이션 페이드 + `펼치기` → `바로 가입하기` 활성화, 본인인증 회원은 전문 열람) → 히어로(승인 문구 + `내 관심자산 속보 무료로 받기 →` + 텔레그램) → 2열 핵심 존(오늘의 한 장 / KST 카운트다운) → 실시간 속보 타임라인(카테고리·관심자산 필터, 검색, `N분 전 확인`, 출처 등급 배지, 3줄 요약, 시장 영향 한 줄, 자산 태그, `공식 원문 보기 ↗`) → 사이드바(관심자산·텔레그램·수집 소스) → 컴플라이언스 푸터.
-- **회원가입** — 카카오/구글 버튼(정식 오픈 전 "준비 중" 안내) + **이메일 인증번호 → 성함/닉네임(필수) → 휴대폰 인증번호** → 「마케팅 활용 동의」 체크박스 + 옆의 `[보기]` → 관심자산 6종 선택(BTC·ETH·나스닥·코스피·삼성전자·NVDA) → 완료 화면. `[보기]`는 수집·이용 항목, 이용 목적, 제3자 제공(받는 자/목적/항목/보유기간), 보유·이용 기간, 동의 거부 권리·불이익, 전송 방법·수신 거부를 담은 모달을 엽니다. 동의는 선택이며 거부해도 가입·속보 수신은 가능합니다.
+- **메인 (TUPL 톤 · 오프화이트 `#FAF8F4` · 720px 단일 컬럼)** — 시장 지표 티커(항목별 출처 표기) → 히어로 → **오늘의 한 장**(다크 카드 1장, 최근 72시간 S등급 우선 · `전문 확인하고 알림 받기 →` 는 글 태그에 따라 `signup.html?watch=BTC|NVDA|AAPL|연준·금리` 로 연결) → 주요 속보 캐러셀 → 최신 속보(관심자산 1초 미리보기 BTC·NVDA·AAPL·연준·금리, S/A/B·카테고리 필터, 3줄 요약·시장 영향 한 줄·`공식 원문 ↗`) → 공식 일정(KST 카운트다운·D-day·S/A/B 배지·`이 일정 발표 알림 받기 →`) → 무료/Pro 안내 → 컴플라이언스 푸터.
+- **회원가입 (540px 단일 컬럼 카드)** — 카카오/구글 버튼(정식 오픈 전 "준비 중" 안내) + **이메일 인증번호 → 성함/닉네임(필수) → 휴대폰 인증번호**(`/api/auth/send-sms-otp`·`verify-sms-otp`) → 「마케팅 활용 동의」 체크박스 + 옆의 `[보기]` → 관심자산 8종(BTC·ETH·NVDA·AAPL·나스닥·코스피·삼성전자·연준·금리) → 완료 화면. `?watch=FOMC` 처럼 일정에서 넘어오면 `config.EVENT_WATCH_ALIASES` 규칙으로 해당 관심자산을 자동 선택하고 화면 위에 1줄로 안내합니다. `[보기]`는 수집·이용 항목, 이용 목적, 제3자 제공(받는 자/목적/항목/보유기간), 보유·이용 기간, 동의 거부 권리·불이익, 전송 방법·수신 거부를 담은 모달을 엽니다. 동의는 선택이며 거부해도 가입·속보 수신은 가능합니다.
 - **운영자 페이지(/admin)** — 비밀번호 로그인 게이트 → 초안 목록, 제목/서식 유지 본문/HTML/태그/이미지 링크 복사, 미리보기·HTML·텍스트 탭, 로그아웃. 정적 프리뷰에서는 초안 대신 비공개 안내를 표시합니다.
 
 ## 공식 일정(카운트다운) 데이터
 
-`data/calendar.json` 에 기관 공식 일정 페이지에서 확인한 3건을 넣었습니다.
-
-1. 미 3분기 GDP 2차 추정치 — 2026-11-25 22:30 KST (`bea.gov/news/schedule`, 08:30 ET)
-2. FOMC 결과 발표(12/8~9 회의) — 2026-12-10 04:00 KST (`federalreserve.gov/monetarypolicy/fomccalendars.htm`, 14:00 ET)
-3. 미 11월 CPI — 2026-12-10 22:30 KST (`bls.gov/schedule/news_release/cpi.htm`, 08:30 ET)
+`calendar.json`(저장소 루트)에 기관 공식 일정 페이지에서 확인한 7건을 넣었습니다. 화면·API·정적 스냅샷은 `config.load_calendar()` 가 정규화한 결과(중요도 S/A/B·라벨·기관·발표 시각·공식 원문 링크)를 그대로 씁니다.
+예전 배포본이 쓰던 `data/calendar.json` 은 읽기 폴백으로만 남겨 두었습니다(볼륨 보존).
 
 ## 네이버 블로그 자동화 범위
 
@@ -146,16 +145,20 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 ## 검증 결과 (요약)
 
-`python3 verify.py` → **139/139 통과**
-- 3개 테이블·필수 컬럼, `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 9개 썸네일 1200×630 PNG
+`python3 verify.py` → **171/171 통과**
+- 3개 테이블·필수 컬럼(중요도 `posts.importance` 포함), `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 9개 썸네일 1200×630 PNG
+- 중요도: 모든 글 S/A/B 유효값 + 라벨, `content.fed_post` 생성 시 등급 계산, `posts.importance` 저장·재조회, `/api/posts?importance=S` 필터
+- 공식 일정: `calendar.json` 정규화(중요도·라벨·기관·원문 링크), watch→관심자산 매핑, 발표 시각 오름차순, `/api/calendar` 응답
+- 가입 화면: 관심자산 목록 = `config.WATCHLIST_ASSETS`, 일정→관심자산 매핑 = `config.EVENT_WATCH_ALIASES`, `?watch=` 자동 선택, 실제 OTP API 6개 엔드포인트 연동, 540px 단일 컬럼
+- 메인: `오늘의 한 장` CTA 의 `watchKeyForPost` 연결, 관심자산 칩 4종, 화면 순서(티커→히어로→오늘의 한 장→최신 속보)
 - 글 1건당 초안 1건, 키워드 5~8, 텔레그램/웹 링크·고지·이미지 링크 포함, CTA 최대 유사도 0.40
-- HTTP: `/`, `/signup.html`, `/signup`, `/admin`·`/admin/`(관리자 콘솔 200·`no-store`·`noindex`), `/admin/admin.css`·`/admin/app.js`, `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q), `/api/calendar` 200 / `/admin-blog.html`·`/admin-blog` 404
+- HTTP: `/`, `/signup.html`, `/signup`, `/admin`·`/admin/`(관리자 콘솔 200·`no-store`·`noindex`), `/admin/admin.css`·`/admin/app.js`, `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q·importance), `/api/stats`, `/api/calendar` 200 / `/admin-blog.html`·`/admin-blog` 404
 - 관리자 API 보호: 미로그인 `/api/admin/*`·`/api/naver-drafts` 전부 401 → 틀린 비밀번호 401 → `login` 200·`HttpOnly; SameSite=Lax` 쿠키
 - 대시보드: KPI 6종·14일 가입 추이(빈 날 0 포함)·분포·최근 목록 / 회원 목록 / 글 목록(상태)
 - 콘텐츠: 숨김 전환 시 공개 `/api/posts` 에서 제외 → 재공개, 임시 글 삭제 후 DB에서 사라짐
 - 비밀번호 변경: 현재 비밀번호 오류 401 · 10자 미만/확인 불일치 400 · 성공 200 → `admin_auth.json` 에 평문 없이 PBKDF2+salt(0600) → 이전 비밀번호 401 · 새 비밀번호 200 → 파일 재로딩 시에도 새 비밀번호만 통과
 - 수집 작업: 스텁 단계로 시작→완료 상태 파일 기록, 30초 내 재실행 거부
-- 정적 프리뷰: `export_static.py` 가 `public/data/naver-drafts.json` 을 만들지 않음, 숨김 글 미포함, `public/admin` 에 비밀번호·DB 파일 없음
+- 정적 프리뷰: `export_static.py` 가 `public/data/naver-drafts.json` 을 만들지 않음, `posts.json`·`calendar.json` 에 중요도 포함, `stats.json` 생성, 숨김 글 미포함, `public/admin` 에 비밀번호·DB 파일 없음
 - POST `/api/signup` 201 → `/api/watchlist` 200 → SQLite 저장 확인, 같은 이메일 재가입 시 관심자산 보존, 잘못된 이메일 400, 미지원 자산 4xx, 없는 경로 404, 상위 경로 403, 테스트 서버 정상 종료
 
 ## GitHub Pages 정적 프리뷰
@@ -163,7 +166,7 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 서버 없이 화면만 그대로 확인할 수 있도록 정적 스냅샷 배포를 넣었습니다.
 
 ```bash
-python3 export_static.py   # data/*.json + DB → public/data/{posts,ticker,calendar}.json
+python3 export_static.py   # data/*.json + DB → public/data/{posts,ticker,calendar,stats}.json
 ./sync_docs.sh             # 내보내기 + public/ → docs/ 복사
 ./deploy_pages.sh          # 위 둘 + 커밋 + push + 라이브 200 확인 (평소엔 이것만 실행)
 ```

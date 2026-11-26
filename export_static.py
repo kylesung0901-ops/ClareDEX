@@ -6,6 +6,7 @@
   posts.json         ← GET /api/posts?limit=60
   ticker.json        ← GET /api/ticker (마지막 수집 스냅샷)
   calendar.json      ← GET /api/calendar
+  stats.json         ← GET /api/stats (오늘·최근 확인 건수)
 
 **네이버 초안(`naver-drafts.json`)은 일부러 내보내지 않는다.**
 초안은 운영자 내부 자료이고 `/api/naver-drafts` 는 로그인 없이는 401 이므로, 공개 정적
@@ -39,6 +40,11 @@ def rel_image(path: str | None) -> str | None:
 def post_json(post: dict) -> dict:
     out = dict(post)
     out["category_label"] = config.CATEGORIES.get(post["category"], {}).get("label", post["category"])
+    level = str(out.get("importance") or config.IMPORTANCE_DEFAULT).upper()
+    if level not in config.IMPORTANCE_LEVELS:
+        level = config.IMPORTANCE_DEFAULT
+    out["importance"] = level
+    out["importance_label"] = config.IMPORTANCE_LEVELS[level]["label"]
     out["image_path"] = rel_image(post.get("image_path"))
     out["image_url"] = out["image_path"]  # 정적 미리보기: 페이지 기준 상대 경로
     return out
@@ -80,15 +86,26 @@ def main() -> int:
     write("ticker.json", ticker)
 
     try:
-        calendar = json.loads(config.CALENDAR_PATH.read_text(encoding="utf-8"))
+        calendar = config.load_calendar()
     except Exception:
         calendar = {"events": []}
     write("calendar.json", {"ok": True, **calendar})
+
+    with db.session() as conn:
+        stats = db.confirmation_stats(conn)
+    write("stats.json", {
+        "ok": True,
+        "generated_at": config.iso_kst(),
+        "today": {"date": stats["date"], "count": stats["today"]},
+        "recent": {"date": stats["recent_date"], "count": stats["recent_count"]},
+        "total": stats["total"],
+    })
 
     print(f"내보내기 완료 → {OUT_DIR}")
     print(f"  posts.json        {len(posts)}건")
     print(f"  ticker.json       {len(ticker.get('items') or [])}항목")
     print(f"  calendar.json     {len(calendar.get('events') or [])}일정")
+    print(f"  stats.json        오늘 {stats['today']}건 · 최근 {stats['recent_count']}건")
     print("  naver-drafts.json 내보내지 않음 (운영자 전용 · 서버 로그인 후 조회)")
     for path in removed:
         print(f"  삭제: {path.name} (공개 정적 호스팅 노출 방지)")
