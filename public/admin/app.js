@@ -383,8 +383,8 @@
     }
     body.innerHTML = items.map((u) => `
       <tr>
-        <td><span class="cell-title" title="${esc(u.email || u.phone)}">${u.email ? esc(u.email) : esc(u.phone || "휴대폰 가입")}</span>
-            <span class="cell-sub">${esc(PROVIDER_LABEL[u.provider] || u.provider || "")}${u.phone && u.email ? " · " + esc(u.phone) : ""}</span></td>
+        <td><span class="cell-title" title="${esc(u.email || u.phone)}">${u.name ? esc(u.name) : (u.email ? esc(u.email) : esc(u.phone || "휴대폰 가입"))}</span>
+            <span class="cell-sub">${u.name && (u.email || u.phone) ? esc(u.email || u.phone) + " · " : ""}${esc(PROVIDER_LABEL[u.provider] || u.provider || "")}${u.email && u.phone ? " · " + esc(u.phone) : ""}</span></td>
         <td><div class="tag-list">${(u.watchlist || []).slice(0, 3).map((t) => `<span class="tag">${esc(t)}</span>`).join("") || '<span class="cell-sub">—</span>'}${(u.watchlist || []).length > 3 ? `<span class="tag">+${u.watchlist.length - 3}</span>` : ""}</div></td>
         <td class="num">${esc(fmtDate(u.created_at))}</td>
       </tr>`).join("");

@@ -295,11 +295,29 @@ def server_checks(port: int) -> None:
         check("data-social" not in signup_html and "준비 중" not in signup_html
               and "카카오로 시작하기" not in signup_html and "Google로 시작하기" not in signup_html,
               "가입 화면: 카카오·구글 (준비 중) 버튼 제거")
-        check("성함 또는 닉네임" not in signup_html and 'id="name"' not in signup_html,
-              "가입 화면: 성함/닉네임 필수 입력 제거")
-        check("이메일로도 받기 (선택)" in signup_html
-              and re.search(r'<details class="optional-email"(?![^>]*\bopen\b)', signup_html) is not None,
-              "이메일은 '이메일로도 받기(선택)' 접기로만 (기본 화면 비노출)")
+        check("성함 또는 닉네임" in signup_html and 'id="name"' in signup_html
+              and 'name="name"' in signup_html,
+              "가입 화면: 성함/닉네임 입력란 노출")
+        check("이메일로도 받기 (선택)" not in signup_html
+              and "optional-email" not in signup_html and "emailToggle" not in signup_html
+              and "sendEmailBtn" not in signup_html and "emailCode" not in signup_html
+              and "/api/auth/send-email-otp" not in signup_html
+              and "/api/auth/verify-email-otp" not in signup_html,
+              "이메일: 접기 토글·이메일 인증번호 발송/확인 UI·로직 완전 제거")
+        m_email = re.search(r'<input[^>]*id="email"[^>]*>', signup_html)
+        m_name = re.search(r'<input[^>]*id="name"[^>]*>', signup_html)
+        form_pos = signup_html.find('id="bellForm"')
+        submit_pos = signup_html.find('id="signupBtn"')
+        check(m_email is not None and m_name is not None and 0 < form_pos < submit_pos
+              and form_pos < m_email.start() < submit_pos and form_pos < m_name.start() < submit_pos
+              and "hidden" not in m_email.group(0) and "hidden" not in m_name.group(0)
+              and "인증번호는 보내지 않습니다" in signup_html
+              and "you@gmail.com" in m_email.group(0),
+              "이메일·성함/닉네임 입력란이 가입 폼에 바로 노출 (접힘·숨김 없음 · 이메일 형식 안내)")
+        check("EMAIL_RE" in signup_html and "이메일 형식이 올바르지 않습니다" in signup_html
+              and "email: email || undefined" in signup_html
+              and "name: name || undefined" in signup_html,
+              "가입 화면: 이메일 실시간 형식 검증 + 이메일·성함을 /api/signup 으로 전송")
         check("가입 전 미리 보는 내 종목 3초 브리핑" in signup_html
               and "/api/posts?limit=60" in signup_html and "/api/calendar" in signup_html,
               "1단계: 관심자산 선택 → 최근 공시 · S등급 일정 즉시 미리보기 연동")
@@ -310,12 +328,13 @@ def server_checks(port: int) -> None:
         check("12월 S등급 일정" in signup_html and "고용보고서" in signup_html
               and "FOMC 회의 결과 발표" in signup_html and "소비자물가지수(CPI)" in signup_html,
               "가입 완료 화면: 내 관심자산 + 12월 S등급 일정(고용보고서·FOMC·CPI) 카드")
-        endpoints = ("/api/auth/send-email-otp", "/api/auth/verify-email-otp",
-                     "/api/auth/send-sms-otp", "/api/auth/verify-sms-otp", "/api/signup")
+        endpoints = ("/api/auth/send-sms-otp", "/api/auth/verify-sms-otp", "/api/signup")
         missing = [e for e in endpoints if e not in signup_html]
-        check(not missing and "watchlist: Array.from(selected)" in signup_html,
-              "가입 화면이 실제 본인인증·가입 API 와 연동 (관심자산은 /api/signup 으로 동시 전송)",
-              ", ".join(missing) or "5개 엔드포인트 + watchlist")
+        check(not missing and "watchlist: Array.from(selected)" in signup_html
+              and "name: name || undefined" in signup_html
+              and "email: email || undefined" in signup_html,
+              "가입 화면이 실제 휴대폰 인증·가입 API 와 연동 (관심자산·이메일·성함 동시 전송)",
+              ", ".join(missing) or "3개 엔드포인트 + watchlist/email/name")
         signup_assets = re.findall(r'\{ key: "([^"]+)", sub:', signup_html)
         check(len(signup_assets) == len(set(signup_assets))
               and set(signup_assets) == set(config.WATCHLIST_ASSETS),
@@ -620,72 +639,101 @@ def server_checks(port: int) -> None:
               "GET /api/auth/channels → 발송 채널 상태",
               f"email={((ch.get('email') or {}).get('mode'))} sms={((ch.get('sms') or {}).get('mode'))}")
 
-        email = f"verify-{int(time.time())}@claredex.test"
-        phone = "010-9876-5432"
+        # 실행마다 새 번호·이메일을 쓴다(이전 실행의 인증 기록과 섞이지 않게).
+        stamp = int(time.time())
+        email = f"verify-{stamp}@claredex.test"
+        phone = f"010-9{stamp % 1000:03d}-{stamp % 10000:04d}"
+        with db.session() as conn:
+            conn.execute("DELETE FROM phone_auth_state WHERE phone = ?", (phone,))
+            conn.execute("DELETE FROM signup_verification WHERE email = ?", (email,))
+            conn.execute("DELETE FROM auth_otp WHERE target = ?", (phone,))
+            conn.execute("DELETE FROM users WHERE phone = ? AND COALESCE(email, '') = ''", (phone,))
+            conn.commit()
 
         status, _, raw = http(base + "/api/signup", "POST",
                               {"email": email, "name": "검증", "phone": phone})
         blocked = json.loads(raw)
-        check(status == 403 and blocked.get("code") == "verification_required",
-              "인증 없이 POST /api/signup → 403", f"HTTP {status}")
+        check(status == 403 and blocked.get("code") == "verification_required"
+              and blocked.get("phone_verified") is False,
+              "휴대폰 인증 없이 POST /api/signup → 403 (이메일은 인증 요구하지 않음)", f"HTTP {status}")
 
-        status, _, raw = http(base + "/api/signup", "POST", {"email": email, "name": "", "phone": phone})
-        check(status == 403 and json.loads(raw).get("code") == "verification_required",
-              "성함/닉네임이 비어도 400으로 막지 않음 (인증만 확인)", f"HTTP {status}")
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"email": "not-an-email", "name": "검증", "phone": phone})
+        check(status == 400 and "이메일" in json.loads(raw).get("error", ""),
+              "잘못된 이메일 형식 → 400", f"HTTP {status}")
 
-        status, _, raw = http(base + "/api/auth/send-email-otp", "POST", {"email": email})
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"email": "verify@claredex", "name": "검증", "phone": phone})
+        check(status == 400 and "이메일" in json.loads(raw).get("error", ""),
+              "도메인 TLD 없는 이메일 → 400", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"email": email, "name": "가" * 41, "phone": phone})
+        check(status == 400 and json.loads(raw).get("code") == "name_too_long",
+              "성함/닉네임 41자 이상 → 400", f"HTTP {status}")
+
+        # 이메일 인증번호 API 는 다른 흐름용으로 남아 있다(가입에서는 요구하지 않는다).
+        otp_email = f"verify-otp-{int(time.time())}@claredex.test"
+        status, _, raw = http(base + "/api/auth/send-email-otp", "POST", {"email": otp_email})
         sent = json.loads(raw)
         check(status == 200 and sent.get("ok") and sent.get("delivery_mode") in ("unconfigured", "smtp", "resend"),
-              "POST /api/auth/send-email-otp → 200",
+              "POST /api/auth/send-email-otp → 200 (API 유지)",
               f"mode={sent.get('delivery_mode')} sent={sent.get('sent')}")
 
-        status, _, raw = http(base + "/api/auth/send-email-otp", "POST", {"email": email})
+        status, _, raw = http(base + "/api/auth/send-email-otp", "POST", {"email": otp_email})
         check(status == 429 and json.loads(raw).get("code") == "cooldown",
-              "인증번호 재발송 30초 대기 → 429", f"HTTP {status}")
+              "이메일 인증번호 재발송 30초 대기 → 429", f"HTTP {status}")
 
-        code = sent.get("preview_code")
-        if code:
-            wrong = "000000" if code != "000000" else "111111"
-            status, _, raw = http(base + "/api/auth/verify-email-otp", "POST", {"email": email, "code": wrong})
+        otp_code = sent.get("preview_code")
+        if otp_code:
+            wrong = "000000" if otp_code != "000000" else "111111"
+            status, _, raw = http(base + "/api/auth/verify-email-otp", "POST", {"email": otp_email, "code": wrong})
             check(status == 400 and json.loads(raw).get("code") == "mismatch",
                   "잘못된 이메일 인증번호 → 400", f"HTTP {status}")
-            status, _, raw = http(base + "/api/auth/verify-email-otp", "POST", {"email": email, "code": code})
+            status, _, raw = http(base + "/api/auth/verify-email-otp", "POST", {"email": otp_email, "code": otp_code})
             ok_email = json.loads(raw)
-            check(status == 200 and ok_email.get("ok") and ok_email.get("verification", {}).get("email_verified"),
-                  "POST /api/auth/verify-email-otp → 200", f"HTTP {status}")
+            check(status == 200 and ok_email.get("ok"), "POST /api/auth/verify-email-otp → 200", f"HTTP {status}")
         else:
             check(True, "실제 SMTP 발송 모드 — 인증번호 검증은 코드 미노출로 건너뜀")
 
-        status, _, raw = http(base + "/api/auth/send-sms-otp", "POST", {"email": email, "phone": phone})
+        # ① 이메일 인증 없이 이메일 + 성함/닉네임 + 휴대폰 OTP 만으로 가입 (201)
+        status, _, raw = http(base + "/api/auth/send-sms-otp", "POST", {"phone": phone})
         sms = json.loads(raw)
         check(status == 200 and sms.get("ok") and sms.get("channel") == "sms",
-              "POST /api/auth/send-sms-otp → 200", f"mode={sms.get('delivery_mode')}")
+              "이메일 인증 없이 POST /api/auth/send-sms-otp → 200", f"mode={sms.get('delivery_mode')}")
         sms_code = sms.get("preview_code")
         if sms_code:
             status, _, raw = http(base + "/api/auth/verify-sms-otp", "POST",
-                                  {"email": email, "phone": phone, "code": sms_code})
+                                  {"phone": phone, "code": sms_code})
             ok_sms = json.loads(raw)
-            check(status == 200 and ok_sms.get("ok") and ok_sms.get("verification", {}).get("phone_verified"),
+            check(status == 200 and ok_sms.get("ok") and ok_sms.get("verified"),
                   "POST /api/auth/verify-sms-otp → 200", f"HTTP {status}")
         else:
             check(True, "실제 문자 발송 모드 — 인증번호 검증은 코드 미노출로 건너뜀")
 
         status, _, raw = http(base + "/api/signup", "POST",
-                              {"email": email, "name": "검증", "phone": "010-1111-2222"})
-        check(status == 403 and json.loads(raw).get("code") == "phone_mismatch",
-              "인증한 번호와 다른 휴대폰 → 403", f"HTTP {status}")
-
-        status, _, raw = http(base + "/api/signup", "POST",
-                              {"email": email, "name": "검증", "phone": phone,
+                              {"email": email, "name": "코인덕후", "phone": phone,
                                "provider": "email", "watchlist": ["BTC", "ETH"], "marketing_agreed": True})
         signup = json.loads(raw)
         check(status == 201 and signup.get("ok") and signup["user"]["email"] == email,
-              "인증 후 POST /api/signup → 201", f"HTTP {status}")
+              "이메일 인증 없이 이메일+성함+휴대폰 OTP POST /api/signup → 201", f"HTTP {status}")
         user = signup.get("user") or {}
-        check(user.get("phone") == phone and user.get("email_verified") and user.get("phone_verified"),
-              "회원 레코드에 연락처·인증 상태 저장", str((user.get("phone"), user.get("email_verified"), user.get("phone_verified"))))
+        check(user.get("name") == "코인덕후",
+              "성함/닉네임이 users.name 에 저장", str(user.get("name")))
+        check(user.get("phone") == phone and user.get("phone_verified") and not user.get("email_verified"),
+              "회원 레코드: 휴대폰 인증 O · 이메일은 무인증(0)으로 저장",
+              str((user.get("phone"), user.get("email_verified"), user.get("phone_verified"))))
         check(user.get("marketing_agreed") and user.get("marketing_agreed_at"),
               "마케팅 활용 동의 + 동의 시각 저장", str(user.get("marketing_agreed_at")))
+
+        status, _, raw = http(base + "/api/admin/users?q=" + urllib.parse.quote(email), cookie=admin_cookie)
+        admin_found = json.loads(raw)
+        admin_items = admin_found.get("items") or []
+        check(status == 200 and admin_found.get("total") == 1 and admin_items
+              and admin_items[0].get("name") == "코인덕후"
+              and admin_items[0].get("email") == email,
+              "관리자 회원 목록(GET /api/admin/users)에 성함/닉네임 그대로 표시",
+              f"HTTP {status} name={admin_items[0].get('name') if admin_items else None}")
 
         status, _, raw = http(base + "/api/watchlist", "POST",
                               {"email": email, "watchlist": ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"]})
@@ -694,23 +742,56 @@ def server_checks(port: int) -> None:
               "POST /api/watchlist → 200 저장 (AAPL·연준·금리 포함)", f"HTTP {status} · {wl.get('user', {}).get('watchlist')}")
 
         status, _, raw = http(base + "/api/signup", "POST",
-                              {"email": email, "name": "검증", "phone": phone, "provider": "email", "watchlist": []})
+                              {"email": email, "name": "코인덕후", "phone": phone, "provider": "email", "watchlist": []})
         again = json.loads(raw)
         check(status == 201 and len(again["user"]["watchlist"]) == 6,
-              "같은 이메일 재가입 시 관심자산 보존", str(again["user"]["watchlist"]))
+              "같은 이메일 재가입 시 관심자산 보존 (이메일 재인증 불필요)", str(again["user"]["watchlist"]))
+
+        # ② 이미 다른 회원이 쓰는 이메일과 충돌하면 덮어쓰지 않고 409 로 안내
+        other_phone = "010-3333-4444"
+        status, _, raw = http(base + "/api/auth/send-sms-otp", "POST", {"phone": other_phone})
+        other_sms = json.loads(raw)
+        other_code = other_sms.get("preview_code")
+        if other_code:
+            status, _, raw = http(base + "/api/auth/verify-sms-otp", "POST",
+                                  {"phone": other_phone, "code": other_code})
+            check(status == 200 and json.loads(raw).get("ok"),
+                  "충돌 검증용 두 번째 번호 인증 → 200", f"HTTP {status}")
+        else:
+            check(True, "실제 문자 발송 모드 — 충돌 검증용 번호 인증은 코드 미노출로 건너뜀")
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"email": email, "name": "중복", "phone": other_phone})
+        conflict = json.loads(raw)
+        check(status == 409 and conflict.get("code") == "email_in_use" and "이메일" in conflict.get("error", ""),
+              "다른 휴대폰 회원이 쓰는 이메일 → 409 email_in_use", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"email": f"other-{int(time.time())}@claredex.test", "name": "중복", "phone": phone})
+        conflict2 = json.loads(raw)
+        check(status == 409 and conflict2.get("code") == "email_in_use",
+              "이미 다른 이메일로 가입된 휴대폰 → 409 email_in_use", f"HTTP {status}")
+
+        with db.session() as conn:
+            intact = db.get_user_by_phone(conn, phone)
+        check(bool(intact) and intact.get("email") == email and intact.get("name") == "코인덕후",
+              "409 이후 기존 회원 이메일·성함을 덮어쓰지 않음", str((intact or {}).get("email")))
 
         with db.session() as conn:
             row = conn.execute(
-                "SELECT watchlist, phone, email_verified, phone_verified, marketing_agreed "
+                "SELECT name, watchlist, phone, email_verified, phone_verified, marketing_agreed "
                 "FROM users WHERE email = ?", (email,)).fetchone()
-            stored = json.loads(row[0]) if row else None
-            flags = tuple(row[1:]) if row else None
+            stored = json.loads(row[1]) if row else None
+            stored_name = row[0] if row else None
+            flags = tuple(row[2:]) if row else None
             conn.execute("DELETE FROM users WHERE email = ?", (email,))
-            conn.execute("DELETE FROM signup_verification WHERE email = ?", (email,))
-            conn.execute("DELETE FROM auth_otp WHERE email = ?", (email,))
+            conn.execute("DELETE FROM signup_verification WHERE email IN (?, ?)", (email, otp_email))
+            conn.execute("DELETE FROM auth_otp WHERE target IN (?, ?)", (phone, other_phone))
+            conn.execute("DELETE FROM phone_auth_state WHERE phone IN (?, ?)", (phone, other_phone))
             conn.commit()
         check(stored == ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"], "관심자산 SQLite 저장 확인", str(stored))
-        check(flags == (phone, 1, 1, 1), "본인인증·마케팅 동의 SQLite 저장 확인", str(flags))
+        check(stored_name == "코인덕후", "성함/닉네임 SQLite 저장 확인", str(stored_name))
+        check(flags == (phone, 0, 1, 1), "SQLite: 이메일 무인증(0) · 휴대폰 인증(1) · 마케팅 동의(1)", str(flags))
 
         # ---------------------------------------- 1단계 휴대폰 가입 (이메일·이름 없이)
         solo_phone = "010-2222-3333"
@@ -730,15 +811,16 @@ def server_checks(port: int) -> None:
 
         solo_watch = ["BTC", "삼성전자", "SK하이닉스", "TSLA", "연준·금리"]
         status, _, raw = http(base + "/api/signup", "POST",
-                              {"phone": solo_phone, "watchlist": solo_watch})
+                              {"phone": solo_phone, "name": "휴대폰족", "watchlist": solo_watch})
         solo = json.loads(raw)
         check(status == 201 and solo.get("ok"),
-              "이메일·이름 없이 POST /api/signup → 201", f"HTTP {status}")
+              "이메일 없이(성함만) POST /api/signup → 201", f"HTTP {status}")
         solo_user = solo.get("user") or {}
         check(not solo_user.get("email") and solo_user.get("phone") == solo_phone
-              and solo_user.get("phone_verified") and solo_user.get("provider") == "phone",
-              "휴대폰 단독 회원: 이메일 NULL · 휴대폰 인증 · provider=phone",
-              str((solo_user.get("email"), solo_user.get("phone"), solo_user.get("provider"))))
+              and solo_user.get("phone_verified") and solo_user.get("provider") == "phone"
+              and solo_user.get("name") == "휴대폰족",
+              "휴대폰 단독 회원: 이메일 NULL · 휴대폰 인증 · provider=phone · 성함 저장",
+              str((solo_user.get("email"), solo_user.get("phone"), solo_user.get("provider"), solo_user.get("name"))))
         check(solo_user.get("watchlist") == solo_watch,
               "가입과 동시에 관심자산 즉시 저장 (SK하이닉스·TSLA 포함)", str(solo_user.get("watchlist")))
 
@@ -752,8 +834,9 @@ def server_checks(port: int) -> None:
         found = json.loads(raw)
         found_items = found.get("items") or []
         check(status == 200 and found.get("total") == 1 and found_items
-              and found_items[0].get("phone") == solo_phone and found_items[0].get("email") is None,
-              "관리자 회원 목록: 이메일 없는 회원 검색·표시 (UNIQUE·목록 안 깨짐)",
+              and found_items[0].get("phone") == solo_phone and found_items[0].get("email") is None
+              and found_items[0].get("name") == "휴대폰족",
+              "관리자 회원 목록: 이메일 없는 회원 검색·표시 (이름 포함, UNIQUE·목록 안 깨짐)",
               f"HTTP {status} total={found.get('total')}")
 
         with db.session() as conn:

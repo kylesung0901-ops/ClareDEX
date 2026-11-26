@@ -9,11 +9,11 @@ public/ 정적 파일 + JSON API.
   GET  /api/stats            오늘(KST 자정 기준) 확인 건수 · 최근 확인 건수
   GET  /api/calendar         KST 공식 일정
   GET  /api/auth/channels    본인인증 발송 채널 상태 (SMTP/Resend/SMS 설정 여부·샌드박스 여부)
-  POST /api/auth/send-email-otp   {email}            이메일 인증번호 발송
+  POST /api/auth/send-email-otp   {email}            이메일 인증번호 발송 (가입은 이 API 없이 진행)
   POST /api/auth/verify-email-otp {email, code}      이메일 인증번호 확인
   POST /api/auth/send-sms-otp     {phone, email?}    휴대폰 인증번호 발송 (이메일 없이도 가능)
   POST /api/auth/verify-sms-otp   {phone, code, email?}  휴대폰 인증번호 확인
-  POST /api/signup           {phone, watchlist, email?, name?, marketing_agreed?}  (휴대폰 인증 필수 · 이메일·이름은 선택)
+  POST /api/signup           {phone, watchlist, email?, name?, marketing_agreed?}  (휴대폰 인증 필수 · 이메일은 인증번호 없이 형식만 확인해 저장 · 이름은 선택)
   POST /api/watchlist        {email|phone, watchlist}
 
 운영자 API (모두 세션 쿠키 필요 · 미로그인 401)
@@ -1047,6 +1047,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if route == "/api/signup":
             # 휴대폰 1단계 가입: email·name 은 선택이다(휴대폰 OTP 하나로 가입 완료).
+            # 이메일은 인증번호(OTP)를 요구하지 않고 형식만 확인해 저장한다(무인증 주소).
             email = str(body.get("email", "") or "").strip().lower() or None
             raw_name = body.get("name")
             name = (str(raw_name).strip() if raw_name is not None else "") or None
@@ -1085,35 +1086,19 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 return
             with db.session() as conn:
-                if email:
-                    state = authflow.verification_state(conn, email)
-                else:
-                    state = {"email_verified": False, "phone_verified": False, "phone": None}
-                # 휴대폰 인증은 번호 기준으로도 확인한다(이메일 없이 가입하는 흐름).
+                # 휴대폰 인증은 번호 기준 기록을 본다(1단계 퍼널).
                 pstate = authflow.phone_state(conn, phone)
-            email_ok = bool(state["email_verified"])
-            # 휴대폰 인증은 번호 기준(1단계 퍼널) 기록을 먼저 보고, 예전 이메일 기준 기록도 호환한다.
+                # 이메일은 인증을 요구하지 않지만, 예전 '이메일 + 휴대폰' 인증 흐름의
+                # 기록이 남아 있으면 그 기록도 휴대폰 인증 근거로 호환한다.
+                estate = (authflow.verification_state(conn, email) if email
+                          else {"email_verified": False, "phone_verified": False, "phone": None})
+                email_user = db.get_user(conn, email) if email else None
+                phone_user = db.get_user_by_phone(conn, phone)
+            email_ok = bool(estate["email_verified"])
             phone_ok = bool(pstate["phone_verified"]) or bool(
-                state["phone_verified"] and state.get("phone") == phone
+                estate["phone_verified"] and estate.get("phone") == phone
             )
-            # 이메일을 함께 보냈다면 그 이메일도 인증돼 있어야 저장한다.
-            if email and not email_ok:
-                self._send_json({
-                    "ok": False,
-                    "code": "verification_required",
-                    "error": "이메일 인증을 마쳐야 이메일을 함께 등록할 수 있습니다. 인증 없이 가입하려면 이메일을 비워 주세요.",
-                    "email_verified": False,
-                    "phone_verified": bool(phone_ok),
-                }, 403)
-                return
-            if state.get("phone") and state["phone"] != phone and not pstate["phone_verified"]:
-                self._send_json({
-                    "ok": False,
-                    "code": "phone_mismatch",
-                    "error": "인증한 휴대폰 번호와 입력한 번호가 다릅니다.",
-                    "phone_masked": authflow.masked_phone(state["phone"]),
-                }, 403)
-                return
+            # 휴대폰 인증을 먼저 확인한다(인증 없이 이메일 보유 여부를 묻지 못하게).
             if not phone_ok:
                 self._send_json({
                     "ok": False,
@@ -1123,13 +1108,40 @@ class Handler(BaseHTTPRequestHandler):
                     "phone_verified": False,
                 }, 403)
                 return
+            # 이메일은 OTP 없이 받는다. 이미 다른 회원이 쓰는 이메일·휴대폰이면
+            # 남의 계정을 덮어쓰지 않고 409 로 돌려준다.
+            if email and email_user and phone_user and int(email_user["id"]) != int(phone_user["id"]):
+                self._send_json({
+                    "ok": False,
+                    "code": "email_in_use",
+                    "error": "이 이메일과 휴대폰 번호가 서로 다른 회원으로 등록되어 있습니다. 다른 이메일을 입력하거나 이메일을 비워 주세요.",
+                }, 409)
+                return
+            if email and email_user:
+                owner_phone = (email_user.get("phone") or "").strip()
+                if owner_phone and authflow.normalize_phone(owner_phone) != phone:
+                    self._send_json({
+                        "ok": False,
+                        "code": "email_in_use",
+                        "error": "이미 다른 휴대폰 번호로 가입된 이메일입니다. 다른 이메일을 입력하거나 이메일을 비워 주세요.",
+                    }, 409)
+                    return
+            if email and phone_user:
+                owner_email = (phone_user.get("email") or "").strip().lower()
+                if owner_email and owner_email != email:
+                    self._send_json({
+                        "ok": False,
+                        "code": "email_in_use",
+                        "error": "이미 다른 이메일로 가입된 휴대폰 번호입니다. 등록된 이메일을 쓰시거나 이메일을 비워 주세요.",
+                    }, 409)
+                    return
             with db.session() as conn:
                 existing = (db.get_user(conn, email) if email else None) or db.get_user_by_phone(conn, phone)
                 # 이미 가입한 회원을 다시 진행할 때 빈 목록으로 기존 관심자산을 지우지 않는다.
                 effective = watchlist if (watchlist or not existing) else None
                 user = db.upsert_user(
                     conn, email=email, name=name, provider=provider, watchlist=effective,
-                    phone=phone, email_verified=bool(email_ok), phone_verified=True,
+                    phone=phone, email_verified=(True if email_ok else None), phone_verified=True,
                     marketing_agreed=marketing_agreed,
                 )
             self._send_json({"ok": True, "user": user, "next": "/?reserved=1"}, 201)

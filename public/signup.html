@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20261126b">
+<link rel="stylesheet" href="assets/style.css?v=20261126c">
 </head>
 <body>
 
@@ -100,30 +100,20 @@
               <div class="otp-box" id="smsDelivery" hidden></div>
             </div>
 
-            <!-- 선택: 이메일로도 받기 (기본 화면에서는 접혀 있음) -->
-            <details class="optional-email" id="emailToggle">
-              <summary>이메일로도 받기 (선택)</summary>
-              <div class="optional-body">
-                <p class="hint-inline">같은 알림을 메일로도 받고 싶을 때만 추가하세요. 인증번호 확인이 필요하며, 비워 두면 휴대폰으로만 받습니다.</p>
-                <div class="field">
-                  <label for="email">이메일</label>
-                  <div class="verify-row">
-                    <input id="email" name="email" type="email" inputmode="email" placeholder="you@gmail.com" autocomplete="email">
-                    <button class="btn-code" type="button" id="sendEmailBtn" data-default-label="인증번호 발송">인증번호 발송</button>
-                  </div>
-                  <div class="err" id="emailErr"></div>
-                </div>
-                <div class="field" id="emailCodeWrap" hidden>
-                  <label for="emailCode">이메일 인증번호 6자리</label>
-                  <div class="verify-row">
-                    <input id="emailCode" name="emailCode" type="text" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code">
-                    <button class="btn-code" type="button" id="verifyEmailBtn">확인</button>
-                  </div>
-                  <div class="err" id="emailCodeErr"></div>
-                  <div class="otp-box" id="emailDelivery" hidden></div>
-                </div>
-              </div>
-            </details>
+            <!-- 이메일·성함/닉네임은 접힘 없이 바로 노출 (이메일은 인증번호 없이 형식만 확인) -->
+            <div class="field">
+              <label for="email">이메일 <span class="opt-tag">선택</span></label>
+              <input id="email" name="email" type="email" inputmode="email" placeholder="you@gmail.com" autocomplete="email" maxlength="120">
+              <div class="err" id="emailErr"></div>
+              <div class="hint-inline">인증번호는 보내지 않습니다. 주소 형식만 확인해 저장하며, 비워 두면 휴대폰으로만 받습니다.</div>
+            </div>
+
+            <div class="field">
+              <label for="name">성함 또는 닉네임 <span class="opt-tag">선택</span></label>
+              <input id="name" name="name" type="text" placeholder="홍길동 / 코인덕후" autocomplete="nickname" maxlength="40">
+              <div class="err" id="nameErr"></div>
+              <div class="hint-inline">알림 인사말과 회원 관리에 쓰입니다. 실명이 아니어도 됩니다.</div>
+            </div>
 
             <div class="consent">
               <div class="consent-row">
@@ -342,7 +332,11 @@
   const selected = new Set();
   if (REQUEST) selected.add(REQUEST.asset);
 
-  const flow = { phone: "", phoneVerified: false, email: "", emailVerified: false, previewMode: false };
+  const flow = { phone: "", phoneVerified: false, previewMode: false };
+  /* 이메일은 인증번호 없이 형식만 확인한다 (서버 EMAIL_RE 와 같은 규칙) */
+  const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
+  const emailValue = () => ($("#email").value || "").trim().toLowerCase();
+  const nameValue = () => ($("#name").value || "").trim();
   let cooldownTimers = {};
   const digits = (v) => String(v || "").replace(/[^0-9]/g, "");
   let EVENTS = [];
@@ -620,9 +614,8 @@
     if (!/^\d{6}$/.test(code)) { setMsg("#smsCodeErr", "인증번호 6자리를 입력해 주세요."); return; }
     const btn = $("#verifySmsBtn");
     btn.disabled = true; btn.textContent = "확인 중…";
-    const email = flow.emailVerified ? flow.email : undefined;
     try {
-      await apiCall("/api/auth/verify-sms-otp", { phone: phone, code: code, email: email });
+      await apiCall("/api/auth/verify-sms-otp", { phone: phone, code: code });
       flow.phone = digits(phone); flow.phoneVerified = true;
       $("#smsCodeWrap").hidden = true;
       stopCooldown("#sendSmsBtn", "인증 완료");
@@ -637,53 +630,27 @@
     }
   });
 
-  /* --------------------------------------------- 이메일 인증 (선택 · 접힘) */
-  $("#emailToggle").addEventListener("toggle", () => {
-    if ($("#emailToggle").open) setTimeout(() => $("#email").focus(), 60);
+  /* ------------------------------- 이메일·성함 (인증번호 없음 · 형식만 확인) */
+  $("#email").addEventListener("input", () => {
+    const email = emailValue();
+    if (!email) { setMsg("#emailErr", ""); return; }
+    if (!EMAIL_RE.test(email)) {
+      setMsg("#emailErr", "이메일 형식이 올바르지 않습니다. 예) you@gmail.com");
+      return;
+    }
+    setMsg("#emailErr", "✓ 형식 확인 완료 · 인증번호 없이 저장됩니다", true);
+  });
+  $("#email").addEventListener("blur", () => {
+    const email = emailValue();
+    if (email && !EMAIL_RE.test(email)) setMsg("#emailErr", "이메일 형식이 올바르지 않습니다. 예) you@gmail.com");
+  });
+  $("#name").addEventListener("input", () => {
+    const name = nameValue();
+    if (name.length > 40) setMsg("#nameErr", "40자 이내로 입력해 주세요.");
+    else setMsg("#nameErr", "");
   });
 
-  $("#sendEmailBtn").addEventListener("click", async () => {
-    const email = $("#email").value.trim().toLowerCase();
-    setMsg("#emailErr", "");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) {
-      setMsg("#emailErr", "이메일 형식을 확인해 주세요."); $("#email").focus(); return;
-    }
-    const btn = $("#sendEmailBtn");
-    btn.disabled = true; btn.textContent = "발송 중…";
-    try {
-      const data = await apiCall("/api/auth/send-email-otp", { email: email });
-      $("#emailCodeWrap").hidden = false;
-      showDelivery("#emailDelivery", data);
-      setMsg("#emailErr", data.message || "인증번호를 보냈습니다.", true);
-      $("#emailCode").focus();
-      startCooldown("#sendEmailBtn", data.retry_after || 30);
-    } catch (err) {
-      handleSendError(err, "#sendEmailBtn", "#emailErr");
-    }
-  });
-
-  $("#verifyEmailBtn").addEventListener("click", async () => {
-    const email = $("#email").value.trim().toLowerCase();
-    const code = $("#emailCode").value.trim();
-    setMsg("#emailCodeErr", "");
-    if (!/^\d{6}$/.test(code)) { setMsg("#emailCodeErr", "인증번호 6자리를 입력해 주세요."); return; }
-    const btn = $("#verifyEmailBtn");
-    btn.disabled = true; btn.textContent = "확인 중…";
-    try {
-      await apiCall("/api/auth/verify-email-otp", { email: email, code: code });
-      flow.email = email; flow.emailVerified = true;
-      setMsg("#emailCodeErr", "이메일 인증이 완료되었습니다.", true);
-      $("#emailCodeWrap").hidden = true;
-      stopCooldown("#sendEmailBtn", "인증 완료");
-      $("#emailErr").innerHTML = '<span class="verified-pill">✓ 이메일 인증 완료 · 문자와 함께 메일로도 받습니다</span>';
-    } catch (err) {
-      setMsg("#emailCodeErr", err.message);
-    } finally {
-      btn.disabled = false; btn.textContent = "확인";
-    }
-  });
-
-  /* 인증 후 번호·이메일을 고치면 인증을 다시 받게 한다 */
+  /* 인증 후 번호를 고치면 인증을 다시 받게 한다 */
   $("#phone").addEventListener("input", () => {
     if (!flow.phoneVerified) return;
     if (digits($("#phone").value) === flow.phone) return;
@@ -695,17 +662,6 @@
     btn.disabled = false;
     btn.textContent = btn.dataset.defaultLabel || "인증번호 발송";
     updateSubmitState();
-  });
-  $("#email").addEventListener("input", () => {
-    if (!flow.emailVerified) return;
-    if ($("#email").value.trim().toLowerCase() === flow.email) return;
-    flow.email = "";
-    flow.emailVerified = false;
-    $("#emailErr").textContent = "";
-    $("#emailCodeWrap").hidden = true;
-    const btn = $("#sendEmailBtn");
-    btn.disabled = false;
-    btn.textContent = btn.dataset.defaultLabel || "인증번호 발송";
   });
 
   /* ------------------------------------------------------- 제출 준비 상태 */
@@ -742,8 +698,9 @@
   $("#bellForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const phone = $("#phone").value.trim();
-    const emailRaw = $("#email").value.trim().toLowerCase();
-    setMsg("#phoneErr", ""); setMsg("#emailErr", "");
+    const email = emailValue();
+    const name = nameValue();
+    setMsg("#phoneErr", ""); setMsg("#emailErr", ""); setMsg("#nameErr", "");
     if (!flow.phoneVerified) {
       setMsg("#phoneErr", "휴대폰 인증을 먼저 완료해 주세요.");
       $("#phone").focus(); return;
@@ -754,18 +711,23 @@
       updateSubmitState();
       return;
     }
-    if (emailRaw && !flow.emailVerified) {
-      $("#emailToggle").open = true;
-      setMsg("#emailErr", "이메일 인증을 마쳐 주세요. 이메일 없이 가입하려면 입력란을 비워 두세요.");
+    /* 이메일은 인증번호 없이 형식만 정확히 확인한다. 비워 두면 선택 사항. */
+    if (email && !EMAIL_RE.test(email)) {
+      setMsg("#emailErr", "이메일 형식이 올바르지 않습니다. 예) you@gmail.com (비워 두면 이메일 없이 가입됩니다)");
       $("#email").focus(); return;
+    }
+    if (name.length > 40) {
+      setMsg("#nameErr", "성함 또는 닉네임은 40자 이내로 입력해 주세요.");
+      $("#name").focus(); return;
     }
     const payload = {
       phone: phone,
+      name: name || undefined,
+      email: email || undefined,
       watchlist: Array.from(selected),
       marketing_agreed: $("#marketing").checked,
-      provider: flow.emailVerified ? "email" : "phone"
+      provider: email ? "email" : "phone"
     };
-    if (flow.emailVerified) payload.email = flow.email;
 
     const btn = $("#signupBtn");
     btn.disabled = true; btn.textContent = "비상벨 켜는 중…";
@@ -776,19 +738,22 @@
       if (err.network) {
         flow.previewMode = true;
         const users = readLocalUsers();
-        const key = flow.emailVerified ? flow.email : phone;
-        users[key] = { email: flow.emailVerified ? flow.email : null, phone: phone, provider: payload.provider, watchlist: payload.watchlist };
+        const key = email || phone;
+        users[key] = { email: email || null, name: name || null, phone: phone, provider: payload.provider, watchlist: payload.watchlist };
         writeLocalUsers(users);
         afterSignup(users[key], payload);
         return;
       }
       const d = err.data || {};
-      if (d.code === "verification_required") {
+      if (d.code === "email_in_use") {
+        setMsg("#emailErr", err.message);
+        $("#email").focus();
+      } else if (d.code === "verification_required") {
         flow.phoneVerified = !!d.phone_verified;
         setMsg("#phoneErr", d.phone_verified ? "" : err.message);
-        if (!d.email_verified && emailRaw) setMsg("#emailErr", "이메일 인증이 만료되었습니다. 다시 인증해 주세요.");
-      } else if (d.code === "phone_mismatch") {
-        setMsg("#phoneErr", err.message);
+        updateSubmitState();
+      } else if (d.code === "name_too_long") {
+        setMsg("#nameErr", err.message);
       } else {
         setMsg("#phoneErr", err.message);
       }
@@ -801,9 +766,9 @@
   function afterSignup(user, payload) {
     const list = (user && user.watchlist && user.watchlist.length ? user.watchlist : payload.watchlist) || [];
     try {
-      if (flow.emailVerified) sessionStorage.setItem("claredex_email", flow.email);
       localStorage.setItem(MEMBER_KEY, JSON.stringify({
-        email: flow.emailVerified ? flow.email : null,
+        email: payload.email || null,
+        name: payload.name || null,
         phone: payload.phone,
         watchlist: list,
         verified: !flow.previewMode,
@@ -839,9 +804,12 @@
 
     $("#successMeta").textContent = flow.previewMode
       ? "정적 미리보기라 서버 전송 없이 이 브라우저에만 저장되었습니다."
-      : (flow.emailVerified
-          ? `${flow.email} · ${payload.phone} · 휴대폰·이메일 인증 완료` + ($("#marketing").checked ? " · 마케팅 활용 동의" : "")
-          : `${payload.phone} · 휴대폰 인증 완료 (이메일 없이 가입)` + ($("#marketing").checked ? " · 마케팅 활용 동의" : ""));
+      : [
+          payload.name ? `${payload.name} 님` : "",
+          `${payload.phone} 휴대폰 인증 완료`,
+          payload.email ? `${payload.email} 함께 등록(무인증)` : "이메일 없이 가입",
+          $("#marketing").checked ? "마케팅 활용 동의" : ""
+        ].filter(Boolean).join(" · ");
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast(flow.previewMode ? "정적 미리보기라 이 브라우저에만 저장했습니다." : "비상벨이 켜졌습니다!");
   }
