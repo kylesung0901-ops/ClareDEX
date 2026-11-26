@@ -178,7 +178,7 @@
   "use strict";
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
-  const state = { category: "all", importance: null, posts: [] };
+  const state = { category: "all", importance: null, posts: [], featured: null };
 
   /* 정적 호스팅(GitHub Pages) 대응: API 가 없으면 public/data/*.json 스냅샷으로 대체 */
   const API = { ticker: "/api/ticker", posts: "/api/posts?limit=60", calendar: "/api/calendar", stats: "/api/stats" };
@@ -291,6 +291,7 @@
     if (!state.posts.length) return;
     const recentS = state.posts.find((x) => imp(x) === "S" && (Date.now() - new Date(x.verified_at).getTime()) < 72 * 3600 * 1000);
     const p = recentS || state.posts[0];
+    state.featured = p;
     $("#featuredMeta").innerHTML = `오늘의 한 장 <span class="dot" aria-hidden="true">·</span> ${gradeTag(p)} <span class="dot" aria-hidden="true">·</span> ${esc(relTime(p.verified_at))}`;
     $("#featuredTitle").textContent = p.title;
     $("#featuredBody").textContent = bodyText(p, 3);
@@ -304,9 +305,10 @@
 
   function pickSlides() {
     const out = [];
-    const byS = state.posts.filter((p) => imp(p) === "S");
-    byS.forEach((p) => { if (out.length < 3) out.push(p); });
-    state.posts.forEach((p) => { if (out.length < 3 && !out.includes(p)) out.push(p); });
+    /* '오늘의 한 장'과 겹치지 않게 다른 원문을 우선 고른다 */
+    const rest = state.posts.filter((p) => p !== state.featured);
+    rest.filter((p) => imp(p) === "S").forEach((p) => { if (out.length < 3) out.push(p); });
+    rest.forEach((p) => { if (out.length < 3 && !out.includes(p)) out.push(p); });
     return out;
   }
 
