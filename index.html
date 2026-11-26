@@ -411,6 +411,15 @@
     $("#convertCount").textContent = n ? `공식 원문 ${n}건` : "발표 대기";
   }
 
+  function syncUrl() {
+    try {
+      const url = new URL(location.href);
+      if (state.watch) url.searchParams.set("watch", state.watch);
+      else url.searchParams.delete("watch");
+      history.replaceState(null, "", url);
+    } catch (e) { /* file:// 등 주소를 못 바꾸는 환경은 그대로 둔다 */ }
+  }
+
   function setWatch(key) {
     state.watch = key && watchByKey(key) ? key : null;
     if (state.watch) {
@@ -420,12 +429,7 @@
     }
     renderWatch();
     renderFeed();
-    try {
-      const url = new URL(location.href);
-      if (state.watch) url.searchParams.set("watch", state.watch);
-      else url.searchParams.delete("watch");
-      history.replaceState(null, "", url);
-    } catch (e) { /* file:// 등 주소를 못 바꾸는 환경은 그대로 둔다 */ }
+    syncUrl();
   }
 
   $$("#watchChips .watch-chip").forEach((chip) => {
@@ -599,6 +603,7 @@
       state.watch = null;
       renderWatch();
       renderFeed();
+      syncUrl();
     });
   });
 
