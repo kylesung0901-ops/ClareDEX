@@ -5,6 +5,7 @@ public/ 정적 파일 + JSON API.
   GET  /signup(.html)        10초 가입 + 관심자산 온보딩
   GET  /admin/, /admin       운영자 전용 관리자 콘솔 (로그인 게이트 · KPI · 회원 · 콘텐츠 · 수집기 · 보안)
   GET  /api/ticker           실시간 지표 (실패 시 data/market_cache.json 폴백)
+  GET  /api/market           가입 화면용 현재 지표 + 타점 비상벨 지표(kimp_pct·fng·long_pct)
   GET  /api/posts            ?category= &tag= &q= &importance= &limit=   (공개 글만 · S/A/B)
   GET  /api/stats            오늘(KST 자정 기준) 확인 건수 · 최근 확인 건수
   GET  /api/calendar         KST 공식 일정
@@ -13,8 +14,10 @@ public/ 정적 파일 + JSON API.
   POST /api/auth/verify-email-otp {email, code}      이메일 인증번호 확인
   POST /api/auth/send-sms-otp     {phone, email?}    휴대폰 인증번호 발송 (이메일 없이도 가능)
   POST /api/auth/verify-sms-otp   {phone, code, email?}  휴대폰 인증번호 확인
-  POST /api/signup           {phone, watchlist, email?, name?, marketing_agreed?}  (휴대폰 인증 필수 · 이메일은 인증번호 없이 형식만 확인해 저장 · 이름은 선택)
+  POST /api/signup           {phone, watchlist, email?, name?, marketing_agreed?, alert_rule?}  (휴대폰 인증 필수 · 이메일은 인증번호 없이 형식만 확인해 저장 · 이름은 선택)
   POST /api/watchlist        {email|phone, watchlist}
+  GET  /api/alerts           ?phone=   내 타점 비상벨 조건 조회
+  POST /api/alerts           {phone, alert_rule:{metric, operator, threshold, label?}} | {phone, active:false}
 
 운영자 API (모두 세션 쿠키 필요 · 미로그인 401)
   GET  /api/admin/session            현재 운영자 세션 상태
@@ -486,6 +489,51 @@ def get_ticker(force: bool = False) -> dict:
             return {"ok": False, "served_from": "none", "items": [], "error": str(exc)}
 
 
+def get_market_payload() -> dict:
+    """가입 화면·타점 비상벨용 현재 지표. /api/ticker 와 같은 캐시를 쓰고,
+    비상벨 지표(kimp_pct·fng·long_pct)를 항상 같은 키로 정리해 내려준다."""
+    payload = dict(get_ticker())
+    metrics = collector.alert_metric_values(payload)
+    payload["metrics"] = {
+        key: {
+            "value": metrics.get(key),
+            "display": config.fmt_alert_value(key, metrics.get(key)) if metrics.get(key) is not None else None,
+            "label": config.alert_metric_label(key),
+        }
+        for key in config.ALERT_METRICS
+    }
+    payload.setdefault("values", {})
+    return payload
+
+
+def _parse_alert_rule(raw: object) -> dict:
+    """요청으로 받은 alert_rule 을 검증해 DB 저장용 dict 로 만든다. 잘못되면 ValueError."""
+    if not isinstance(raw, dict):
+        raise ValueError("alert_rule 은 객체여야 합니다.")
+    metric = str(raw.get("metric") or "").strip()
+    operator = str(raw.get("operator") or "").strip()
+    threshold = db.validate_alert_rule(metric, operator, raw.get("threshold"))
+    label = raw.get("label")
+    label = str(label).strip()[: config.ALERT_LABEL_MAX] if label else None
+    cooldown = raw.get("cooldown_minutes")
+    if cooldown is not None:
+        try:
+            cooldown = int(cooldown)
+        except (TypeError, ValueError):
+            raise ValueError("cooldown_minutes 는 숫자(분)여야 합니다.") from None
+    return {"metric": metric, "operator": operator, "threshold": threshold,
+            "label": label, "cooldown_minutes": cooldown}
+
+
+def _alert_rule_json(rule: dict | None) -> dict | None:
+    if not rule:
+        return None
+    out = dict(rule)
+    out["metric_label"] = config.alert_metric_label(rule.get("metric", ""))
+    out["threshold_display"] = config.fmt_alert_value(rule.get("metric", ""), rule.get("threshold"))
+    return out
+
+
 def _post_json(post: dict) -> dict:
     out = dict(post)
     out["category_label"] = config.CATEGORIES.get(post["category"], {}).get("label", post["category"])
@@ -726,6 +774,34 @@ class Handler(BaseHTTPRequestHandler):
         if route == "/api/ticker":
             self._send_json(get_ticker(), 200)
             return
+        if route == "/api/market":
+            # 가입 화면이 김프·공포탐욕·롱비율 현재 수치와 타점 프리셋을 그릴 때 쓴다.
+            self._send_json(get_market_payload(), 200)
+            return
+        if route == "/api/alerts":
+            phone = authflow.normalize_phone((qs.get("phone") or [""])[0])
+            if not phone:
+                self._send_json({"ok": False, "code": "phone_required",
+                                 "error": "휴대폰 번호를 정확히 입력해 주세요."}, 400)
+                return
+            with db.session() as conn:
+                user = db.get_user_by_phone(conn, phone)
+                if not user:
+                    self._send_json({"ok": False, "code": "not_member",
+                                     "error": "가입된 휴대폰 번호가 아닙니다."}, 404)
+                    return
+                rule = db.get_active_alert_rule(conn, phone)
+                history = db.list_alert_rules_by_phone(conn, phone, include_inactive=True)[:5]
+            self._send_json({
+                "ok": True, "phone": phone, "member": bool(user),
+                "alert_rule": _alert_rule_json(rule),
+                "rules": [_alert_rule_json(r) for r in history],
+                "metrics": {k: {"label": config.alert_metric_label(k),
+                                 "operator_options": list(config.ALERT_OPERATORS),
+                                 "min": v["min"], "max": v["max"], "unit": v["unit"]}
+                            for k, v in config.ALERT_METRICS.items()},
+            }, 200)
+            return
         if route == "/api/posts":
             category = (qs.get("category") or [None])[0]
             tag = (qs.get("tag") or [None])[0]
@@ -783,6 +859,10 @@ class Handler(BaseHTTPRequestHandler):
                                       limit=limit, offset=offset)
                 total = db.count_users(conn, q=q or None, provider=provider, status=status)
                 providers = db.provider_counts(conn)
+                # 회원별 타점 비상벨 요약 — 설정이 없으면 alert_rule 은 None
+                summaries = db.alert_rule_summaries(conn, [u.get("phone") for u in items])
+            for item in items:
+                item["alert_rule"] = summaries.get(str(item.get("phone") or ""))
             self._send_json({"ok": True, "total": total, "count": len(items), "limit": limit,
                              "offset": offset, "items": items, "providers": providers})
             return
@@ -1056,6 +1136,15 @@ class Handler(BaseHTTPRequestHandler):
             provider = ((str(raw_provider).strip().lower() if raw_provider is not None else "")
                         or ("email" if email else "phone"))
             watchlist = body.get("watchlist") or []
+            # 타점 비상벨(선택): {metric, operator, threshold, label?} — 무료 회원 1인당 활성 1개
+            raw_alert = body.get("alert_rule")
+            alert_rule = None
+            if raw_alert is not None:
+                try:
+                    alert_rule = _parse_alert_rule(raw_alert)
+                except ValueError as exc:
+                    self._send_json({"ok": False, "code": "invalid_alert_rule", "error": str(exc)}, 400)
+                    return
             # 동의 여부를 보내지 않은 요청(관심자산만 수정 등)은 기존 동의 이력을 지우지 않는다.
             raw_marketing = body.get("marketing_agreed")
             marketing_agreed = None if raw_marketing is None else bool(raw_marketing)
@@ -1144,7 +1233,17 @@ class Handler(BaseHTTPRequestHandler):
                     phone=phone, email_verified=(True if email_ok else None), phone_verified=True,
                     marketing_agreed=marketing_agreed,
                 )
-            self._send_json({"ok": True, "user": user, "next": "/?reserved=1"}, 201)
+                if alert_rule:
+                    saved_alert = db.upsert_user_alert_rule(
+                        conn, phone=phone, user_id=int(user["id"]),
+                        metric=alert_rule["metric"], operator=alert_rule["operator"],
+                        threshold=alert_rule["threshold"], label=alert_rule["label"],
+                        cooldown_minutes=alert_rule["cooldown_minutes"],
+                    )
+                else:
+                    saved_alert = db.get_active_alert_rule(conn, phone)
+            self._send_json({"ok": True, "user": user, "alert_rule": _alert_rule_json(saved_alert),
+                             "next": "/?reserved=1"}, 201)
             return
 
         if route == "/api/watchlist":
@@ -1171,6 +1270,51 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 user = db.set_watchlist_by_id(conn, int(user["id"]), watchlist)
             self._send_json({"ok": True, "user": user})
+            return
+
+        if route == "/api/alerts":
+            # 기존 가입자가 휴대폰 기준으로 타점 비상벨을 조회·변경한다.
+            #   {phone, alert_rule: {metric, operator, threshold, label?}} → 설정/교체
+            #   {phone, active: false} → 끄기
+            phone = authflow.normalize_phone(body.get("phone"))
+            if not phone:
+                self._send_json({"ok": False, "code": "phone_required",
+                                 "error": "휴대폰 번호를 정확히 입력해 주세요."}, 400)
+                return
+            raw_active = body.get("active")
+            raw_alert = body.get("alert_rule")
+            if raw_active is False:
+                with db.session() as conn:
+                    if not db.get_user_by_phone(conn, phone):
+                        self._send_json({"ok": False, "code": "not_member",
+                                         "error": "가입된 휴대폰 번호가 아닙니다."}, 404)
+                        return
+                    changed = db.set_alert_rules_active(conn, phone, False)
+                self._send_json({"ok": True, "phone": phone, "alert_rule": None,
+                                 "changed": changed, "message": "타점 비상벨을 껐습니다."}, 200)
+                return
+            if raw_alert is None:
+                self._send_json({"ok": False, "code": "alert_rule_required",
+                                 "error": "설정할 알림 조건(alert_rule) 또는 active:false 가 필요합니다."}, 400)
+                return
+            try:
+                parsed = _parse_alert_rule(raw_alert)
+            except ValueError as exc:
+                self._send_json({"ok": False, "code": "invalid_alert_rule", "error": str(exc)}, 400)
+                return
+            with db.session() as conn:
+                user = db.get_user_by_phone(conn, phone)
+                if not user:
+                    self._send_json({"ok": False, "code": "not_member",
+                                     "error": "가입된 휴대폰 번호가 아닙니다."}, 404)
+                    return
+                saved = db.upsert_user_alert_rule(
+                    conn, phone=phone, user_id=int(user["id"]), metric=parsed["metric"],
+                    operator=parsed["operator"], threshold=parsed["threshold"],
+                    label=parsed["label"], cooldown_minutes=parsed["cooldown_minutes"],
+                )
+            self._send_json({"ok": True, "phone": phone, "alert_rule": _alert_rule_json(saved),
+                             "message": "타점 비상벨 조건을 저장했습니다."}, 200)
             return
 
         self._send_json({"ok": False, "error": "not found"}, 404)

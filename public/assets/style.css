@@ -853,6 +853,86 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .reserved-when em { display: block; font-style: normal; font-family: var(--sans); font-size: 10px; color: var(--muted); }
 .reserved-title { font-size: 12.5px; color: var(--ink-2); line-height: 1.55; }
 .reserved-fine { margin: 10px 0 0; font-size: 10.5px; color: var(--faint); line-height: 1.6; }
+/* --------------------------------------------------- 타점 비상벨 (메인 바) */
+.alert-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin: 4px 0 26px; padding: 13px 16px;
+  border: 1px solid #e2d3ae; border-radius: var(--radius);
+  background: linear-gradient(180deg, #fdf7e6, #faf1d9);
+  text-decoration: none; transition: border-color .15s ease, background .15s ease;
+}
+.alert-bar:hover { border-color: var(--gold-deep); background: #faf0d2; }
+.alert-bar-main { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+.alert-bar-sub {
+  font-family: var(--mono); font-size: 11px; color: var(--gold-deep); letter-spacing: 0.01em;
+}
+@media (max-width: 480px) {
+  .alert-bar { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; }
+  .alert-bar-main { font-size: 13.5px; }
+}
+
+/* ------------------------------------------------ 타점 비상벨 (가입 화면) */
+.alt-panel {
+  margin: 4px 0 14px; padding: 13px 13px 11px;
+  border: 1px solid #e6d9b8; border-radius: var(--radius);
+  background: linear-gradient(180deg, #fdfaf1, #fbf6e8);
+}
+.alt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.alt-title { font-size: 13px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+.alt-live { font-family: var(--mono); font-size: 10px; color: var(--gold-deep); }
+.alt-now {
+  list-style: none; display: flex; gap: 6px; margin: 9px 0 0; padding: 0;
+}
+.alt-now li {
+  flex: 1 1 0; min-width: 0; background: #fff; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 7px 8px; text-align: center;
+}
+.alt-now span { display: block; font-size: 10px; color: var(--muted); letter-spacing: 0.02em; }
+.alt-now b { display: block; font-family: var(--mono); font-size: 13px; color: var(--ink); margin-top: 1px; }
+.alt-hint { margin: 9px 0 0; font-size: 11px; color: var(--body); line-height: 1.6; }
+.alt-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.alt-chip {
+  font-family: var(--sans); font-size: 11.5px; line-height: 1.2; padding: 6px 10px;
+  border: 1px solid var(--line-2); border-radius: 999px; background: #fff;
+  color: var(--ink-2); cursor: pointer; transition: all .12s ease;
+}
+.alt-chip:hover { border-color: var(--ink-2); color: var(--ink); }
+.alt-chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fbfaf6; font-weight: 700; }
+.alt-custom { display: flex; gap: 6px; margin: 9px 0 0; flex-wrap: wrap; }
+.alt-custom select, .alt-custom input {
+  font-size: 12px; padding: 6px 8px; border: 1px solid var(--line-2); border-radius: var(--radius-sm);
+  background: #fff; color: var(--ink); min-width: 0;
+}
+.alt-custom select { flex: 0 0 auto; }
+.alt-custom input { flex: 1 1 92px; font-family: var(--mono); }
+.btn-mini {
+  font-size: 12px; font-weight: 700; padding: 6px 11px; cursor: pointer;
+  border: 1px solid var(--line-2); border-radius: var(--radius-sm); background: var(--paper-2); color: var(--ink);
+}
+.btn-mini:hover { border-color: var(--ink-2); background: #fff; }
+.alt-panel .err { min-height: 0; margin-top: 6px; }
+.alt-state { margin: 7px 0 0; font-size: 11px; color: var(--muted); line-height: 1.6; }
+.alt-state.is-on { color: #2f6b4a; }
+.alt-state b { color: var(--ink); }
+.alert-summary {
+  margin: 4px 0 16px; padding: 11px 13px; text-align: left;
+  border: 1px dashed var(--line-2); border-radius: var(--radius); background: #fff;
+}
+.alert-summary.is-on { border-style: solid; border-color: #e2d3ae; background: #fdfaf1; }
+.alert-summary-head {
+  margin: 0 0 4px; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+}
+.alert-summary-body { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.65; }
+.alert-summary-body b { color: var(--ink); }
+.alert-summary-body span { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); }
+.alert-summary-body a { color: var(--gold-deep); font-weight: 700; text-decoration: none; }
+
+@media (max-width: 480px) {
+  .alt-now b { font-size: 12px; }
+  .alt-chip { font-size: 11px; padding: 6px 9px; }
+}
+
 @media (max-width: 480px) {
   .alarm-title { font-size: 16.5px; }
   .reserved-list li { grid-template-columns: 1fr; gap: 3px; }

@@ -283,6 +283,33 @@ def send_sms(to: str, text: str) -> tuple[str, bool, str | None]:
     return "unconfigured", False, None
 
 
+def send_sms_text(phone: str, text: str) -> dict:
+    """인증번호가 아닌 일반 문자(타점 비상벨 경보 등)를 보낸다.
+
+    자격증명이 없으면(test_mode) 예외 대신 ok=True·sent=False·test_mode=True 로 돌려준다.
+    실제 발송이 실패하면 ok=False 와 사유를 담는다.
+    """
+    target = normalize_phone(phone)
+    if not target:
+        return {"ok": False, "sent": False, "test_mode": False, "mode": "invalid",
+                "error": "휴대폰 번호 형식을 확인해 주세요."}
+    body = (text or "").strip()
+    if not body:
+        return {"ok": False, "sent": False, "test_mode": False, "mode": "invalid",
+                "error": "문자 내용이 비어 있습니다."}
+    mode, ok, error = send_sms(target, body)
+    if mode == "unconfigured":
+        return {"ok": True, "sent": False, "test_mode": True, "mode": mode,
+                "target": masked_phone(target), "text": body,
+                "message": "문자 발송 채널 미설정 · 테스트 모드(실제 발송 안 함)"}
+    if not ok:
+        return {"ok": False, "sent": False, "test_mode": False, "mode": mode,
+                "target": masked_phone(target), "text": body,
+                "error": error or "문자 발송에 실패했습니다."}
+    return {"ok": True, "sent": True, "test_mode": False, "mode": mode,
+            "target": masked_phone(target), "text": body, "message": "문자 발송 완료"}
+
+
 # ------------------------------------------------------------------ OTP 저장
 def _new_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"

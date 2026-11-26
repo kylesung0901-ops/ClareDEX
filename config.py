@@ -58,6 +58,21 @@ EVENT_WATCH_ALIASES = {
     "무역수지": "연준·금리",
 }
 
+# ---------------------------------------------------------------- 타점 비상벨
+# 김프·공포탐욕·롱숏이 정한 선을 넘는 순간 1초 안에 문자로 알리는 조건알림.
+# metric 키는 collector.collect_market() 의 values 키와 화면·DB 에서 같이 쓴다.
+ALERT_METRICS = {
+    "kimp_pct": {"label": "김치프리미엄", "unit": "%", "min": -50.0, "max": 50.0, "digits": 2},
+    "fng": {"label": "공포탐욕지수", "unit": "", "min": 0.0, "max": 100.0, "digits": 0},
+    "long_pct": {"label": "바이낸스 롱 비율", "unit": "%", "min": 0.0, "max": 100.0, "digits": 1},
+}
+ALERT_OPERATORS = (">=", "<=")
+ALERT_COOLDOWN_MINUTES = 360          # 기본 쿨다운 6시간 (같은 조건 중복 문자 방지)
+ALERT_COOLDOWN_MIN = 30
+ALERT_COOLDOWN_MAX = 1440
+ALERT_LABEL_MAX = 60
+
+
 # ---------------------------------------------------------------- 중요도 등급
 # S(긴급) · A(주요) · B(일반). 화면에서는 S 를 빨간 배지로 강조한다.
 IMPORTANCE_LEVELS = {
@@ -108,6 +123,21 @@ def iso_kst(dt: datetime | None = None) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=KST)
     return dt.astimezone(KST).replace(microsecond=0).isoformat()
+
+
+def alert_metric_label(metric: str) -> str:
+    return (ALERT_METRICS.get(metric) or {}).get("label", metric)
+
+
+def fmt_alert_value(metric: str, value: float | int | None) -> str:
+    """화면·문자에 쓰는 지표 표기 (김프는 부호 포함, 공포탐욕은 정수)."""
+    if value is None:
+        return "-"
+    meta = ALERT_METRICS.get(metric) or {}
+    digits = int(meta.get("digits", 2))
+    unit = meta.get("unit", "")
+    number = f"{float(value):+.{digits}f}" if metric == "kimp_pct" else f"{float(value):.{digits}f}"
+    return f"{number}{unit}"
 
 
 def parse_kst(value: str) -> datetime:

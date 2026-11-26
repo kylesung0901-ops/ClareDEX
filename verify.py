@@ -79,7 +79,8 @@ def db_checks() -> None:
     db.init_db()  # 서버 기동과 같은 스키마·마이그레이션을 먼저 적용해 검사한다
     conn = db.connect()
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    for t in ("posts", "users", "naver_drafts", "auth_otp", "signup_verification", "phone_auth_state", "naver_publish"):
+    for t in ("posts", "users", "naver_drafts", "auth_otp", "signup_verification", "phone_auth_state",
+              "naver_publish", "alert_rules", "alert_logs"):
         check(t in tables, f"테이블 존재: {t}")
 
     post_cols = {r[1] for r in conn.execute("PRAGMA table_info(posts)")}
@@ -108,6 +109,16 @@ def db_checks() -> None:
     publish_cols = {r[1] for r in conn.execute("PRAGMA table_info(naver_publish)")}
     check({"draft_id", "post_id", "status", "url", "published_at"} <= publish_cols,
           "naver_publish 컴럼 (발행 이력)")
+    alert_cols = {r[1] for r in conn.execute("PRAGMA table_info(alert_rules)")}
+    required_alert = {"id", "user_id", "phone", "metric", "operator", "threshold", "label",
+                      "cooldown_minutes", "last_triggered_at", "active", "created_at"}
+    check(required_alert <= alert_cols, "alert_rules 필수 컴럼 (지표·연산자·임계치·쿨다운·활성)",
+          ", ".join(sorted(required_alert - alert_cols)) or "모두 존재")
+    alert_log_cols = {r[1] for r in conn.execute("PRAGMA table_info(alert_logs)")}
+    required_alert_log = {"id", "rule_id", "phone", "metric", "observed_value", "message",
+                          "status", "created_at"}
+    check(required_alert_log <= alert_log_cols, "alert_logs 필수 컴럼 (관측값·메시지·발송 상태)",
+          ", ".join(sorted(required_alert_log - alert_log_cols)) or "모두 존재")
 
     posts = db.list_posts(conn, include_hidden=True)
     check(len(posts) > 0, "수집된 글 존재", f"{len(posts)}건")
@@ -747,6 +758,84 @@ def server_checks(port: int) -> None:
         check(status == 201 and len(again["user"]["watchlist"]) == 6,
               "같은 이메일 재가입 시 관심자산 보존 (이메일 재인증 불필요)", str(again["user"]["watchlist"]))
 
+        # ------------------------------- 타점 비상벨: 가입과 동시에 조건 저장 (김프·공포탐욕·롱숏)
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"email": email, "name": "코인덕후", "phone": phone,
+                               "alert_rule": {"metric": "kimp_pct", "operator": ">=", "threshold": 3.0,
+                                              "label": "김프 +3.0% 이상"}})
+        alert_signup = json.loads(raw)
+        saved_alert = alert_signup.get("alert_rule") or {}
+        check(status == 201 and saved_alert.get("metric") == "kimp_pct"
+              and saved_alert.get("operator") == ">=" and float(saved_alert.get("threshold") or 0) == 3.0,
+              "① POST /api/signup + alert_rule → 201 · 응답에 타점 조건",
+              f"HTTP {status} · {saved_alert.get('label')}")
+        with db.session() as conn:
+            alert_row = conn.execute(
+                "SELECT * FROM alert_rules WHERE phone = ? AND active = 1", (phone,)
+            ).fetchone()
+            stored_alert = dict(alert_row) if alert_row else None
+        check(bool(stored_alert) and stored_alert["metric"] == "kimp_pct"
+              and stored_alert["operator"] == ">=" and stored_alert["threshold"] == 3.0
+              and stored_alert["cooldown_minutes"] == 360 and bool(stored_alert["user_id"]),
+              "① alert_rules SQLite 저장 (지표·연산자·임계치·6시간 쿨다운·회원 연결)",
+              str({k: stored_alert[k] for k in ("metric", "operator", "threshold", "cooldown_minutes")}
+                  if stored_alert else "행 없음"))
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"phone": phone,
+                               "alert_rule": {"metric": "doge_pct", "operator": ">=", "threshold": 1}})
+        bad_metric = json.loads(raw)
+        check(status == 400 and bad_metric.get("code") == "invalid_alert_rule",
+              "지원하지 않는 지표 alert_rule → 400 invalid_alert_rule", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"phone": phone,
+                               "alert_rule": {"metric": "kimp_pct", "operator": ">=", "threshold": 999}})
+        bad_range = json.loads(raw)
+        check(status == 400 and bad_range.get("code") == "invalid_alert_rule",
+              "범위를 벗어난 임계값 alert_rule → 400", f"HTTP {status}")
+
+        status, headers, raw = http(base + "/api/market")
+        market = json.loads(raw)
+        check(status == 200 and "application/json" in headers.get("Content-Type", "")
+              and set(market.get("metrics") or {}) == set(config.ALERT_METRICS)
+              and isinstance(market.get("values"), dict),
+              "GET /api/market → 200 · kimp_pct·fng·long_pct 지표", ", ".join(sorted(market.get("metrics") or {})))
+
+        status, _, raw = http(base + "/api/alerts?phone=" + urllib.parse.quote(phone))
+        alerts_get = json.loads(raw)
+        check(status == 200 and (alerts_get.get("alert_rule") or {}).get("label") == "김프 +3.0% 이상"
+              and alerts_get.get("member") is True,
+              "GET /api/alerts?phone → 설정된 타점 조건 조회", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/alerts", "POST",
+                              {"phone": phone,
+                               "alert_rule": {"metric": "fng", "operator": "<=", "threshold": 15}})
+        alerts_post = json.loads(raw)
+        with db.session() as conn:
+            active_rules = db.list_alert_rules_by_phone(conn, phone)
+        check(status == 200 and (alerts_post.get("alert_rule") or {}).get("metric") == "fng"
+              and len(active_rules) == 1 and active_rules[0]["metric"] == "fng"
+              and active_rules[0]["cooldown_minutes"] == 360,
+              "POST /api/alerts → 기존 가입자 조건 변경 (활성 1개 정책)",
+              f"HTTP {status} · 활성 {len(active_rules)}개")
+
+        status, _, raw = http(base + "/api/admin/users?q=" + urllib.parse.quote(phone), cookie=admin_cookie)
+        admin_alert = json.loads(raw)
+        admin_alert_items = admin_alert.get("items") or []
+        admin_rule_one = (admin_alert_items[0].get("alert_rule") if admin_alert_items else None) or {}
+        check(status == 200 and admin_rule_one.get("metric") == "fng"
+              and admin_rule_one.get("label"),
+              "관리자 회원 목록에 타점 비상벨 요약 표시",
+              f"HTTP {status} · {admin_rule_one.get('label')}")
+
+        status, _, raw = http(base + "/api/alerts", "POST", {"phone": phone, "active": False})
+        end_alerts = json.loads(raw)
+        with db.session() as conn:
+            off_rules = db.list_alert_rules_by_phone(conn, phone)
+        check(status == 200 and end_alerts.get("alert_rule") is None and off_rules == [],
+              "POST /api/alerts {active:false} → 타점 비상벨 끄기", f"HTTP {status}")
+
         # ② 이미 다른 회원이 쓰는 이메일과 충돌하면 덮어쓰지 않고 409 로 안내
         other_phone = "010-3333-4444"
         status, _, raw = http(base + "/api/auth/send-sms-otp", "POST", {"phone": other_phone})
@@ -788,6 +877,8 @@ def server_checks(port: int) -> None:
             conn.execute("DELETE FROM signup_verification WHERE email IN (?, ?)", (email, otp_email))
             conn.execute("DELETE FROM auth_otp WHERE target IN (?, ?)", (phone, other_phone))
             conn.execute("DELETE FROM phone_auth_state WHERE phone IN (?, ?)", (phone, other_phone))
+            conn.execute("DELETE FROM alert_rules WHERE phone IN (?, ?)", (phone, other_phone))
+            conn.execute("DELETE FROM alert_logs WHERE phone IN (?, ?)", (phone, other_phone))
             conn.commit()
         check(stored == ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"], "관심자산 SQLite 저장 확인", str(stored))
         check(stored_name == "코인덕후", "성함/닉네임 SQLite 저장 확인", str(stored_name))
@@ -897,6 +988,118 @@ def collector_job_checks() -> None:
     check(not again and "초 뒤" in message2, "연속 실행 방지 (최소 간격)", message2)
 
 
+def alert_engine_checks() -> None:
+    print("\n── 5. 타점 비상벨 엔진 — 임계치·쿨다운 ──────────────────")
+    import authflow  # noqa: E402
+    import collector  # noqa: E402
+
+    db.init_db()
+    phone = "010-5555-6600"
+    sent: list[tuple[str, str]] = []
+
+    def stub_send(p: str, text: str) -> dict:
+        sent.append((p, text))
+        return {"ok": True, "sent": True, "mode": "stub", "test_mode": False}
+
+    with db.session() as conn:
+        conn.execute("DELETE FROM alert_logs WHERE phone = ?", (phone,))
+        conn.execute("DELETE FROM alert_rules WHERE phone = ?", (phone,))
+        conn.commit()
+        try:
+            rule = db.upsert_user_alert_rule(conn, phone=phone, metric="kimp_pct", operator=">=",
+                                              threshold=3.0, label="김프 +3.0% 이상")
+            check(rule["cooldown_minutes"] == 360 and config.ALERT_COOLDOWN_MINUTES == 360,
+                  "기본 쿨다운 360분(6시간)", str(rule["cooldown_minutes"]))
+            check(db.get_active_alert_rule(conn, phone) is not None
+                  and len(db.list_active_alert_rules(conn)) >= 1,
+                  "활성 규칙 조회 (list_active_alert_rules)")
+
+            hit = {"values": {"kimchi_premium": 3.42, "fear_greed": 50, "long_pct": 55.0}}
+            result = collector.evaluate_market_alerts(conn, hit, send_fn=stub_send)
+            check(result["sent"] == 1 and result["matched"] == 1 and len(sent) == 1,
+                  "② 임계치 도달 → 문자 발송 1건",
+                  f"matched={result['matched']} sent={result['sent']}")
+            message = sent[0][1] if sent else ""
+            check(message.startswith("[클레어덱스 비상벨]") and "+3.42%" in message
+                  and "+3.00%" in message and "KST" in message and "\n" not in message,
+                  "경보 문자: [클레어덱스 비상벨] 한 줄 · 관측값·기준값·시각", message)
+            triggered = conn.execute(
+                "SELECT last_triggered_at FROM alert_rules WHERE id = ?", (rule["id"],)
+            ).fetchone()
+            check(bool(triggered and triggered["last_triggered_at"]),
+                  "last_triggered_at 갱신", str(triggered["last_triggered_at"] if triggered else None))
+            logs = conn.execute(
+                "SELECT * FROM alert_logs WHERE phone = ? ORDER BY id DESC", (phone,)
+            ).fetchall()
+            check(len(logs) == 1 and logs[0]["status"] == "sent"
+                  and abs(float(logs[0]["observed_value"]) - 3.42) < 1e-9
+                  and logs[0]["message"] == message,
+                  "alert_logs 기록 (관측값·메시지·상태=sent)", f"{len(logs)}건")
+
+            again = collector.evaluate_market_alerts(conn, hit, send_fn=stub_send)
+            check(again["sent"] == 0 and again["skipped_cooldown"] == 1 and len(sent) == 1,
+                  "② 6시간 쿨다운 안 중복 발송 차단",
+                  f"cooldown={again['skipped_cooldown']} · 누적 발송 {len(sent)}건")
+
+            conn.execute("UPDATE alert_rules SET last_triggered_at = NULL WHERE id = ?", (rule["id"],))
+            conn.commit()
+            below = collector.evaluate_market_alerts(
+                conn, {"values": {"kimchi_premium": 2.0, "fear_greed": 50, "long_pct": 55.0}},
+                send_fn=stub_send,
+            )
+            check(below["matched"] == 0 and below["sent"] == 0 and len(sent) == 1,
+                  "③ 임계치 미도달 → 미발송", f"matched={below['matched']} · 발송 {len(sent)}건")
+
+            missing = collector.evaluate_market_alerts(conn, {"values": {"fear_greed": 5}}, send_fn=stub_send)
+            check(missing["sent"] == 0 and "kimp_pct" in missing["missing_metrics"],
+                  "지표 값이 없으면 발송하지 않음 (missing_metrics)",
+                  str(missing["missing_metrics"]))
+
+            db.upsert_user_alert_rule(conn, phone=phone, metric="fng", operator="<=", threshold=15)
+            fear = collector.evaluate_market_alerts(conn, {"values": {"fear_greed": 12}}, send_fn=stub_send)
+            check(fear["sent"] == 1 and "공포탐욕" in sent[-1][1] and "12" in sent[-1][1],
+                  "공포탐욕 ≤ 15 조건도 같은 엔진으로 발송", sent[-1][1] if sent else "")
+
+            def failing_send(p: str, text: str) -> dict:
+                return {"ok": False, "sent": False, "error": "stub failure"}
+
+            conn.execute("UPDATE alert_rules SET last_triggered_at = NULL WHERE phone = ?", (phone,))
+            conn.commit()
+            failed = collector.evaluate_market_alerts(conn, {"values": {"fear_greed": 10}},
+                                                      send_fn=failing_send)
+            failed_row = conn.execute(
+                "SELECT last_triggered_at FROM alert_rules WHERE phone = ? AND active = 1", (phone,)
+            ).fetchone()
+            failed_log = conn.execute(
+                "SELECT status FROM alert_logs WHERE phone = ? ORDER BY id DESC LIMIT 1", (phone,)
+            ).fetchone()
+            check(failed["failed"] == 1 and failed_log and failed_log["status"] == "failed"
+                  and not (failed_row and failed_row["last_triggered_at"]),
+                  "발송 실패는 실패로 기록하고 last_triggered_at 은 그대로 (재시도 가능)",
+                  f"failed={failed['failed']}")
+
+            db.upsert_user_alert_rule(conn, phone=phone, metric="long_pct", operator=">=", threshold=65.0)
+            active_now = db.list_alert_rules_by_phone(conn, phone)
+            check(len(active_now) == 1 and active_now[0]["metric"] == "long_pct",
+                  "무료 회원 활성 타점 알림 1개 정책 — 새 조건이 기존을 대체",
+                  f"활성 {len(active_now)}개 · {active_now[0]['metric'] if active_now else '없음'}")
+        finally:
+            conn.execute("DELETE FROM alert_logs WHERE phone = ?", (phone,))
+            conn.execute("DELETE FROM alert_rules WHERE phone = ?", (phone,))
+            conn.commit()
+
+    # 자격증명 미설정 시 실제 발송 없이 test_mode 로 안전하게 돌려준다.
+    saved_env = {k: os.environ.pop(k) for k in list(os.environ) if k.startswith("SMS_")}
+    try:
+        probe = authflow.send_sms_text(phone, "[클레어덱스 비상벨] 테스트")
+    finally:
+        os.environ.update(saved_env)
+    check(probe.get("ok") is True and probe.get("sent") is False
+          and probe.get("test_mode") is True and probe.get("mode") == "unconfigured",
+          "SMS 자격증명 미설정 → send_sms_text test_mode 안전 반환 (실제 발송 없음)",
+          str({k: probe.get(k) for k in ("mode", "sent", "test_mode")}))
+
+
 def naver_publish_checks() -> None:
     print("\n── 4. 네이버 블로그 발행 파이프라인 ───────────────────────")
     import naver_publish  # noqa: E402  (네트워크·브라우저 없이 상태 로직만 검사)
@@ -934,6 +1137,77 @@ def naver_publish_checks() -> None:
           "collect.sh: 실행당 발행 수 제한 (하루 2회 × 1건 = 2건/일)")
     check("collector_state.json" in text,
           "collect.sh: cron 실행도 collector_state.json 에 기록 (/admin 수집기 탭)")
+
+
+def _js_balanced(src: str) -> bool:
+    """esprima 가 없을 때 쓰는 간이 검사: 문자열·주석을 건너뛰고 괄호 짝만 본다."""
+    pairs = {")": "(", "]": "[", "}": "{"}
+    stack: list[str] = []
+    quote = None
+    escaped = False
+    line_comment = False
+    block_comment = False
+    i = 0
+    while i < len(src):
+        ch = src[i]
+        nxt = src[i + 1] if i + 1 < len(src) else ""
+        if line_comment:
+            if ch == "\n":
+                line_comment = False
+        elif block_comment:
+            if ch == "*" and nxt == "/":
+                block_comment = False
+                i += 1
+        elif quote:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == quote:
+                quote = None
+        else:
+            if ch == "/" and nxt == "/":
+                line_comment = True
+                i += 1
+            elif ch == "/" and nxt == "*":
+                block_comment = True
+                i += 1
+            elif ch in "\"'`":
+                quote = ch
+            elif ch in "([{":
+                stack.append(ch)
+            elif ch in ")]}":
+                if not stack or stack[-1] != pairs[ch]:
+                    return False
+                stack.pop()
+        i += 1
+    return not stack and quote is None
+
+
+def js_syntax_check(html_text: str, name: str) -> None:
+    """페이지의 인라인 스크립트 문법을 검사한다 (esprima 우선 · 없으면 괄호 짝 검사)."""
+    scripts = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", html_text, re.S)
+    if not scripts:
+        check(False, f"{name}: 인라인 스크립트 존재")
+        return
+    try:
+        import esprima  # noqa: F401
+    except Exception:  # noqa: BLE001
+        esprima = None
+    ok_all = True
+    detail = ""
+    for idx, script in enumerate(scripts):
+        if esprima is not None:
+            try:
+                esprima.parseScript(script)
+            except Exception as exc:  # noqa: BLE001
+                ok_all = False
+                detail = f"{idx + 1}번째 블록: {exc}"
+        elif not _js_balanced(script):
+            ok_all = False
+            detail = f"{idx + 1}번째 블록: 괄호 짝 불일치"
+    check(ok_all, f"{name}: 인라인 JS 문법 검증",
+          detail or f"{len(scripts)}블록 · {'esprima' if esprima is not None else 'bracket'}")
 
 
 def static_checks() -> None:
@@ -992,6 +1266,30 @@ def static_checks() -> None:
     check(bool(snap_posts) and all(k in snap_posts[0] for k in ("importance", "category_label")),
           "posts.json: 정적 화면용 필드(importance·category_label)")
 
+    # ── 타점 비상벨(김프·공포탐욕·롱숟) 화면·프리셋·JS 문법
+    presets = ("🔥 김프 +3.0% 이상", "❄️ 역프 -0.5% 이하", "😱 공포탐욕 15 이하",
+               "🤑 공포탐욕 75 이상", "⚖️ 롱 비율 65% 돌파")
+    missing_presets = [p for p in presets if p not in signup_html]
+    check(not missing_presets, "가입 화면: 5가지 원클릭 타점 프리셋 칩",
+          ", ".join(missing_presets) or "5/5")
+    check("/api/market" in signup_html and 'id="alertNow"' in signup_html
+          and all(f'data-metric="{m}"' in signup_html for m in config.ALERT_METRICS),
+          "가입 화면: /api/market 으로 김프·공포탐욕·롱비율 현재 수치 표시")
+    check('id="alertThreshold"' in signup_html and "직접 입력" in signup_html
+          and all(op in signup_html for op in ('value=">="', 'value="<="')),
+          "가입 화면: 직접 숫자 입력(지표·조건·임계값)")
+    check('get("alert")' in signup_html and all(k in signup_html for k in
+          ("kimp_high", "kimp_low", "fng_low", "fng_high", "long_high")),
+          "가입 화면: ?alert= 파라미터로 프리셋 자동 선택")
+    check("alert_rule" in signup_html and "payload.alert_rule" in signup_html,
+          "가입 화면: 선택한 타점 조건을 /api/signup alert_rule 로 전송")
+    check('id="alertSummary"' in signup_html and "타점 비상벨 조건" in signup_html,
+          "가입 완료 화면에 설정된 타점 비상벨 조건 표시")
+    check('alert=kimp_high' in index_html and "김프·공포탐욕·롱숟 1초 비상벨 설정" in index_html,
+          "메인 상단/관심자산 영역에 타점 비상벨 설정 바")
+    js_syntax_check(signup_html, "signup.html")
+    js_syntax_check(index_html, "index.html")
+
 
 def free_port(preferred: int = 8765) -> int:
     for port in (preferred, 8766, 8767, 8799, 0):
@@ -1013,6 +1311,7 @@ def main() -> int:
     port = args.port or free_port()
     server_checks(port)
     collector_job_checks()
+    alert_engine_checks()
     naver_publish_checks()
     static_checks()
 

@@ -86,6 +86,40 @@ CREATE TABLE IF NOT EXISTS phone_auth_state (
     updated_at  TEXT NOT NULL
 );
 
+-- 타점 비상벨: 회원이 정한 지표 조건(예: 김프 +3.0% 이상)을 넘으면 문자로 알린다.
+-- 무료 회원 1인당 활성 규칙 1개(active=1) 기본 정책 — 새로 설정하면 기존 활성 규칙은 꺼진다.
+CREATE TABLE IF NOT EXISTS alert_rules (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id           INTEGER,
+    phone             TEXT NOT NULL,
+    metric            TEXT NOT NULL,
+    operator          TEXT NOT NULL,
+    threshold         REAL NOT NULL,
+    label             TEXT,
+    cooldown_minutes  INTEGER NOT NULL DEFAULT 360,
+    last_triggered_at TEXT,
+    active            INTEGER NOT NULL DEFAULT 1,
+    created_at        TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_rules_phone  ON alert_rules(phone, active);
+CREATE INDEX IF NOT EXISTS idx_alert_rules_active ON alert_rules(active);
+
+-- 타점 비상벨 발송 이력 (같은 조건의 중복 발송·실패를 사실대로 남긴다)
+CREATE TABLE IF NOT EXISTS alert_logs (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule_id        INTEGER,
+    phone          TEXT NOT NULL,
+    metric         TEXT NOT NULL,
+    observed_value REAL,
+    message        TEXT,
+    status         TEXT NOT NULL,
+    created_at     TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_logs_rule ON alert_logs(rule_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_alert_logs_phone ON alert_logs(phone, created_at DESC);
+
 -- 네이버 블로그 발행 이력
 CREATE TABLE IF NOT EXISTS naver_publish (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -963,6 +997,208 @@ def naver_publish_stats(conn: sqlite3.Connection) -> dict[str, Any]:
         "last": dict(last) if last else None,
         "pending": len(pending_naver_drafts(conn, limit=999)),
     }
+
+
+# ------------------------------------------------------------ 타점 비상벨
+
+def _alert_rule_dict(row: sqlite3.Row) -> dict[str, Any]:
+    rule = dict(row)
+    rule["threshold"] = float(rule["threshold"])
+    rule["cooldown_minutes"] = int(rule["cooldown_minutes"] or config.ALERT_COOLDOWN_MINUTES)
+    rule["active"] = bool(rule["active"])
+    return rule
+
+
+def validate_alert_rule(metric: str, operator: str, threshold: Any) -> float:
+    """지원 지표·연산자·임계치 범위를 확인하고 threshold 를 float 로 돌려준다."""
+    metric = str(metric or "").strip()
+    operator = str(operator or "").strip()
+    if metric not in config.ALERT_METRICS:
+        raise ValueError(f"지원하지 않는 지표입니다: {metric}")
+    if operator not in config.ALERT_OPERATORS:
+        raise ValueError("연산자는 '>=' 또는 '<=' 만 쓸 수 있습니다.")
+    try:
+        value = float(threshold)
+    except (TypeError, ValueError):
+        raise ValueError("임계값은 숫자로 입력해 주세요.") from None
+    meta = config.ALERT_METRICS[metric]
+    if value != value or value in (float("inf"), float("-inf")):  # NaN·inf 차단
+        raise ValueError("임계값은 숫자로 입력해 주세요.")
+    if value < float(meta["min"]) or value > float(meta["max"]):
+        raise ValueError(
+            f"{meta['label']} 임계값은 {meta['min']:g}~{meta['max']:g}{meta['unit']} 사이로 입력해 주세요."
+        )
+    return value
+
+
+def default_alert_label(metric: str, operator: str, threshold: float) -> str:
+    word = "이상" if operator == ">=" else "이하"
+    return f"{config.alert_metric_label(metric)} {config.fmt_alert_value(metric, threshold)} {word}"
+
+
+def upsert_user_alert_rule(
+    conn: sqlite3.Connection,
+    phone: str,
+    metric: str,
+    operator: str,
+    threshold: float,
+    label: str | None = None,
+    cooldown_minutes: int | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
+    """타점 비상벨 규칙을 저장한다(무료 회원 1인당 활성 1개).
+
+    같은 조건을 다시 저장하면 라벨만 고치고 쿨다운 기록은 그대로 둔다.
+    조건(지표·연산자·임계치)이 달라지면 기존 활성 규칙을 끄고 새 규칙을 만든다.
+    """
+    phone = (phone or "").strip()
+    if not phone:
+        raise ValueError("휴대폰 번호가 필요합니다.")
+    value = validate_alert_rule(metric, operator, threshold)
+    operator = str(operator).strip()
+    cooldown = int(cooldown_minutes or config.ALERT_COOLDOWN_MINUTES)
+    cooldown = max(config.ALERT_COOLDOWN_MIN, min(config.ALERT_COOLDOWN_MAX, cooldown))
+    label = (str(label).strip() if label else "") or default_alert_label(metric, operator, value)
+    label = label[: config.ALERT_LABEL_MAX]
+    now = config.iso_kst()
+
+    rows = [
+        _alert_rule_dict(r) for r in conn.execute(
+            "SELECT * FROM alert_rules WHERE phone = ? AND active = 1 ORDER BY id DESC", (phone,)
+        ).fetchall()
+    ]
+    same = next(
+        (r for r in rows
+         if r["metric"] == metric and r["operator"] == operator
+         and abs(float(r["threshold"]) - value) < 1e-9),
+        None,
+    )
+    if same:
+        sets = ["label = ?", "cooldown_minutes = ?"]
+        params: list[Any] = [label, cooldown]
+        if user_id:
+            sets.append("user_id = ?")
+            params.append(int(user_id))
+        params.append(int(same["id"]))
+        conn.execute(f"UPDATE alert_rules SET {', '.join(sets)} WHERE id = ?", params)
+        conn.commit()
+        return get_alert_rule(conn, int(same["id"]))  # type: ignore[return-value]
+
+    if rows:
+        conn.execute("UPDATE alert_rules SET active = 0 WHERE phone = ? AND active = 1", (phone,))
+    cur = conn.execute(
+        """INSERT INTO alert_rules
+               (user_id, phone, metric, operator, threshold, label,
+                cooldown_minutes, last_triggered_at, active, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (int(user_id) if user_id else None, phone, metric, operator, value, label,
+         cooldown, None, 1, now),
+    )
+    conn.commit()
+    return get_alert_rule(conn, int(cur.lastrowid))  # type: ignore[return-value]
+
+
+def set_alert_rules_active(conn: sqlite3.Connection, phone: str, active: bool) -> int:
+    """휴대폰 기준 활성 규칙을 켜거나 끈다. 바뀐 규칙 수를 돌려준다."""
+    cur = conn.execute(
+        "UPDATE alert_rules SET active = ? WHERE phone = ? AND active = ?",
+        (1 if active else 0, (phone or "").strip(), 0 if active else 1),
+    )
+    conn.commit()
+    return int(cur.rowcount or 0)
+
+
+def get_alert_rule(conn: sqlite3.Connection, rule_id: int) -> dict[str, Any] | None:
+    row = conn.execute("SELECT * FROM alert_rules WHERE id = ?", (int(rule_id),)).fetchone()
+    return _alert_rule_dict(row) if row else None
+
+
+def list_alert_rules_by_phone(
+    conn: sqlite3.Connection, phone: str, include_inactive: bool = False
+) -> list[dict[str, Any]]:
+    sql = "SELECT * FROM alert_rules WHERE phone = ?"
+    if not include_inactive:
+        sql += " AND active = 1"
+    sql += " ORDER BY id DESC"
+    return [_alert_rule_dict(r) for r in conn.execute(sql, ((phone or "").strip(),)).fetchall()]
+
+
+def get_active_alert_rule(conn: sqlite3.Connection, phone: str) -> dict[str, Any] | None:
+    rows = list_alert_rules_by_phone(conn, phone)
+    return rows[0] if rows else None
+
+
+def list_active_alert_rules(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT * FROM alert_rules WHERE active = 1 ORDER BY id"
+    ).fetchall()
+    return [_alert_rule_dict(r) for r in rows]
+
+
+def mark_alert_rule_triggered(
+    conn: sqlite3.Connection, rule_id: int, when: str | None = None
+) -> dict[str, Any] | None:
+    conn.execute(
+        "UPDATE alert_rules SET last_triggered_at = ? WHERE id = ?",
+        (when or config.iso_kst(), int(rule_id)),
+    )
+    conn.commit()
+    return get_alert_rule(conn, int(rule_id))
+
+
+def log_alert_delivery(
+    conn: sqlite3.Connection,
+    rule_id: int | None,
+    phone: str,
+    metric: str,
+    observed_value: float | None,
+    message: str,
+    status: str,
+    when: str | None = None,
+) -> int:
+    cur = conn.execute(
+        """INSERT INTO alert_logs
+               (rule_id, phone, metric, observed_value, message, status, created_at)
+           VALUES (?,?,?,?,?,?,?)""",
+        (int(rule_id) if rule_id else None, phone, metric, observed_value, message,
+         status, when or config.iso_kst()),
+    )
+    conn.commit()
+    return int(cur.lastrowid)
+
+
+def alert_rule_summaries(conn: sqlite3.Connection, phones: Iterable[str | None]) -> dict[str, dict[str, Any]]:
+    """관리자 회원 목록용: 휴대폰 → 활성 타점 알림 요약(없으면 키 없음)."""
+    wanted = [str(p).strip() for p in phones if str(p or "").strip()]
+    if not wanted:
+        return {}
+    marks = ",".join("?" for _ in wanted)
+    rows = conn.execute(
+        f"""SELECT * FROM alert_rules WHERE active = 1 AND phone IN ({marks})
+            ORDER BY id DESC""",
+        wanted,
+    ).fetchall()
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        rule = _alert_rule_dict(row)
+        out.setdefault(rule["phone"], {
+            "id": rule["id"],
+            "metric": rule["metric"],
+            "metric_label": config.alert_metric_label(rule["metric"]),
+            "operator": rule["operator"],
+            "threshold": rule["threshold"],
+            "label": rule["label"],
+            "cooldown_minutes": rule["cooldown_minutes"],
+            "last_triggered_at": rule["last_triggered_at"],
+        })
+    return out
+
+
+def recent_alert_logs(conn: sqlite3.Connection, limit: int = 20) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT * FROM alert_logs ORDER BY id DESC LIMIT ?", (int(limit),)
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 if __name__ == "__main__":
