@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS posts (
     created_at      TEXT NOT NULL,
     published_at    TEXT,
     topic           TEXT,
-    status          TEXT NOT NULL DEFAULT 'published'
+    status          TEXT NOT NULL DEFAULT 'published',
+    importance      TEXT NOT NULL DEFAULT 'B'
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category);
@@ -136,6 +137,9 @@ def init_db(conn: sqlite3.Connection | None = None) -> None:
         # 운영자 콘텐츠 관리: 공개/숨김 상태 (기존 글은 모두 공개)
         if "status" not in cols:
             conn.execute("ALTER TABLE posts ADD COLUMN status TEXT NOT NULL DEFAULT 'published'")
+        # 중요도(S/A/B) 분류: 기존 글도 등급을 잃지 않도록 컬럼만 추가하고 아래에서 백필한다.
+        if "importance" not in cols:
+            conn.execute("ALTER TABLE posts ADD COLUMN importance TEXT NOT NULL DEFAULT 'B'")
         user_cols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
         if "status" not in user_cols:
             conn.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
@@ -150,9 +154,31 @@ def init_db(conn: sqlite3.Connection | None = None) -> None:
             if column not in user_cols:
                 conn.execute(ddl)
         conn.commit()
+        _backfill_importance(conn)
     finally:
         if own:
             conn.close()
+
+
+def _backfill_importance(conn: sqlite3.Connection) -> None:
+    """중요도가 비어 있는 기존 글에 S/A/B 등급을 재계산해 채운다(사실 정보만 사용)."""
+    import content  # 순환 임포트 방지: 백필 시점에만 가져온다
+
+    rows = conn.execute(
+        "SELECT id, title, topic, source_name, source_url, summary_lines FROM posts "
+        "WHERE COALESCE(importance, '') NOT IN ('S', 'A', 'B')"
+    ).fetchall()
+    if not rows:
+        return
+    for row in rows:
+        post = dict(row)
+        try:
+            post["summary_lines"] = json.loads(post.get("summary_lines") or "[]")
+        except Exception:  # noqa: BLE001
+            post["summary_lines"] = []
+        level = content.classify_post_importance(post)
+        conn.execute("UPDATE posts SET importance = ? WHERE id = ?", (level, post["id"]))
+    conn.commit()
 
 
 def row_to_post(row: sqlite3.Row) -> dict[str, Any]:
@@ -160,6 +186,11 @@ def row_to_post(row: sqlite3.Row) -> dict[str, Any]:
     post["summary_lines"] = json.loads(post["summary_lines"] or "[]")
     post["tags"] = json.loads(post["tags"] or "[]")
     post["is_member_early"] = bool(post["is_member_early"])
+    # importance 컬럼이 없는 이전 DB(읽기 전용 경로)에서도 화면이 깨지지 않도록 기본값을 채운다.
+    if str(post.get("importance") or "").upper() not in config.IMPORTANCE_LEVELS:
+        post["importance"] = config.IMPORTANCE_DEFAULT
+    else:
+        post["importance"] = str(post["importance"]).upper()
     return post
 
 
@@ -170,8 +201,8 @@ def insert_post(conn: sqlite3.Connection, post: dict[str, Any]) -> tuple[int | N
         INSERT INTO posts
             (title, category, source_name, source_grade, source_url, source_hash,
              verified_at, summary_lines, market_impact, tags, image_path,
-             is_member_early, created_at, published_at, topic)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             is_member_early, created_at, published_at, topic, importance)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(source_hash) DO NOTHING
         """,
         (
@@ -190,6 +221,7 @@ def insert_post(conn: sqlite3.Connection, post: dict[str, Any]) -> tuple[int | N
             post["created_at"],
             post.get("published_at"),
             post.get("topic"),
+            str(post.get("importance") or config.IMPORTANCE_DEFAULT).upper(),
         ),
     )
     conn.commit()
@@ -216,9 +248,13 @@ def list_posts(
     status: str | None = None,
     source: str | None = None,
     offset: int = 0,
+    importance: str | None = None,
 ) -> list[dict[str, Any]]:
     sql = "SELECT * FROM posts WHERE 1=1"
     params: list[Any] = []
+    if importance in config.IMPORTANCE_LEVELS:
+        sql += " AND UPPER(COALESCE(importance, ?)) = ?"
+        params.extend([config.IMPORTANCE_DEFAULT, importance.upper()])
     if status in POST_STATUSES:
         sql += " AND COALESCE(status, 'published') = ?"
         params.append(status)
@@ -262,6 +298,33 @@ def count_posts_since(conn: sqlite3.Connection, day: str) -> int:
     return int(conn.execute(
         "SELECT COUNT(*) FROM posts WHERE substr(created_at, 1, 10) = ?", (day,)
     ).fetchone()[0])
+
+
+def confirmation_stats(conn: sqlite3.Connection, day: str | None = None) -> dict[str, Any]:
+    """KST 자정 기준 '오늘 확인 건수'와, 0건일 때 함께 보여줄 최근 확인 건수.
+
+    기준 시각은 글의 확인 시각(verified_at, +09:00)의 날짜다. 서버 시각대와 무관하게
+    KST 달력 기준으로 세므로 자정 직후에도 전날 건수가 섞이지 않는다.
+    """
+    day = day or config.now_kst().date().isoformat()
+    published = "COALESCE(status, 'published') = 'published'"
+    today = int(conn.execute(
+        f"SELECT COUNT(*) FROM posts WHERE {published} AND substr(verified_at, 1, 10) = ?", (day,)
+    ).fetchone()[0])
+    last = conn.execute(
+        f"SELECT substr(verified_at, 1, 10) AS d, COUNT(*) AS n FROM posts "
+        f"WHERE {published} AND substr(verified_at, 1, 10) < ? "
+        f"GROUP BY d ORDER BY d DESC LIMIT 1",
+        (day,),
+    ).fetchone()
+    total = count_posts(conn, "published")
+    return {
+        "date": day,
+        "today": today,
+        "recent_date": last["d"] if last else None,
+        "recent_count": int(last["n"]) if last else 0,
+        "total": total,
+    }
 
 
 def count_posts_matching(

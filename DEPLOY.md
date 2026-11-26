@@ -35,6 +35,51 @@ tar -czf /tmp/claredex-v2.tgz -C claredex-v2-deploy .
 cd /root/claredex-v2 && tar -xzf ~/claredex-v2.tgz && docker compose build && docker compose up -d
 ```
 
+### 2-1. git 으로 갱신 (브랜치 `live-prod-snapshot`)
+
+VPS 의 `/root/claredex-v2` 가 git 저장소라면 아래 순서로 반영합니다.
+`data/`(SQLite·시장 캐시·네이버 세션)와 `.env` 는 .gitignore 대상이라 pull 로 덮어써지지 않습니다.
+
+```bash
+cd /root/claredex-v2
+git remote -v                       # origin = GitHub 클레어덱스 저장소인지 확인
+git stash list                      # 로컬 수정이 있으면 먼저 정리
+git fetch origin
+git checkout live-prod-snapshot     # 현재 다른 브랜치에 있으면 전환
+git pull --ff-only origin live-prod-snapshot
+git log --oneline -3
+
+docker compose build                # 코드·public·calendar.json 은 이미지에 포함 → 재빌드 필요
+docker compose up -d
+docker compose ps
+docker exec claredex-v2 python -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8000/api/health').read().decode())"
+docker exec claredex-v2 python verify.py     # 자체 검증 (아래 기대값 참고)
+```
+
+git 저장소가 아니라 tar 배포본이라면, 같은 브랜치를 새 경로에 clone 하고 운영 데이터만 복사해 올리는 방식이 안전합니다
+(컨테이너 이름은 그대로라 기존 컨테이너를 대체합니다. 기존 디렉터리는 백업으로 남겨 둡니다).
+
+```bash
+cd /root
+git clone --branch live-prod-snapshot --depth 1 <저장소 URL> claredex-v2-git
+cd /root/claredex-v2-git
+rm -rf data public/images/posts
+cp -a /root/claredex-v2/data ./data
+mkdir -p public/images/posts && cp -a /root/claredex-v2/public/images/posts/. public/images/posts/
+cp /root/claredex-v2/.env ./.env
+chmod 600 .env
+
+docker compose build && docker compose up -d
+docker exec claredex-v2 python verify.py
+```
+
+이후 갱신은 `/root/claredex-v2-git` 에서 `git pull --ff-only origin live-prod-snapshot` → `docker compose build && docker compose up -d` 로 하면 됩니다.
+기존 `/root/claredex-v2` 디렉터리는 문제가 없으면 나중에 `claredex-v2-backup-<날짜>` 로 이름을 바꿔 보관합니다.
+
+> `calendar.json` 은 저장소 루트에 있고 Dockerfile 의 `COPY calendar.json` 으로 이미지에 들어갑니다.
+> 예전 배포본이 쓰던 `data/calendar.json` 은 읽기 폴백으로만 남겨 두었습니다(볼륨 보존).
+> 일정만 고칠 때도 `docker compose build` 가 필요합니다.
+
 ## 3. 정기 작업 (호스트 cron, KST)
 
 | 시각 | 파일 | 내용 |
@@ -110,7 +155,7 @@ SMS_SENDER=01012345678
 - 이전 이미지로: `docker compose down` 후 `image: claredex-v2:<이전태그>` 로 바꿔 `up -d`
 - DB 복구: `gunzip -c backups/claredex-<stamp>.db.gz > data/claredex.db && docker compose restart`
 - 코드 롤백: `/root/claredex-v2-backup-<stamp>.tgz` 를 풀고 `docker compose build && docker compose up -d`
-- 자체 검증: `docker exec claredex-v2 python verify.py` (2026-11-24 기준 140/140)
+- 자체 검증: `docker exec claredex-v2 python verify.py` (2026-11-26 기준 171/171)
 - **주의**: 이 서버에는 `Cryptomining`(peterpan3.com), `kylesung-schedule-ui`, `claredex-live/claredex-beta/claredex-web`,
   `ett-naver-publisher` 등 다른 서비스가 함께 돈다. `docker compose down -v`, `docker system prune -a`,
   `proxy` 네트워크 삭제는 절대 금지. `claredex-v2` 디렉터리 밖은 건드리지 않는다.

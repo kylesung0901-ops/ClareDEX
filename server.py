@@ -5,7 +5,8 @@ public/ 정적 파일 + JSON API.
   GET  /signup(.html)        10초 가입 + 관심자산 온보딩
   GET  /admin/, /admin       운영자 전용 관리자 콘솔 (로그인 게이트 · KPI · 회원 · 콘텐츠 · 수집기 · 보안)
   GET  /api/ticker           실시간 지표 (실패 시 data/market_cache.json 폴백)
-  GET  /api/posts            ?category= &tag= &q= &limit=   (공개 글만)
+  GET  /api/posts            ?category= &tag= &q= &importance= &limit=   (공개 글만 · S/A/B)
+  GET  /api/stats            오늘(KST 자정 기준) 확인 건수 · 최근 확인 건수
   GET  /api/calendar         KST 공식 일정
   GET  /api/auth/channels    본인인증 발송 채널 상태 (SMTP/Resend/SMS 설정 여부·샌드박스 여부)
   POST /api/auth/send-email-otp   {email}            이메일 인증번호 발송
@@ -489,6 +490,11 @@ def _post_json(post: dict) -> dict:
     out = dict(post)
     out["category_label"] = config.CATEGORIES.get(post["category"], {}).get("label", post["category"])
     out["image_url"] = f"{config.PUBLIC_BASE_URL}{post['image_path']}" if post.get("image_path") else None
+    level = str(out.get("importance") or config.IMPORTANCE_DEFAULT).upper()
+    if level not in config.IMPORTANCE_LEVELS:
+        level = config.IMPORTANCE_DEFAULT
+    out["importance"] = level
+    out["importance_label"] = config.IMPORTANCE_LEVELS[level]["label"]
     return out
 
 
@@ -715,13 +721,26 @@ class Handler(BaseHTTPRequestHandler):
             category = (qs.get("category") or [None])[0]
             tag = (qs.get("tag") or [None])[0]
             q = (qs.get("q") or [None])[0]
+            importance = (qs.get("importance") or [None])[0]
             try:
                 limit = min(int((qs.get("limit") or ["50"])[0]), 200)
             except ValueError:
                 limit = 50
             with db.session() as conn:
-                posts = db.list_posts(conn, category=category, tag=tag, q=q, limit=limit)
+                posts = db.list_posts(conn, category=category, tag=tag, q=q, limit=limit,
+                                      importance=importance)
             self._send_json({"ok": True, "count": len(posts), "posts": [_post_json(p) for p in posts]})
+            return
+        if route == "/api/stats":
+            with db.session() as conn:
+                stats = db.confirmation_stats(conn)
+            self._send_json({
+                "ok": True,
+                "generated_at": config.iso_kst(),
+                "today": {"date": stats["date"], "count": stats["today"]},
+                "recent": {"date": stats["recent_date"], "count": stats["recent_count"]},
+                "total": stats["total"],
+            })
             return
         if route == "/api/admin/session":
             authenticated = self._is_admin()
@@ -830,11 +849,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"ok": True, "count": len(drafts), "drafts": drafts})
             return
         if route == "/api/calendar":
-            try:
-                data = json.loads(config.CALENDAR_PATH.read_text(encoding="utf-8"))
-            except Exception:
-                data = {"events": []}
-            self._send_json({"ok": True, **data})
+            self._send_json({"ok": True, **config.load_calendar()})
             return
         if route == "/api/auth/channels":
             self._send_json({"ok": True, **authflow.delivery_status()})

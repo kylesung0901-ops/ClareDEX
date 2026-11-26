@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: claredex-v2:20261125-mobile
+    image: claredex-v2:20261126-tupl
     container_name: claredex-v2
     restart: unless-stopped
     env_file:
@@ -13,7 +13,8 @@ services:
     environment:
       TZ: Asia/Seoul
     volumes:
-      # SQLite DB · 시장 캐시 · 일정 (컨테이너 재생성에도 유지)
+      # SQLite DB · 시장 캐시 · 네이버 세션 (컨테이너 재생성에도 유지)
+      # 공식 일정(calendar.json)은 저장소 루트에서 이미지에 포함된다(Dockerfile COPY)
       - ./data:/app/data
       # 수집기가 새로 만드는 썸네일 PNG (재배포해도 유지)
       - ./public/images/posts:/app/public/images/posts
