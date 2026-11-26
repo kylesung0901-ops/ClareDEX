@@ -18,6 +18,7 @@ import argparse
 import gzip
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -439,6 +440,160 @@ def _is_fresh(published_iso: str | None, verified_iso: str) -> bool:
         return False
 
 
+def backfill_importance(conn) -> int:
+    """중요도 등급이 없는(마이그레이션 이전) 글을 제목·주제·요약 기준으로 분류한다."""
+    rows = conn.execute("SELECT * FROM posts WHERE importance IS NULL OR importance = ''").fetchall()
+    count = 0
+    for row in rows:
+        post = db.row_to_post(row)
+        level = content.classify_post_importance(post)
+        db.set_post_importance(conn, post["id"], level)
+        count += 1
+    conn.commit()
+    if count:
+        log(f"[중요도] 기존 글 {count}건 등급 재분류")
+    return count
+
+
+GENERIC_FED_TITLES = (
+    "연준 공식 보도자료", "연준, 금융규제 관련 발표", "연준, 인사 발표",
+    "연준, 금융기관 대상 조사 결과 공개", "연준, 소액 대출 면제 기준 금액 발표",
+    "연준, 금융기관 제재·시정조치 발표", "연준, 소비자금융 규제 기준 금액 발표",
+    "연준, 소액 대출 감정평가 면제 기준 발표",
+)
+
+
+def refresh_legacy_content(conn) -> int:
+    """예전 버전이 만든 천편일률적인 연준 글의 제목·요약·영향 문구를 새 규칙으로 다시 만든다.
+
+    원문 제목은 저장된 요약 2번째 줄(`원문 제목: …`)에서 그대로 읽어 쓰므로 새 숫자를 만들지 않는다.
+    이미 초안이 만들어진 글도 있어 초안은 건드리지 않는다(필요하면 `naver_drafts.py --rebuild`).
+    """
+    rows = conn.execute(
+        "SELECT * FROM posts WHERE category = 'macro' AND source_grade = ?",
+        (config.SOURCE_GRADES["primary"],),
+    ).fetchall()
+    changed = 0
+    for row in rows:
+        post = db.row_to_post(row)
+        base = post["title"].split(" (")[0]
+        if base not in GENERIC_FED_TITLES:
+            continue
+        raw = None
+        for line in post["summary_lines"]:
+            if line.startswith("원문 제목: "):
+                raw = line[len("원문 제목: "):].strip()
+                break
+        if not raw:
+            continue
+        gist, topic = content.classify_fed(raw)
+        if "공식 보도자료" in gist:
+            gist = f"연준, {content.fed_kind_from_url(post['source_url'])} 보도자료 공개"
+        suffix = post["title"][len(base):]
+        new_title = gist + suffix
+        first = post["summary_lines"][0] if post["summary_lines"] else ""
+        new_summary = [first, f"원문 제목: {raw}",
+                       content.FED_DETAIL.get(topic, content.FED_DETAIL["general-macro"])]
+        new_impact = content.FED_IMPACT.get(topic, content.FED_IMPACT["general-macro"])
+        level = content.fed_importance(topic, post["source_url"], raw)
+        if (new_title, new_summary, new_impact, topic, level) == (
+                post["title"], post["summary_lines"], post["market_impact"], post["topic"], post["importance"]):
+            continue
+        conn.execute(
+            "UPDATE posts SET title = ?, summary_lines = ?, market_impact = ?, topic = ?, importance = ? "
+            "WHERE id = ?",
+            (new_title, json.dumps(new_summary, ensure_ascii=False), new_impact, topic, level, post["id"]),
+        )
+        # 제목·등급이 바뀌면 썸네일도 다시 그린다.
+        thumbnail.render(dict(post, title=new_title, importance=level))
+        changed += 1
+        log(f"  ↻ [{post['id']}] {post['title'][:40]} → {new_title[:60]} ({level})")
+    conn.commit()
+    if changed:
+        log(f"[콘텐츠] 기존 연준 글 {changed}건 제목·요약·영향 문구 갱신")
+    return changed
+
+
+SEC_ITEM_REVERSE = {label: code for code, label in content.FORM8K_ITEMS.items()}
+
+
+def refresh_legacy_sec_content(conn) -> int:
+    """예전 버전이 만든 SEC 공시 글의 3번째 요약 줄과 시장 영향 문구를 항목 기준으로 다시 만든다.
+
+    서식·신고 항목은 이미 저장된 제목·요약에서 읽어 쓰므로 새 사실을 만들지 않는다.
+    """
+    rows = conn.execute("SELECT * FROM posts WHERE source_grade = ?",
+                        (config.SOURCE_GRADES["filing"],)).fetchall()
+    changed = 0
+    for row in rows:
+        post = db.row_to_post(row)
+        title = post["title"]
+        if "SEC" not in post["source_name"]:
+            continue
+        form = next((f for f in ("10-K", "10-Q", "8-K") if f in title), "")
+        if not form:
+            continue
+        items: list[str] = []
+        for line in post["summary_lines"]:
+            if "신고 항목:" in line:
+                labels = [part.strip() for part in line.split("신고 항목:", 1)[-1].split(",")]
+                items = [SEC_ITEM_REVERSE[label] for label in labels if label in SEC_ITEM_REVERSE]
+                break
+        impact_key = form
+        if form == "8-K" and items:
+            for code in items:
+                if code in content.SEC_IMPACT:
+                    impact_key = code
+                    break
+        detail = content.SEC_DETAIL.get(impact_key) or content.SEC_DETAIL.get(form)
+        if not detail:
+            continue
+        summary = list(post["summary_lines"])
+        name_ko = re.sub(r"\s*\(.*?\)", "", title.split(",")[0]).strip()
+        ticker = ""
+        m = re.search(r"\(([A-Z]{1,6})\)", title)
+        if m:
+            ticker = m.group(1)
+        sector = next((t for t in post["tags"] if t not in (ticker, "나스닥", "미국주식", "공시")), "미국주식")
+        sector_phrase = f"{sector} 업종" if sector != "미국주식" else "미국주식 종목"
+        impact = (f"{name_ko}({ticker}){content.subject_particle(name_ko)} {sector_phrase}으로, 이 공시가 같은 업종 종목과 "
+                  f"나스닥 성장주 수급에 영향을 줄 수 있습니다. "
+                  + content.SEC_IMPACT.get(impact_key, content.SEC_IMPACT.get(form, "")))
+        if len(summary) >= 3 and summary[2] == detail and post["market_impact"] == impact:
+            continue
+        if len(summary) >= 3:
+            summary[2] = detail
+        level = content.sec_importance(form, items)
+        conn.execute(
+            "UPDATE posts SET summary_lines = ?, market_impact = ?, importance = ? WHERE id = ?",
+            (json.dumps(summary, ensure_ascii=False), impact, level, post["id"]),
+        )
+        thumbnail.render(dict(post, summary_lines=summary, market_impact=impact, importance=level))
+        changed += 1
+        log(f"  ↻ [{post['id']}] {title[:44]} 요약·영향 문구 갱신 ({level})")
+    conn.commit()
+    if changed:
+        log(f"[콘텐츠] 기존 SEC 공시 글 {changed}건 요약·영향 문구 갱신")
+    return changed
+
+
+def sync_calendar_snapshot() -> dict:
+    """공식 일정(calendar.json)을 검증해 public/data/calendar.json 스냅샷으로 내보낸다."""
+    calendar = config.load_calendar()
+    path = config.PUBLIC_DIR / "data" / "calendar.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"ok": True, **calendar}, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+    events = calendar.get("events") or []
+    if events:
+        upcoming = [e for e in events if config.parse_kst(e["datetime_kst"]) >= config.now_kst()]
+        nxt = (upcoming or events)[0]
+        log(f"[일정] 공식 일정 {len(events)}건 · 다음 {nxt['datetime_kst']} {nxt['title']}")
+    else:
+        log("[일정] calendar.json 에 유효한 공식 일정이 없습니다")
+    return calendar
+
+
 def store_posts(conn, posts: list[dict]) -> tuple[list[dict], int]:
     new_posts: list[dict] = []
     duplicates = 0
@@ -464,6 +619,10 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True)
     db.init_db()
     verified_at = config.iso_kst()
     conn = db.connect()
+    backfill_importance(conn)
+    refresh_legacy_content(conn)
+    refresh_legacy_sec_content(conn)
+    calendar = sync_calendar_snapshot()
 
     posts: list[dict] = []
     source_status: dict[str, str] = {}
@@ -515,9 +674,13 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True)
             log(f"[시장 지표] 수집 실패: {exc}")
 
     total = db.count_posts(conn)
+    levels = db.importance_counts(conn)
+    today = db.today_stats(conn)
     log("")
     log("=" * 72)
     log(f"수집 완료 · 신규 {len(new_posts)}건 · 중복/기존 {duplicates}건 · DB 전체 {total}건")
+    log(f"중요도 S {levels['S']} · A {levels['A']} · B {levels['B']} | 오늘 확인 {today['count']}건")
+    log(f"공식 일정 {len(calendar.get('events') or [])}건")
     for key, status in source_status.items():
         log(f"  - {key:<8} {status}")
     log("=" * 72)
@@ -528,6 +691,7 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True)
         "total": total,
         "source_status": source_status,
         "market": market_payload,
+        "calendar_events": len(calendar.get("events") or []),
     }
 
 

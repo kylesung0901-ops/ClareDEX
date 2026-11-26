@@ -3,9 +3,10 @@
 `public/data/` 에 아래 파일을 만든다. 각 파일의 구조는 server.py 의 해당 API 응답과 같아서
 프론트엔드가 API 대신 이 파일을 그대로 읽어도 화면이 동일하게 그려진다.
 
-  posts.json         ← GET /api/posts?limit=60
+  posts.json         ← GET /api/posts?limit=60 (중요도 S/A/B 포함)
   ticker.json        ← GET /api/ticker (마지막 수집 스냅샷)
   calendar.json      ← GET /api/calendar
+  stats.json         ← GET /api/stats (KST 기준 오늘 확인 건수)
 
 **네이버 초안(`naver-drafts.json`)은 일부러 내보내지 않는다.**
 초안은 운영자 내부 자료이고 `/api/naver-drafts` 는 로그인 없이는 401 이므로, 공개 정적
@@ -39,6 +40,11 @@ def rel_image(path: str | None) -> str | None:
 def post_json(post: dict) -> dict:
     out = dict(post)
     out["category_label"] = config.CATEGORIES.get(post["category"], {}).get("label", post["category"])
+    level = str(post.get("importance") or config.IMPORTANCE_DEFAULT).upper()
+    if level not in config.IMPORTANCE_LEVELS:
+        level = config.IMPORTANCE_DEFAULT
+    out["importance"] = level
+    out["importance_label"] = config.IMPORTANCE_LEVELS[level]["label"]
     out["image_path"] = rel_image(post.get("image_path"))
     out["image_url"] = out["image_path"]  # 정적 미리보기: 페이지 기준 상대 경로
     return out
@@ -66,8 +72,11 @@ def main() -> int:
     removed = purge_forbidden()
     with db.session() as conn:
         posts = db.list_posts(conn, limit=60)
+        stats = db.today_stats(conn)
+        levels = db.importance_counts(conn)
 
     write("posts.json", {"ok": True, "count": len(posts), "posts": [post_json(p) for p in posts]})
+    write("stats.json", {"ok": True, "today": stats, "importance": levels, "timezone": "Asia/Seoul"})
 
     ticker: dict
     try:
@@ -79,16 +88,14 @@ def main() -> int:
     ticker["note"] = "정적 미리보기: 마지막으로 수집한 시장지표 스냅샷입니다."
     write("ticker.json", ticker)
 
-    try:
-        calendar = json.loads(config.CALENDAR_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        calendar = {"events": []}
+    calendar = config.load_calendar()
     write("calendar.json", {"ok": True, **calendar})
 
     print(f"내보내기 완료 → {OUT_DIR}")
-    print(f"  posts.json        {len(posts)}건")
+    print(f"  posts.json        {len(posts)}건 (S {levels['S']} · A {levels['A']} · B {levels['B']})")
     print(f"  ticker.json       {len(ticker.get('items') or [])}항목")
     print(f"  calendar.json     {len(calendar.get('events') or [])}일정")
+    print(f"  stats.json        오늘 확인 {stats['count']}건 · 전체 {stats['total']}건")
     print("  naver-drafts.json 내보내지 않음 (운영자 전용 · 서버 로그인 후 조회)")
     for path in removed:
         print(f"  삭제: {path.name} (공개 정적 호스팅 노출 방지)")

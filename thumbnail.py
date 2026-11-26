@@ -112,6 +112,17 @@ def render(post: dict) -> Path:
     draw.ellipse([bx + 16, by + 19, bx + 23, by + 26], fill=CREAM)
     draw.text((bx + 32, by + 10), badge_text, font=f_badge, fill=CREAM)
 
+    # 중요도 배지 (S=긴급 빨강 / A=주요 금색)
+    level = str(post.get("importance") or "B").upper()
+    meta = config.IMPORTANCE_LEVELS.get(level)
+    if meta and level in ("S", "A"):
+        label = f"{level} {meta['label']}"
+        iw = draw.textlength(label, font=f_badge)
+        ix = bx + tw + 62 + 12
+        draw.rounded_rectangle([ix, by, ix + iw + 52, by + 44], radius=22,
+                               fill=meta["color"])
+        draw.text((ix + 26, by + 10), label, font=f_badge, fill=CREAM)
+
     # 제목 (크기 자동 축소)
     title = post["title"]
     max_w = W - 128
@@ -188,6 +199,7 @@ if __name__ == "__main__":
             for row in db.list_posts(conn):
                 path = render(row)
                 conn.execute("UPDATE posts SET image_path = ? WHERE id = ?", (f"/images/posts/{row['id']}.png", row["id"]))
+                print(f"  {row['id']}.png ← {row['title'][:50]}")
             conn.commit()
         print("썸네일 재생성 완료")
     else:

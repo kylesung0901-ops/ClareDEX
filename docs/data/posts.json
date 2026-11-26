@@ -4,19 +4,109 @@
   "posts": [
     {
       "id": 9,
+      "title": "연준, 소액 대출 감정평가 면제 기준 발표",
+      "category": "macro",
+      "source_name": "미 연방준비제도(Fed)",
+      "source_grade": "1차 공식",
+      "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20261125a.htm",
+      "source_hash": "657383e9620afc1b422f1d2187e991f6b3e38b01ca0c5b52eb2d7f65cbac8507",
+      "verified_at": "2026-11-26T14:17:01+09:00",
+      "summary_lines": [
+        "미 연방준비제도(Fed)가 2026-11-26 05:00 KST에 공식 보도자료를 공개했습니다.",
+        "원문 제목: Agencies announce dollar thresholds for smaller loan exemption from appraisal requirements for higher-priced mortgage loans",
+        "발표는 고가 주택담보대출의 감정평가 요건을 면제하는 소액 대출 기준 금액과 적용 시점을 담습니다. 기준 금액과 시행일이 원문에서 확인할 항목입니다."
+      ],
+      "market_impact": "고가 주택담보대출의 감정평가 요건을 면제하는 소액 대출 기준을 정하는 발표로, 모기지·주택담보대출 업권의 실무 기준에 닿습니다. 주가·금리 방향에 대한 직접 영향은 제한적입니다.",
+      "tags": [
+        "매크로",
+        "연준",
+        "금리"
+      ],
+      "image_path": "images/posts/9.png",
+      "is_member_early": true,
+      "created_at": "2026-11-26T14:17:03+09:00",
+      "published_at": "2026-11-26T05:00:00+09:00",
+      "topic": "appraisal-exemption",
+      "importance": "B",
+      "importance_label": "일반",
+      "category_label": "매크로·공시",
+      "image_url": "images/posts/9.png"
+    },
+    {
+      "id": 8,
+      "title": "연준, 소비자금융 규제 기준 금액 발표",
+      "category": "macro",
+      "source_name": "미 연방준비제도(Fed)",
+      "source_grade": "1차 공식",
+      "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20261125b.htm",
+      "source_hash": "ebcc18ee02d95aa3ed7f33b55ef01a9ecd70797c7dcf9a21d2d5ded06a404cec",
+      "verified_at": "2026-11-26T14:17:01+09:00",
+      "summary_lines": [
+        "미 연방준비제도(Fed)가 2026-11-26 05:00 KST에 공식 보도자료를 공개했습니다.",
+        "원문 제목: Agencies announce dollar thresholds for applicability of truth in lending and consumer leasing rules for consumer credit and lease transactions",
+        "발표는 소비자신용·리스 거래에 규제가 적용되는 기준 금액과 시행 시점을 담습니다. 기준 금액과 시행일이 원문에서 확인할 항목입니다."
+      ],
+      "market_impact": "소비자신용·리스 거래에 규제가 적용되는 기준 금액을 정하는 행정적 발표로, 카드·캐피탈·은행 소비자금융의 실무 기준에 닿습니다. 주가·금리 방향에 대한 직접 영향은 제한적입니다.",
+      "tags": [
+        "매크로",
+        "연준",
+        "금리"
+      ],
+      "image_path": "images/posts/8.png",
+      "is_member_early": true,
+      "created_at": "2026-11-26T14:17:03+09:00",
+      "published_at": "2026-11-26T05:00:00+09:00",
+      "topic": "loan-thresholds",
+      "importance": "B",
+      "importance_label": "일반",
+      "category_label": "매크로·공시",
+      "image_url": "images/posts/8.png"
+    },
+    {
+      "id": 7,
+      "title": "연준, 지역연준 할인율 회의 의사록 공개",
+      "category": "macro",
+      "source_name": "미 연방준비제도(Fed)",
+      "source_grade": "1차 공식",
+      "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261124a.htm",
+      "source_hash": "ee53adbaa022cb629b983f02768ca260b18e1e25dfd4510c912e5c5dbec569e7",
+      "verified_at": "2026-11-26T14:17:01+09:00",
+      "summary_lines": [
+        "미 연방준비제도(Fed)가 2026-11-25 04:00 KST에 공식 보도자료를 공개했습니다.",
+        "원문 제목: Minutes of the Board's discount rate meetings on October 19 and October 28, 2026",
+        "의사록은 각 지역연준이 권고한 할인율과 그 배경을 담습니다. 지역별 권고 수준과 반대 의견 여부가 원문에서 확인할 항목입니다."
+      ],
+      "market_impact": "지역연준이 권고한 할인율(discount rate) 결정을 담은 의사록으로, 연준의 유동성 공급 창구 금리 운용을 보여줍니다. 단기 자금시장과 은행 조달 비용 해석의 참고 자료입니다.",
+      "tags": [
+        "매크로",
+        "연준",
+        "금리"
+      ],
+      "image_path": "images/posts/7.png",
+      "is_member_early": false,
+      "created_at": "2026-11-26T14:17:03+09:00",
+      "published_at": "2026-11-25T04:00:00+09:00",
+      "topic": "discount-rate-minutes",
+      "importance": "B",
+      "importance_label": "일반",
+      "category_label": "매크로·공시",
+      "image_url": "images/posts/7.png"
+    },
+    {
+      "id": 6,
       "title": "엔비디아(NVDA), 8-K 수시공시 제출 (2026-11-23)",
       "category": "us-stock",
       "source_name": "미 SEC EDGAR",
       "source_grade": "전자공시",
       "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000090/0001045810-26-000090-index.htm",
       "source_hash": "fa5e4e1477cea29ffe5f8f4db09bb95603581dca55f7746da4410805b9e1eae1",
-      "verified_at": "2026-11-24T19:51:32+09:00",
+      "verified_at": "2026-11-26T14:17:01+09:00",
       "summary_lines": [
         "NVIDIA Corporation(NVDA)가 2026-11-23 미 SEC에 8-K(수시공시)를 제출했습니다.",
         "접수번호 0001045810-26-000090 · 회계기준일 2026-11-22 · 신고 항목: 임원·이사 선임 또는 사임, 재무제표 및 첨부서류",
-        "8-K는 기업의 주요 사건을 확인되는 즉시 공시하는 서식입니다. 공개 시각은 2026-11-23 22:57 KST입니다."
+        "5.02(임원·이사 선임 또는 사임) 항목은 인사와 사유를 담습니다. 후임·권한 변화가 확인할 항목입니다."
       ],
-      "market_impact": "경영진 변동 공시로, 전략의 연속성에 대한 시장 판단에 영향을 줄 수 있습니다.",
+      "market_impact": "엔비디아(NVDA)는 반도체 업종으로, 이 공시가 같은 업종 종목과 나스닥 성장주 수급에 영향을 줄 수 있습니다. 임원·이사 선임 또는 사임 공시로, 전략의 연속성과 지배구조에 대한 시장 판단에 영향을 줄 수 있습니다.",
       "tags": [
         "NVDA",
         "나스닥",
@@ -24,57 +114,61 @@
         "반도체",
         "공시"
       ],
-      "image_path": "images/posts/9.png",
-      "is_member_early": true,
-      "created_at": "2026-11-24T19:51:33+09:00",
+      "image_path": "images/posts/6.png",
+      "is_member_early": false,
+      "created_at": "2026-11-26T14:17:03+09:00",
       "published_at": "2026-11-23T22:57:54+09:00",
       "topic": "filing",
+      "importance": "A",
+      "importance_label": "주요",
       "category_label": "미국주식",
-      "image_url": "images/posts/9.png"
+      "image_url": "images/posts/6.png"
     },
     {
-      "id": 8,
+      "id": 5,
       "title": "연준, 금융기관 대상 조사 결과 공개",
       "category": "macro",
       "source_name": "미 연방준비제도(Fed)",
       "source_grade": "1차 공식",
       "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/other20261120a.htm",
       "source_hash": "4b9813abbbbcba462a28480f698ccfc797eb48093f0b541668c0381e3b822176",
-      "verified_at": "2026-11-24T19:51:32+09:00",
+      "verified_at": "2026-11-26T14:17:01+09:00",
       "summary_lines": [
         "미 연방준비제도(Fed)가 2026-11-21 00:00 KST에 공식 보도자료를 공개했습니다.",
         "원문 제목: Federal Reserve Board releases results from survey of senior financial officers at banks about their strategies and practices for managing reserve balances",
-        "연준 공식 RSS에서 제목·링크·발표 시각을 직접 확인했습니다. 세부 내용과 수치는 원문에서 확인하세요."
+        "조사 결과는 은행의 유동성·자금 관리 행태에 대한 응답을 담습니다. 조사 대상과 응답 항목이 원문에서 확인할 항목입니다."
       ],
-      "market_impact": "은행의 유동성·자금 관리 행태를 보여주는 자료로, 단기 자금시장과 금리 해석의 참고가 됩니다.",
+      "market_impact": "은행의 유동성·자금 관리 행태를 보여주는 조사로, 단기 자금시장(SOFR·단기 국채)과 지급준비금 해석의 참고 자료가 됩니다. 은행·금융주 투자 심리에 간접적으로 닿을 수 있습니다.",
       "tags": [
         "매크로",
         "연준",
         "금리"
       ],
-      "image_path": "images/posts/8.png",
+      "image_path": "images/posts/5.png",
       "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
+      "created_at": "2026-11-26T14:17:02+09:00",
       "published_at": "2026-11-21T00:00:00+09:00",
       "topic": "survey",
+      "importance": "B",
+      "importance_label": "일반",
       "category_label": "매크로·공시",
-      "image_url": "images/posts/8.png"
+      "image_url": "images/posts/5.png"
     },
     {
-      "id": 7,
+      "id": 4,
       "title": "연준, 금융기관 제재·시정조치 발표",
       "category": "macro",
       "source_name": "미 연방준비제도(Fed)",
       "source_grade": "1차 공식",
       "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20261119a.htm",
       "source_hash": "325a2d06cee138cc11ca9d61312d5ad710721f602dd5c8f46e6d89fc8badfb7e",
-      "verified_at": "2026-11-24T19:51:32+09:00",
+      "verified_at": "2026-11-26T14:17:01+09:00",
       "summary_lines": [
         "미 연방준비제도(Fed)가 2026-11-20 01:00 KST에 공식 보도자료를 공개했습니다.",
         "원문 제목: Federal Reserve Board issues enforcement action with former employee of First Security Bancorp",
-        "연준 공식 RSS에서 제목·링크·발표 시각을 직접 확인했습니다. 세부 내용과 수치는 원문에서 확인하세요."
+        "제재·시정조치 발표는 대상 기관, 사유, 부과된 조치를 담습니다. 해당 기관명과 조치 내용이 원문에서 확인할 항목입니다."
       ],
-      "market_impact": "개별 금융기관에 대한 제재로, 해당 기관과 업권의 규제 리스크 인식에 영향을 줄 수 있습니다.",
+      "market_impact": "특정 금융기관에 대한 제재·시정조치로, 그 기관과 같은 업권(은행·지주)의 규제 비용 인식에 영향을 줄 수 있습니다. 제재 대상과 사유가 원문에 적힌 그대로인지가 확인 포인트입니다.",
       "tags": [
         "매크로",
         "연준",
@@ -82,60 +176,31 @@
         "은행",
         "규제"
       ],
-      "image_path": "images/posts/7.png",
+      "image_path": "images/posts/4.png",
       "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
+      "created_at": "2026-11-26T14:17:02+09:00",
       "published_at": "2026-11-20T01:00:00+09:00",
       "topic": "enforcement",
+      "importance": "B",
+      "importance_label": "일반",
       "category_label": "매크로·공시",
-      "image_url": "images/posts/7.png"
+      "image_url": "images/posts/4.png"
     },
     {
-      "id": 6,
-      "title": "연준, FOMC 의사록 공개 (10월 27~28일 회의, 2026)",
-      "category": "macro",
-      "source_name": "미 연방준비제도(Fed)",
-      "source_grade": "1차 공식",
-      "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20261118a.htm",
-      "source_hash": "c0c4ef66e0d9307c0568eff5e9abce7818405bc16fc001685f0c5acfed4f12e6",
-      "verified_at": "2026-11-24T19:51:32+09:00",
-      "summary_lines": [
-        "미 연방준비제도(Fed)가 2026-11-19 04:00 KST에 공식 보도자료를 공개했습니다.",
-        "원문 제목: Minutes of the Federal Open Market Committee, October 27-28, 2026",
-        "연준 공식 RSS에서 제목·링크·발표 시각을 직접 확인했습니다. 세부 내용과 수치는 원문에서 확인하세요."
-      ],
-      "market_impact": "정책금리 경로에 대한 단서가 담길 수 있어 금리에 민감한 나스닥·성장주·비트코인의 변동성 요인이 됩니다. 방향은 원문 표현과 시장 반응으로 확인이 필요합니다.",
-      "tags": [
-        "매크로",
-        "연준",
-        "금리",
-        "FOMC",
-        "나스닥",
-        "BTC"
-      ],
-      "image_path": "images/posts/6.png",
-      "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
-      "published_at": "2026-11-19T04:00:00+09:00",
-      "topic": "fomc-minutes",
-      "category_label": "매크로·공시",
-      "image_url": "images/posts/6.png"
-    },
-    {
-      "id": 5,
+      "id": 3,
       "title": "엔비디아(NVDA), 8-K 수시공시 제출 (2026-11-17)",
       "category": "us-stock",
       "source_name": "미 SEC EDGAR",
       "source_grade": "전자공시",
       "source_url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000088/0001045810-26-000088-index.htm",
       "source_hash": "4ac13b5dd1bf906f13945b316ae38518ae2b6b2b766b5b31ce126da0e3729710",
-      "verified_at": "2026-11-24T19:51:32+09:00",
+      "verified_at": "2026-11-26T14:17:01+09:00",
       "summary_lines": [
         "NVIDIA Corporation(NVDA)가 2026-11-17 미 SEC에 8-K(수시공시)를 제출했습니다.",
         "접수번호 0001045810-26-000088 · 회계기준일 2026-11-17 · 신고 항목: 실적 및 재무 상태, 재무제표 및 첨부서류",
-        "8-K는 기업의 주요 사건을 확인되는 즉시 공시하는 서식입니다. 공개 시각은 2026-11-18 06:20 KST입니다."
+        "2.02(실적 및 재무 상태) 항목은 매출·이익 등 실적과 재무 상태를 다루는 공시입니다. 첨부된 실적 자료의 수치가 직전 분기와 비교할 대상입니다."
       ],
-      "market_impact": "실적 관련 수시공시로, 공개된 매출·이익이 시장 기대와 비교되며 주가에 직접 영향을 줄 수 있습니다.",
+      "market_impact": "엔비디아(NVDA)는 반도체 업종으로, 이 공시가 같은 업종 종목과 나스닥 성장주 수급에 영향을 줄 수 있습니다. 실적·재무 상태 공시로, 첨부된 실적 자료의 매출·이익과 가이던스가 직전 분기와 시장 기대에 비교되며 주가에 직접 영향을 줄 수 있습니다.",
       "tags": [
         "NVDA",
         "나스닥",
@@ -143,72 +208,14 @@
         "반도체",
         "공시"
       ],
-      "image_path": "images/posts/5.png",
-      "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
-      "published_at": "2026-11-18T06:20:51+09:00",
-      "topic": "earnings",
-      "category_label": "미국주식",
-      "image_url": "images/posts/5.png"
-    },
-    {
-      "id": 4,
-      "title": "연준, 금융규제 관련 발표",
-      "category": "macro",
-      "source_name": "미 연방준비제도(Fed)",
-      "source_grade": "1차 공식",
-      "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20261113a.htm",
-      "source_hash": "537d1229e28dcb2912c5d36b882d3c934c143c8dec9f9c139d0dfc4f3a54ddc3",
-      "verified_at": "2026-11-24T19:51:32+09:00",
-      "summary_lines": [
-        "미 연방준비제도(Fed)가 2026-11-14 06:15 KST에 공식 보도자료를 공개했습니다.",
-        "원문 제목: Agencies extend comment period for proposed third-party risk management guidance",
-        "연준 공식 RSS에서 제목·링크·발표 시각을 직접 확인했습니다. 세부 내용과 수치는 원문에서 확인하세요."
-      ],
-      "market_impact": "규제 방향성과 적용 시점에 대한 발표로, 해당 업권의 비용과 밸류에이션 가정에 영향을 줄 수 있습니다.",
-      "tags": [
-        "매크로",
-        "연준",
-        "금리",
-        "규제",
-        "금융주"
-      ],
-      "image_path": "images/posts/4.png",
-      "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
-      "published_at": "2026-11-14T06:15:00+09:00",
-      "topic": "regulation",
-      "category_label": "매크로·공시",
-      "image_url": "images/posts/4.png"
-    },
-    {
-      "id": 3,
-      "title": "연준, 지급결제 서비스 요금·제도 발표",
-      "category": "macro",
-      "source_name": "미 연방준비제도(Fed)",
-      "source_grade": "1차 공식",
-      "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/other20261112a.htm",
-      "source_hash": "1ee6867cdbb6f3c3818c41cf816ecb3f04af48e3d69450ac807785387cf4fbaf",
-      "verified_at": "2026-11-24T19:51:32+09:00",
-      "summary_lines": [
-        "미 연방준비제도(Fed)가 2026-11-13 03:30 KST에 공식 보도자료를 공개했습니다.",
-        "원문 제목: Federal Reserve Board announces pricing, effective January 1, 2027, for payment services the Federal Reserve Banks provide to banks and credit unions, and chan…",
-        "연준 공식 RSS에서 제목·링크·발표 시각을 직접 확인했습니다. 세부 내용과 수치는 원문에서 확인하세요."
-      ],
-      "market_impact": "은행·핀테크의 수수료 구조와 관련된 항목으로, 결제 업권의 비용 구조에 영향을 줄 수 있습니다.",
-      "tags": [
-        "매크로",
-        "연준",
-        "금리",
-        "은행",
-        "핀테크"
-      ],
       "image_path": "images/posts/3.png",
       "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
-      "published_at": "2026-11-13T03:30:00+09:00",
-      "topic": "payments",
-      "category_label": "매크로·공시",
+      "created_at": "2026-11-26T14:17:02+09:00",
+      "published_at": "2026-11-18T06:20:51+09:00",
+      "topic": "earnings",
+      "importance": "S",
+      "importance_label": "긴급",
+      "category_label": "미국주식",
       "image_url": "images/posts/3.png"
     },
     {
@@ -219,13 +226,13 @@
       "source_grade": "전자공시",
       "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000114036126042798/0001140361-26-042798-index.htm",
       "source_hash": "16a1f1d4227eebb3b3fcd467b9f5b0ac534abc62646f26d1b82338b395c418df",
-      "verified_at": "2026-11-24T19:51:32+09:00",
+      "verified_at": "2026-11-26T14:17:01+09:00",
       "summary_lines": [
         "Apple Inc.(AAPL)가 2026-11-09 미 SEC에 8-K(수시공시)를 제출했습니다.",
         "접수번호 0001140361-26-042798 · 회계기준일 2026-11-05 · 신고 항목: 기타 주요 사건, 재무제표 및 첨부서류",
-        "8-K는 기업의 주요 사건을 확인되는 즉시 공시하는 서식입니다. 공개 시각은 2026-11-10 06:30 KST입니다."
+        "8.01(기타 주요 사건) 항목은 위 항목에 속하지 않는 주요 사항을 담습니다. 사건의 성격과 규모가 확인할 항목입니다."
       ],
-      "market_impact": "기업이 공개한 주요 사항으로, 해당 종목의 수급에 영향을 줄 수 있습니다.",
+      "market_impact": "애플(AAPL)은 미국주식 종목으로, 이 공시가 같은 업종 종목과 나스닥 성장주 수급에 영향을 줄 수 있습니다. 기업이 공개한 주요 사항으로, 해당 종목의 수급과 업종 비교에 영향을 줄 수 있습니다.",
       "tags": [
         "AAPL",
         "나스닥",
@@ -234,9 +241,11 @@
       ],
       "image_path": "images/posts/2.png",
       "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
+      "created_at": "2026-11-26T14:17:02+09:00",
       "published_at": "2026-11-10T06:30:40+09:00",
       "topic": "filing",
+      "importance": "B",
+      "importance_label": "일반",
       "category_label": "미국주식",
       "image_url": "images/posts/2.png"
     },
@@ -248,13 +257,13 @@
       "source_grade": "전자공시",
       "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000026/0000320193-26-000026-index.htm",
       "source_hash": "d56b5d65a4c52083f906270930e8eb6cdd6b67f5e7e2f545a5026797074cce0c",
-      "verified_at": "2026-11-24T19:51:32+09:00",
+      "verified_at": "2026-11-26T14:17:01+09:00",
       "summary_lines": [
         "Apple Inc.(AAPL)가 2026-11-03 미 SEC에 10-K(연간 보고서)를 제출했습니다.",
         "접수번호 0000320193-26-000026 · 회계기준일 2026-09-26",
-        "10-K는 연간 재무제표와 사업 구조·위험 요인을 담은 정기 보고서입니다. 공개 시각은 2026-11-03 22:05 KST입니다."
+        "10-K는 연간 재무제표와 사업 구조·위험 요인을 담습니다. 부문별 매출과 위험 요인 문구의 전년 대비 변화가 확인할 항목입니다."
       ],
-      "market_impact": "연간 사업 구조와 위험 요인을 담은 보고서로, 중장기 밸류에이션 가정에 영향을 줄 수 있습니다.",
+      "market_impact": "애플(AAPL)은 미국주식 종목으로, 이 공시가 같은 업종 종목과 나스닥 성장주 수급에 영향을 줄 수 있습니다. 연간 재무제표와 사업 구조·위험 요인을 담은 보고서로, 전년 대비 변화가 중장기 밸류에이션 가정에 영향을 줄 수 있습니다.",
       "tags": [
         "AAPL",
         "나스닥",
@@ -263,9 +272,11 @@
       ],
       "image_path": "images/posts/1.png",
       "is_member_early": false,
-      "created_at": "2026-11-24T19:51:33+09:00",
+      "created_at": "2026-11-26T14:17:02+09:00",
       "published_at": "2026-11-03T22:05:15+09:00",
       "topic": "filing",
+      "importance": "A",
+      "importance_label": "주요",
       "category_label": "미국주식",
       "image_url": "images/posts/1.png"
     }

@@ -26,8 +26,8 @@ INTRO = {
     "payments": "{source}가 공개한 지급결제 관련 발표를 원문에서 확인했습니다.",
     "regulation": "{source}가 공개한 금융규제 관련 발표를 원문에서 확인했습니다.",
     "general-macro": "{source}가 공개한 공식 자료를 원문에서 확인했습니다.",
-    "earnings": "{source}에 접수된 실적 관련 공시를 확인했습니다. 수치는 원문에서 직접 확인하실 수 있습니다.",
-    "filing": "{source}에 접수된 공시를 확인했습니다. 세부 내용은 원문 링크에서 확인하실 수 있습니다.",
+    "earnings": "{source}에 접수된 실적 관련 공시를 원문에서 확인해 서식·신고 항목·접수 시각을 정리했습니다.",
+    "filing": "{source}에 접수된 공시를 원문에서 확인해 기업명·서식·접수번호를 정리했습니다.",
 }
 
 H2 = 'style="font-size:20px;font-weight:700;margin:28px 0 10px;color:#16150f;"'

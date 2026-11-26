@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "updated_at": "2026-11-26T14:30:00+09:00",
+  "timezone": "Asia/Seoul",
+  "note": "각 기관의 공식 일정 페이지에서 직접 확인한 발표 예정 시각입니다. 기관 사정에 따라 변경될 수 있으며, 확인한 원문 링크를 함께 표기합니다.",
+  "events": [
+    {
+      "id": "bls-emp-2026-11",
+      "title": "미 11월 고용보고서(실업률·비농업 고용)",
+      "org": "미 노동통계국(BLS)",
+      "datetime_kst": "2026-12-04T22:30:00+09:00",
+      "local_time": "2026-12-04 08:30 ET",
+      "note": "11월분 Employment Situation 발표 예정 시각입니다.",
+      "checkpoint": "비농업 고용·실업률과 시간당 임금 상승률이 어느 방향으로 움직이는지가 관전 포인트입니다.",
+      "watch": "고용보고서",
+      "source_url": "https://www.bls.gov/schedule/news_release/empsit.htm",
+      "grade": "1차 공식",
+      "importance": "S"
+    },
+    {
+      "id": "bea-trade-2026-10",
+      "title": "미 10월 국제무역수지(재화·서비스)",
+      "org": "미 경제분석국(BEA)",
+      "datetime_kst": "2026-12-08T22:30:00+09:00",
+      "local_time": "2026-12-08 08:30 ET",
+      "note": "U.S. International Trade in Goods and Services, October 2026 발표 예정 시각입니다.",
+      "checkpoint": "월별 변동이 큰 지표라 3개월 누적 흐름과 재화·서비스 구성을 함께 봅니다.",
+      "watch": "무역수지",
+      "source_url": "https://www.bea.gov/news/schedule",
+      "grade": "1차 공식",
+      "importance": "B"
+    },
+    {
+      "id": "fomc-2026-12",
+      "title": "FOMC 회의 결과 발표 (12/8~9)",
+      "org": "미 연방준비제도(Fed)",
+      "datetime_kst": "2026-12-10T04:00:00+09:00",
+      "local_time": "2026-12-09 14:00 ET",
+      "note": "경제전망요약(SEP)이 함께 공개되는 회의입니다. 성명 발표 시각은 통상 14:00 ET입니다.",
+      "checkpoint": "점도표와 성명서 문구 변화가 향후 금리 경로를 가늠하는 핵심입니다.",
+      "watch": "FOMC",
+      "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+      "grade": "1차 공식",
+      "importance": "S"
+    },
+    {
+      "id": "bls-cpi-2026-11",
+      "title": "미 11월 소비자물가지수(CPI)",
+      "org": "미 노동통계국(BLS)",
+      "datetime_kst": "2026-12-10T22:30:00+09:00",
+      "local_time": "2026-12-10 08:30 ET",
+      "note": "2026년 11월분 CPI 발표 예정 시각입니다.",
+      "checkpoint": "근원 CPI가 예상치 대비 어느 방향으로 벗어나는지가 관전 포인트입니다.",
+      "watch": "CPI",
+      "source_url": "https://www.bls.gov/schedule/news_release/cpi.htm",
+      "grade": "1차 공식",
+      "importance": "S"
+    },
+    {
+      "id": "bea-gdp-q3-3rd",
+      "title": "미 3분기 GDP 3차 추정치·기업이익",
+      "org": "미 경제분석국(BEA)",
+      "datetime_kst": "2026-12-23T22:30:00+09:00",
+      "local_time": "2026-12-23 08:30 ET",
+      "note": "GDP (Third Estimate)·기업이익 잠정치·주(州) GDP 발표 예정 시각입니다.",
+      "checkpoint": "2차 추정치 대비 수정 폭과 기업이익 흐름을 함께 확인합니다.",
+      "watch": "GDP",
+      "source_url": "https://www.bea.gov/news/schedule",
+      "grade": "1차 공식",
+      "importance": "A"
+    },
+    {
+      "id": "bea-pce-2026-11",
+      "title": "미 11월 개인소득·지출(PCE 물가)",
+      "org": "미 경제분석국(BEA)",
+      "datetime_kst": "2026-12-23T22:30:00+09:00",
+      "local_time": "2026-12-23 08:30 ET",
+      "note": "Personal Income and Outlays, November 2026 발표 예정 시각입니다.",
+      "checkpoint": "연준이 참고하는 근원 PCE 물가의 전월 대비 흐름이 핵심입니다.",
+      "watch": "PCE",
+      "source_url": "https://www.bea.gov/news/schedule",
+      "grade": "1차 공식",
+      "importance": "A"
+    },
+    {
+      "id": "fomc-2027-01",
+      "title": "FOMC 회의 결과 발표 (2027년 1/26~27)",
+      "org": "미 연방준비제도(Fed)",
+      "datetime_kst": "2027-01-28T04:00:00+09:00",
+      "local_time": "2027-01-27 14:00 ET",
+      "note": "2027년 1월 회의 결과 발표입니다. 성명 발표 시각은 통상 14:00 ET입니다.",
+      "checkpoint": "성명서에서 향후 금리 인하 횟수에 대한 문구가 어떻게 바뀌는지 봅니다.",
+      "watch": "FOMC",
+      "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+      "grade": "1차 공식",
+      "importance": "A"
+    }
+  ]
+}
