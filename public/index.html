@@ -94,7 +94,7 @@
     </div>
 
     <a class="convert-bar" id="convertBar" href="signup.html" hidden>
-      <span class="convert-main" id="convertText">고른 자산 S등급 급변 시 문자로 바로 받기 (광고 전화 0건) →</span>
+      <span class="convert-main" id="convertText">고른 자산 S등급 급변 시 문자로 바로 받기 →</span>
       <span class="convert-count" id="convertCount"></span>
     </a>
 
@@ -325,7 +325,7 @@
       ? `signup.html?from=featured&watch=${encodeURIComponent(watchKey)}`
       : "signup.html?from=featured";
     cta.textContent = "내 종목 야간 S등급 비상벨 켜기 →";
-    cta.title = watchKey ? `${watchKey} S등급 급변을 문자로 받습니다 · 광고 전화 0건` : "휴대폰 인증 한 단계로 무료 가입";
+    cta.title = watchKey ? `${watchKey} S등급 급변을 문자로 받습니다` : "휴대폰 인증 한 단계로 무료 가입";
     $("#featured").classList.toggle("is-s", imp(p) === "S");
   }
 
@@ -427,7 +427,7 @@
     const n = watchCount(state.watch);
     bar.hidden = false;
     bar.href = `signup.html?watch=${encodeURIComponent(state.watch)}`;
-    $("#convertText").innerHTML = `고른 자산 <b>${esc(state.watch)}</b> S등급 급변 시 문자로 바로 받기 (광고 전화 0건) <span class="convert-arrow" aria-hidden="true">→</span>`;
+    $("#convertText").innerHTML = `고른 자산 <b>${esc(state.watch)}</b> S등급 급변 시 문자로 바로 받기 <span class="convert-arrow" aria-hidden="true">→</span>`;
     $("#convertCount").textContent = n ? `공식 원문 ${n}건` : "발표 대기";
   }
 
