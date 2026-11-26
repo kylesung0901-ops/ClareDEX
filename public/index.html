@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20261126c">
+<link rel="stylesheet" href="assets/style.css?v=20261126d">
 </head>
 <body>
 
@@ -50,6 +50,12 @@
     <span class="hero-rule" aria-hidden="true"></span>
     <p class="hero-sub">오늘의 시장, 공식 원문 3초 결론</p>
   </section>
+
+  <!-- 타점 비상벨: 김프·공포탐욕·롱숟이 선을 넘는 순간 1초 문자 -->
+  <a class="alert-bar" id="alertBar" href="signup.html?alert=kimp_high">
+    <span class="alert-bar-main">⚡ 김프·공포탐욕·롱숟 1초 비상벨 설정 →</span>
+    <span class="alert-bar-sub" id="alertBarNow">김프 · 공포탐욕 · 롱 비율 현재 수치</span>
+  </a>
 
   <!-- 오늘의 한 장 (다크 카드 1장) -->
   <section class="featured" id="featured" aria-labelledby="featuredTitle">
@@ -305,9 +311,22 @@
       note.className = "ticker-note";
       note.textContent = (data.stale ? "지연 · " : "") + (data.generated_at ? hm(data.generated_at) + " KST" : "");
       box.appendChild(note);
+      renderAlertBarNow(data.values || {});
     } catch (err) {
       box.innerHTML = '<span class="ticker-live"><span class="live-dot"></span>LIVE</span><span class="tick">시장 지표를 불러오지 못했습니다</span>';
     }
+  }
+
+  /* 타점 비상벨 바: 지금 수치를 한 줄로 (값이 없으면 문구 그대로 둔다) */
+  function renderAlertBarNow(values) {
+    const el = $("#alertBarNow");
+    if (!el) return;
+    const parts = [];
+    const num = (x) => typeof x === "number" && isFinite(x);
+    if (num(values.kimchi_premium)) parts.push(`김프 ${values.kimchi_premium > 0 ? "+" : ""}${values.kimchi_premium.toFixed(2)}%`);
+    if (num(values.fear_greed)) parts.push(`공포탐욕 ${Math.round(values.fear_greed)}`);
+    if (num(values.long_pct)) parts.push(`롱 ${values.long_pct.toFixed(1)}%`);
+    if (parts.length) el.textContent = "지금 " + parts.join(" · ");
   }
 
   /* ------------------------------------------------ featured (오늘의 한 장) */

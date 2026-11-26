@@ -113,7 +113,9 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 | POST | `/api/admin/posts/delete` | `{id}` 글 삭제(연결 초안 포함) |
 | POST | `/api/admin/collect` | 수집기 + 초안 생성 백그라운드 실행 (`202`, 실행 중 `409`) |
 | POST | `/api/admin/change-password` | `{current_password, new_password, confirm_password}` → `data/admin_auth.json` 해시 갱신 |
-| POST | `/api/signup` | `{phone, watchlist, email?, name?, marketing_agreed?, provider?}` → **휴대폰 인증 필수 · 이메일은 인증번호 없이 형식만 확인해 저장 · 성함/닉네임 선택**. users 저장(name 포함) + 관심자산 즉시 저장 (201). 휴대폰 미인증 403 `verification_required` · 잘못된 이메일 형식 400 · 이미 다른 회원이 쓰는 이메일/휴대폰 409 `email_in_use` |
+| POST | `/api/signup` | `{phone, watchlist, email?, name?, marketing_agreed?, provider?, alert_rule?}` → **휴대폰 인증 필수 · 이메일은 인증번호 없이 형식만 확인해 저장 · 성함/닉네임 선택**. users 저장(name 포함) + 관심자산 즉시 저장 (201). `alert_rule`(`{metric, operator, threshold, label?}`)을 보내면 타점 비상벨 조건도 함께 저장. 휴대폰 미인증 403 `verification_required` · 잘못된 이메일 형식 400 · 잘못된 alert_rule 400 `invalid_alert_rule` · 이미 다른 회원이 쓰는 이메일/휴대폰 409 `email_in_use` |
+| GET | `/api/alerts?phone=` | 내 타점 비상벨 조건 조회(활성 규칙 + 최근 이력). 가입되지 않은 번호 404 `not_member` |
+| POST | `/api/alerts` | `{phone, alert_rule:{metric, operator, threshold, label?}}` → 조건 저장·교체(활성 1개) · `{phone, active:false}` → 끄기 |
 | POST | `/api/watchlist` | `{email\|phone, watchlist}` → 관심자산 갱신 (이메일 없는 휴대폰 단독 회원은 `phone`) |
 | POST | `/api/admin/login` | `{password}` → 200 + `Set-Cookie: claredex_admin=…` (틀리면 401) |
 | POST | `/api/admin/logout` | 세션 폐기 + 쿠키 만료 (`Max-Age=0`) |
@@ -121,7 +123,7 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 ## 화면
 
 - **메인 (TUPL 톤 · 오프화이트 `#FAF8F4` · 720px 단일 컬럼)** — 시장 지표 티커(항목별 출처 표기) → 히어로 → **오늘의 한 장**(다크 카드 1장, 최근 72시간 S등급 우선 · `내 종목 야간 S등급 비상벨 켜기 →` 는 글 태그에 따라 `signup.html?watch=BTC|NVDA|AAPL|연준·금리` 로 연결) → 주요 속보 캐러셀 → 최신 속보(관심자산 1초 미리보기 BTC·NVDA·AAPL·연준·금리, S/A/B·카테고리 필터, 3줄 요약·시장 영향 한 줄·`공식 원문 ↗`) → 공식 일정(KST 카운트다운·D-day·S/A/B 배지·`이 일정 발표 알림 받기 →`) → 무료/Pro 안내 → 컴플라이언스 푸터.
-- **회원가입 (540px 단일 컬럼 카드 · 가치 먼저, 휴대폰 1개만 마지막에)** — **1단계** 관심자산 칩 10종(BTC·NVDA·AAPL·연준·금리·삼성전자·SK하이닉스·ETH·TSLA·나스닥·코스피)을 고르면 `/api/posts`·`/api/calendar` 에서 그 자산의 최근 공식 공시 1~2건과 다가오는 S등급 일정을 즉시 보여줍니다(가입 전 미리 보는 3초 브리핑). **2단계**는 「잠든 사이 내 종목 S등급 기습 공시, 3초 결론으로 깨워드립니다」 아래 **휴대폰 번호 + 인증번호 6자리**(`/api/auth/send-sms-otp`·`verify-sms-otp`), 그리고 **이메일(선택)** 과 **성함 또는 닉네임(선택)** 입력란이 접힘 없이 바로 노출됩니다. 이메일은 **인증번호 발송·확인 없이 형식만 실시간으로 확인**해 저장하고(비워 두면 휴대폰만), 성함/닉네임은 `/api/signup` 의 `name` 으로 전달돼 `users.name` 과 `/admin` 회원 목록에 그대로 보입니다. 카카오·구글(준비 중) 버튼은 없습니다. 「마케팅 활용 동의」는 체크박스 + `[보기]` 모달(수집·이용 항목, 목적, 제3자 제공, 보유 기간, 거부 권리·불이익, 전송 방법·수신 거부)이며 선택 사항입니다. 완료 화면에는 방금 예약된 관심자산과 **12월 S등급 일정(고용보고서 12/4 · FOMC 12/10 · CPI 12/10)** 카드가 뜹니다. `?watch=FOMC` 처럼 일정에서 넘어오면 `config.EVENT_WATCH_ALIASES` 규칙으로 해당 관심자산을 자동 선택하고 화면 위에 1줄로 안내합니다.
+- **회원가입 (540px 단일 컬럼 카드 · 가치 먼저, 휴대폰 1개만 마지막에)** — **1단계** 관심자산 칩 10종(BTC·NVDA·AAPL·연준·금리·삼성전자·SK하이닉스·ETH·TSLA·나스닥·코스피)을 고르면 `/api/posts`·`/api/calendar` 에서 그 자산의 최근 공식 공시 1~2건과 다가오는 S등급 일정을 즉시 보여줍니다(가입 전 미리 보는 3초 브리핑). **2단계**는 「잠든 사이 내 종목 S등급 기습 공시, 3초 결론으로 깨워드립니다」 아래 **휴대폰 번호 + 인증번호 6자리**(`/api/auth/send-sms-otp`·`verify-sms-otp`), 그리고 **이메일(선택)** 과 **성함 또는 닉네임(선택)** 입력란이 접힘 없이 바로 노출됩니다. 이메일은 **인증번호 발송·확인 없이 형식만 실시간으로 확인**해 저장하고(비워 두면 휴대폰만), 성함/닉네임은 `/api/signup` 의 `name` 으로 전달돼 `users.name` 과 `/admin` 회원 목록에 그대로 보입니다. 카카오·구글(준비 중) 버튼은 없습니다. 「마케팅 활용 동의」는 체크박스 + `[보기]` 모달(수집·이용 항목, 목적, 제3자 제공, 보유 기간, 거부 권리·불이익, 전송 방법·수신 거부)이며 선택 사항입니다. 완료 화면에는 방금 예약된 관심자산과 **12월 S등급 일정(고용보고서 12/4 · FOMC 12/10 · CPI 12/10)** 카드가 뜹니다. `?watch=FOMC` 처럼 일정에서 넘어오면 `config.EVENT_WATCH_ALIASES` 규칙으로 해당 관심자산을 자동 선택하고 화면 위에 1줄로 안내합니다. 2단계에는 **김프·공포탐욕·롱숏 타점 비상벨** 패널이 있습니다 — `/api/market` 의 현재 수치(김프·공포탐욕·롱 비율)와 5가지 원클릭 프리셋(🔥 김프 +3.0% 이상 · ❄️ 역프 -0.5% 이하 · 😱 공포탐욕 15 이하 · 🤑 공포탐욕 75 이상 · ⚖️ 롱 비율 65% 돌파), 그리고 직접 숫자 입력. `signup.html?alert=kimp_high` 처럼 들어오면 해당 프리셋이 자동 선택되고, 완료 화면에 설정된 타점 조건이 표시됩니다. 메인 상단에는 「⚡ 김프·공포탐욕·롱숏 1초 비상벨 설정 →」(→ `signup.html?alert=kimp_high`) 바가 있습니다.
 - **운영자 페이지(/admin)** — 비밀번호 로그인 게이트 → 초안 목록, 제목/서식 유지 본문/HTML/태그/이미지 링크 복사, 미리보기·HTML·텍스트 탭, 로그아웃. 정적 프리뷰에서는 초안 대신 비공개 안내를 표시합니다.
 
 ## 공식 일정(카운트다운) 데이터
@@ -146,7 +148,9 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 ## 검증 결과 (요약)
 
-`python3 verify.py` → **188/188 통과**
+`python3 verify.py` → **233/233 통과**
+- 타점 비상벨: `alert_rules`·`alert_logs` 필수 컴럼, `POST /api/signup` + `alert_rule` 201·SQLite 저장(지표·연산자·임계치·6시간 쿨다운·회원 연결), 잘못된 지표·범위 밖 임계값 400 `invalid_alert_rule`, `GET /api/market` 지표, `GET`/`POST /api/alerts` 조회·변경·끄기(활성 1개 정책), 관리자 회원 목록의 타점 요약
+- 비상벨 엔진: 임계치 도달 시 `[클레어덱스 비상벨]` 1줄 발송 · 6시간 쿨다운 내 중복 차단 · 미도달/지표 없음 미발송 · 공포탐욕 조건 · 발송 실패는 실패 기록 후 재시도 가능 · SMS 미설정 시 `test_mode` 안전 반환
 - 3개 테이블·필수 컬럼(중요도 `posts.importance` 포함), `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 9개 썸네일 1200×630 PNG
 - 중요도: 모든 글 S/A/B 유효값 + 라벨, `content.fed_post` 생성 시 등급 계산, `posts.importance` 저장·재조회, `/api/posts?importance=S` 필터
 - 공식 일정: `calendar.json` 정규화(중요도·라벨·기관·원문 링크), watch→관심자산 매핑, 발표 시각 오름차순, `/api/calendar` 응답

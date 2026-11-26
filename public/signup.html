@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=20261126c">
+<link rel="stylesheet" href="assets/style.css?v=20261126d">
 </head>
 <body>
 
@@ -115,6 +115,36 @@
               <div class="hint-inline">알림 인사말과 회원 관리에 쓰입니다. 실명이 아니어도 됩니다.</div>
             </div>
 
+            <!-- 타점 비상벨: 김프·공포탐욕·롱숏이 정한 선을 넘는 순간 1초 문자 -->
+            <div class="alt-panel" id="alertPanel">
+              <div class="alt-head">
+                <span class="alt-title">⚡ 김프·공포탐욕·롱숏 1초 비상벨</span>
+                <span class="alt-live" id="alertLive">지금 수치 불러오는 중…</span>
+              </div>
+              <ul class="alt-now" id="alertNow">
+                <li><span>김프</span><b data-metric="kimp_pct">—</b></li>
+                <li><span>공포탐욕</span><b data-metric="fng">—</b></li>
+                <li><span>롱 비율</span><b data-metric="long_pct">—</b></li>
+              </ul>
+              <p class="alt-hint">선을 넘는 순간 문자 한 줄로 알려드립니다. 고르지 않으면 타점 비상벨은 꺼진 채로 가입됩니다.</p>
+              <div class="alt-chips" id="alertChips" role="group" aria-label="타점 비상벨 프리셋"></div>
+              <div class="alt-custom">
+                <select id="alertMetric" aria-label="지표 선택">
+                  <option value="kimp_pct">김프</option>
+                  <option value="fng">공포탐욕</option>
+                  <option value="long_pct">롱 비율</option>
+                </select>
+                <select id="alertOperator" aria-label="조건 선택">
+                  <option value=">=">이상 (≥)</option>
+                  <option value="<=">이하 (≤)</option>
+                </select>
+                <input id="alertThreshold" type="number" step="0.01" inputmode="decimal" aria-label="임계값" placeholder="직접 입력">
+                <button class="btn-mini" type="button" id="alertApply">적용</button>
+              </div>
+              <div class="err" id="alertErr"></div>
+              <p class="alt-state" id="alertState">프리셋을 고르면 조건이 저장됩니다 · 기본 6시간 쿨다운</p>
+            </div>
+
             <div class="consent">
               <div class="consent-row">
                 <label for="marketing"><input type="checkbox" id="marketing" name="marketing"> 마케팅 활용 동의</label>
@@ -135,6 +165,7 @@
         <h2>비상벨이 켜졌습니다</h2>
         <p>가입이 완료되었습니다. 고른 자산에 S등급 급변이 확인되면 3초 결론으로 문자를 보내드립니다.</p>
         <div class="watch-summary" id="watchSummary"></div>
+        <div class="alert-summary" id="alertSummary" hidden></div>
 
         <div class="reserved-card">
           <p class="reserved-head">내 알림 예약 · 관심자산 + 12월 S등급 일정</p>
@@ -319,6 +350,27 @@
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const IMP = { S: "긴급", A: "주요", B: "일반" };
 
+  /* ---------------- 타점 비상벨 지표·프리셋 (config.ALERT_METRICS 와 같은 범위) */
+  const ALERT_METRICS = {
+    kimp_pct: { label: "김프", full: "김치프리미엄", unit: "%", digits: 2, min: -50, max: 50 },
+    fng: { label: "공포탐욕", full: "공포탐욕지수", unit: "", digits: 0, min: 0, max: 100 },
+    long_pct: { label: "롱 비율", full: "바이낸스 롱 비율", unit: "%", digits: 1, min: 0, max: 100 }
+  };
+  const ALERT_PRESETS = [
+    { id: "kimp_high", chip: "🔥 김프 +3.0% 이상", label: "김프 +3.0% 이상", metric: "kimp_pct", operator: ">=", threshold: 3.0 },
+    { id: "kimp_low", chip: "❄️ 역프 -0.5% 이하", label: "역프 -0.5% 이하", metric: "kimp_pct", operator: "<=", threshold: -0.5 },
+    { id: "fng_low", chip: "😱 공포탐욕 15 이하", label: "공포탐욕 15 이하", metric: "fng", operator: "<=", threshold: 15 },
+    { id: "fng_high", chip: "🤑 공포탐욕 75 이상", label: "공포탐욕 75 이상", metric: "fng", operator: ">=", threshold: 75 },
+    { id: "long_high", chip: "⚖️ 롱 비율 65% 돌파", label: "롱 비율 65% 이상", metric: "long_pct", operator: ">=", threshold: 65.0 }
+  ];
+  const ALERT_COOLDOWN_MINUTES = 360;
+  function fmtAlertValue(metric, value) {
+    const meta = ALERT_METRICS[metric] || { digits: 2, unit: "" };
+    if (value === null || value === undefined || value === "" || isNaN(Number(value))) return "—";
+    const n = Number(value).toFixed(meta.digits);
+    return (metric === "kimp_pct" && Number(value) > 0 ? "+" : "") + n + meta.unit;
+  }
+
   function resolveWatch(raw) {
     const key = String(raw || "").trim();
     if (!key) return null;
@@ -341,6 +393,10 @@
   const digits = (v) => String(v || "").replace(/[^0-9]/g, "");
   let EVENTS = [];
   let POSTS = [];
+  /* 타점 비상벨 상태: {metric, operator, threshold, label} 또는 null(꺼짐) */
+  let alertRule = null;
+  let alertPresetId = null;
+  const ALERT_PARAM = new URLSearchParams(location.search).get("alert");
 
   function toast(msg) {
     const el = $("#toast");
@@ -403,7 +459,13 @@
   /* 관심자산/일정에서 넘어온 watch 값을 화면 맨 위에 1줄로 안내한다 */
   function renderRequest() {
     const note = $("#requestNote");
-    if (!REQUEST) { note.hidden = true; return; }
+    const preset = ALERT_PRESETS.find((p) => p.id === ALERT_PARAM);
+    if (!REQUEST) {
+      if (!preset) { note.hidden = true; return; }
+      note.hidden = false;
+      note.innerHTML = `요청하신 <b>${esc(preset.label)}</b> 타점 비상벨 · 휴대폰 인증 한 단계로 바로 켜집니다`;
+      return;
+    }
     note.hidden = false;
     note.innerHTML = REQUEST.kind === "event"
       ? `요청하신 <b>${esc(REQUEST.label)}</b> 발표 · <b>${esc(REQUEST.asset)}</b> 비상벨로 함께 켜드립니다`
@@ -520,6 +582,130 @@
     } catch (e) { EVENTS = []; }
     renderBrief();
   }
+
+  /* ---------------------------------------------------- 타점 비상벨 */
+  function alertLabel(rule) {
+    if (!rule) return "";
+    if (rule.label) return rule.label;
+    const meta = ALERT_METRICS[rule.metric] || { full: "지표" };
+    return `${meta.full} ${fmtAlertValue(rule.metric, rule.threshold)} ${rule.operator === ">=" ? "이상" : "이하"}`;
+  }
+
+  function renderAlertChips() {
+    const box = $("#alertChips");
+    if (!box) return;
+    box.innerHTML = ALERT_PRESETS.map((p) =>
+      `<button type="button" class="alt-chip" data-alert="${esc(p.id)}" aria-pressed="${alertPresetId === p.id}">${esc(p.chip)}</button>`
+    ).join("");
+    box.querySelectorAll(".alt-chip").forEach((el) => {
+      el.addEventListener("click", () => {
+        const id = el.dataset.alert;
+        if (alertPresetId === id) { clearAlertRule(); return; }
+        applyPreset(id);
+      });
+    });
+  }
+
+  function syncAlertInputs() {
+    if (!alertRule) return;
+    $("#alertMetric").value = alertRule.metric;
+    $("#alertOperator").value = alertRule.operator;
+    $("#alertThreshold").value = alertRule.threshold;
+  }
+
+  function renderAlertState() {
+    const el = $("#alertState");
+    if (!el) return;
+    if (!alertRule) {
+      el.className = "alt-state";
+      el.textContent = "프리셋을 고르면 조건이 저장됩니다 · 기본 6시간 쿨다운";
+      return;
+    }
+    el.className = "alt-state is-on";
+    el.innerHTML = `<b>${esc(alertLabel(alertRule))}</b> · 조건 도달 시 문자 1건 · ${ALERT_COOLDOWN_MINUTES / 60}시간 쿨다운`;
+  }
+
+  function setAlertRule(rule, presetId) {
+    alertRule = rule;
+    alertPresetId = presetId || null;
+    setMsg("#alertErr", "");
+    syncAlertInputs();
+    renderAlertChips();
+    renderAlertState();
+    updateSubmitState();
+  }
+
+  function applyPreset(id) {
+    const preset = ALERT_PRESETS.find((p) => p.id === id);
+    if (!preset) return;
+    setAlertRule({ metric: preset.metric, operator: preset.operator, threshold: preset.threshold, label: preset.label }, preset.id);
+  }
+
+  function clearAlertRule() {
+    alertRule = null;
+    alertPresetId = null;
+    $("#alertThreshold").value = "";
+    renderAlertChips();
+    renderAlertState();
+    updateSubmitState();
+  }
+
+  function applyCustomAlert() {
+    const metric = $("#alertMetric").value;
+    const operator = $("#alertOperator").value;
+    const raw = $("#alertThreshold").value;
+    const meta = ALERT_METRICS[metric];
+    if (!meta) { setMsg("#alertErr", "지표를 선택해 주세요."); return; }
+    if (raw === "" || isNaN(Number(raw))) { setMsg("#alertErr", "임계값을 숫자로 입력해 주세요."); return; }
+    const value = Number(raw);
+    if (value < meta.min || value > meta.max) {
+      setMsg("#alertErr", `${meta.full} 값은 ${meta.min}~${meta.max}${meta.unit} 사이로 입력해 주세요.`);
+      return;
+    }
+    const label = `${meta.label} ${fmtAlertValue(metric, value)} ${operator === ">=" ? "이상" : "이하"}`;
+    setAlertRule({ metric: metric, operator: operator, threshold: value, label: label }, null);
+    toast("타점 비상벨 조건을 적용했습니다.");
+  }
+
+  function renderAlertNow(data) {
+    const metrics = (data && data.metrics) || {};
+    const values = (data && data.values) || {};
+    /* 정적 스냅샷(data/ticker.json)에는 metrics 가 없으므로 values 키로 대신한다 */
+    const valueKeys = { kimp_pct: ["kimp_pct", "kimchi_premium"], fng: ["fng", "fear_greed"], long_pct: ["long_pct"] };
+    Object.keys(ALERT_METRICS).forEach((key) => {
+      const cell = document.querySelector(`#alertNow b[data-metric="${key}"]`);
+      if (!cell) return;
+      const item = metrics[key] || {};
+      let value = item.value;
+      if (value === undefined || value === null) {
+        (valueKeys[key] || []).some((k) => {
+          if (typeof values[k] === "number") { value = values[k]; return true; }
+          return false;
+        });
+      }
+      const text = item.display || fmtAlertValue(key, value);
+      cell.textContent = text && text !== "—" ? text : "—";
+    });
+    const live = $("#alertLive");
+    if (live) live.textContent = data && data.generated_at ? mdhm(data.generated_at) + " KST 기준" : "현재 수치";
+  }
+
+  async function loadAlertNow() {
+    try {
+      const data = await getJSON("/api/market", "data/ticker.json");
+      renderAlertNow(data);
+    } catch (e) {
+      const live = $("#alertLive");
+      if (live) live.textContent = "현재 수치를 불러오지 못했습니다";
+    }
+  }
+
+  $("#alertApply").addEventListener("click", applyCustomAlert);
+  $("#alertThreshold").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); applyCustomAlert(); }
+  });
+  $("#alertMetric").addEventListener("change", () => { $("#alertErr").textContent = ""; });
+  $("#alertOperator").addEventListener("change", () => { $("#alertErr").textContent = ""; });
 
   /* ------------------------------------------------------------- OTP 공통 */
   function startCooldown(btnId, seconds) {
@@ -668,7 +854,9 @@
   function updateSubmitState() {
     const btn = $("#signupBtn");
     btn.disabled = !flow.phoneVerified;
-    btn.textContent = flow.phoneVerified ? "야간 S등급 비상벨 켜기 →" : "휴대폰 인증을 마치면 비상벨이 켜집니다";
+    btn.textContent = flow.phoneVerified
+      ? (alertRule ? "타점 비상벨 켜기 →" : "야간 S등급 비상벨 켜기 →")
+      : "휴대폰 인증을 마치면 비상벨이 켜집니다";
   }
   updateSubmitState();
 
@@ -728,12 +916,20 @@
       marketing_agreed: $("#marketing").checked,
       provider: email ? "email" : "phone"
     };
+    if (alertRule) {
+      payload.alert_rule = {
+        metric: alertRule.metric,
+        operator: alertRule.operator,
+        threshold: alertRule.threshold,
+        label: alertLabel(alertRule)
+      };
+    }
 
     const btn = $("#signupBtn");
     btn.disabled = true; btn.textContent = "비상벨 켜는 중…";
     try {
       const data = await apiCall("/api/signup", payload);
-      afterSignup(data.user || {}, payload);
+      afterSignup(data.user || {}, payload, data.alert_rule || null);
     } catch (err) {
       if (err.network) {
         flow.previewMode = true;
@@ -741,7 +937,7 @@
         const key = email || phone;
         users[key] = { email: email || null, name: name || null, phone: phone, provider: payload.provider, watchlist: payload.watchlist };
         writeLocalUsers(users);
-        afterSignup(users[key], payload);
+        afterSignup(users[key], payload, payload.alert_rule || null);
         return;
       }
       const d = err.data || {};
@@ -763,7 +959,7 @@
     }
   });
 
-  function afterSignup(user, payload) {
+  function afterSignup(user, payload, savedAlert) {
     const list = (user && user.watchlist && user.watchlist.length ? user.watchlist : payload.watchlist) || [];
     try {
       localStorage.setItem(MEMBER_KEY, JSON.stringify({
@@ -771,22 +967,36 @@
         name: payload.name || null,
         phone: payload.phone,
         watchlist: list,
+        alert_rule: savedAlert || null,
         verified: !flow.previewMode,
         at: new Date().toISOString()
       }));
       if (list.length) localStorage.setItem(WATCH_KEY, JSON.stringify(list));
     } catch (e) { /* 저장 실패는 무시 */ }
-    showSuccess(list, payload);
+    showSuccess(list, payload, savedAlert);
   }
 
   /* ------------------------------------------------------- 완료 화면 */
-  function showSuccess(list, payload) {
+  function showSuccess(list, payload, savedAlert) {
     $("#step1").hidden = true;
     $("#step2").hidden = true;
     $("#step3").hidden = false;
     $("#watchSummary").innerHTML = list.length
       ? list.map((a) => `<span>★ ${esc(a)}</span>`).join("")
       : "<span>관심자산은 나중에 추가할 수 있어요</span>";
+
+    /* 설정한 타점 비상벨 조건을 완료 화면에 그대로 보여준다 */
+    const rule = savedAlert || payload.alert_rule || null;
+    const alertBox = $("#alertSummary");
+    if (alertBox) {
+      alertBox.hidden = false;
+      alertBox.classList.toggle("is-on", !!rule);
+      alertBox.innerHTML = rule
+        ? `<p class="alert-summary-head">⚡ 타점 비상벨 조건</p>
+           <p class="alert-summary-body"><b>${esc(alertLabel(rule))}</b><span>조건 도달 시 문자 1줄 · ${ALERT_COOLDOWN_MINUTES / 60}시간 쿨다운으로 중복 발송을 막습니다</span></p>`
+        : `<p class="alert-summary-head">타점 비상벨</p>
+           <p class="alert-summary-body">이번 가입에서는 타점 조건을 켜지 않았습니다. <a href="signup.html?alert=kimp_high">김프·공포탐욕·롱숏 비상벨 설정 →</a></p>`;
+    }
 
     const usingFallback = !EVENTS.length;
     const pool = (EVENTS.length ? EVENTS : FALLBACK_S_EVENTS)
@@ -832,6 +1042,10 @@
 
   renderWatch();
   loadContent();
+  renderAlertChips();
+  renderAlertState();
+  loadAlertNow();
+  if (ALERT_PARAM && ALERT_PRESETS.some((p) => p.id === ALERT_PARAM)) applyPreset(ALERT_PARAM);
 })();
 </script>
 </body>

@@ -427,6 +427,159 @@ def save_market_cache(payload: dict) -> None:
     log(f"[캐시] {config.MARKET_CACHE_PATH} 저장 ({len(payload.get('items', []))}개 지표)")
 
 
+# ------------------------------------------------------------------ 타점 비상벨
+
+ALERT_MESSAGE_PREFIX = "[클레어덱스 비상벨]"
+
+
+def alert_metric_values(market_payload: dict | None) -> dict[str, float]:
+    """collect_market() 결과에서 타점 비상벨 지표만 꺼낸다.
+
+    · kimp_pct  ← values.kimchi_premium (없으면 items 의 kimchi_premium 값)
+    · fng       ← values.fear_greed (없으면 items 의 fear_greed 값)
+    · long_pct  ← values.long_pct (items 의 long_short 값은 롱/숏 비율이라 쓰지 않는다)
+    """
+    out: dict[str, float] = {}
+    if not isinstance(market_payload, dict):
+        return out
+    values = market_payload.get("values") or {}
+    items = {i.get("key"): i for i in market_payload.get("items") or [] if isinstance(i, dict)}
+
+    def pick(keys: list[str], item_key: str | None = None) -> float | None:
+        for key in keys:
+            raw = values.get(key)
+            if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+                return float(raw)
+        if item_key:
+            raw = (items.get(item_key) or {}).get("value")
+            if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+                return float(raw)
+        return None
+
+    for metric, got in (
+        ("kimp_pct", pick(["kimp_pct", "kimchi_premium"], "kimchi_premium")),
+        ("fng", pick(["fng", "fear_greed"], "fear_greed")),
+        ("long_pct", pick(["long_pct"])),
+    ):
+        if got is not None:
+            out[metric] = got
+    return out
+
+
+def alert_condition_met(observed: float, operator: str, threshold: float) -> bool:
+    if operator == ">=":
+        return observed >= threshold
+    if operator == "<=":
+        return observed <= threshold
+    return False
+
+
+def alert_cooldown_left(rule: dict, now: datetime | None = None) -> int:
+    """쿨다운이 남은 초. 아직 발송 이력이 없거나 시각이 깨졌으면 0."""
+    last = rule.get("last_triggered_at")
+    if not last:
+        return 0
+    try:
+        last_dt = config.parse_kst(str(last))
+    except Exception:  # noqa: BLE001
+        return 0
+    now = now or config.now_kst()
+    elapsed = (now - last_dt).total_seconds()
+    if elapsed < 0:  # 미래 시각은 기록 오류로 보고 쿨다운을 걸지 않는다
+        return 0
+    minutes = int(rule.get("cooldown_minutes") or config.ALERT_COOLDOWN_MINUTES)
+    return max(0, int(minutes * 60 - elapsed))
+
+
+def format_alert_message(rule: dict, observed: float, when: datetime | None = None) -> str:
+    """문자에 그대로 들어가는 1줄 경보."""
+    metric = rule.get("metric") or ""
+    operator = rule.get("operator") or ">="
+    symbol = "≥" if operator == ">=" else "≤"
+    when = when or config.now_kst()
+    return (
+        f"{ALERT_MESSAGE_PREFIX} {config.alert_metric_label(metric)} "
+        f"{config.fmt_alert_value(metric, observed)} {symbol} "
+        f"{config.fmt_alert_value(metric, rule.get('threshold'))} 조건 도달 · "
+        f"{config.fmt_kst(when, '%m-%d %H:%M')} KST"
+    )
+
+
+def evaluate_market_alerts(conn, market_payload: dict | None, send_fn=None,
+                            now: datetime | None = None) -> dict:
+    """활성 타점 비상벨 규칙과 현재 지표를 비교해 조건 도달 시 문자를 보낸다.
+
+    · send_fn(phone, text) 는 기본이 authflow.send_sms_text 이며, 테스트에서는 스텁을 넣는다.
+    · 쿨다운(cooldown_minutes, 기본 360분) 안의 같은 규칙은 다시 보내지 않는다.
+    · 발송에 성공(또는 테스트 모드)했을 때만 last_triggered_at 을 갱신한다. 실패는 alert_logs 에 남긴다.
+    """
+    now = now or config.now_kst()
+    if send_fn is None:
+        import authflow  # 순환 임포트 방지: 호출 시점에만 가져온다
+        send_fn = authflow.send_sms_text
+
+    observed_all = alert_metric_values(market_payload)
+    rules = db.list_active_alert_rules(conn)
+    result: dict = {
+        "ok": True, "checked": 0, "matched": 0, "sent": 0, "test_mode": 0,
+        "skipped_cooldown": 0, "failed": 0, "missing_metrics": [], "triggers": [],
+    }
+    missing: set[str] = set()
+    for rule in rules:
+        metric = rule.get("metric") or ""
+        observed = observed_all.get(metric)
+        if observed is None:
+            missing.add(metric)
+            continue
+        result["checked"] += 1
+        if not alert_condition_met(observed, rule.get("operator") or "", float(rule["threshold"])):
+            continue
+        result["matched"] += 1
+        left = alert_cooldown_left(rule, now)
+        if left > 0:
+            result["skipped_cooldown"] += 1
+            result["triggers"].append({
+                "rule_id": rule["id"], "phone": rule["phone"], "metric": metric,
+                "observed": observed, "status": "cooldown", "cooldown_left": left,
+            })
+            continue
+
+        message = format_alert_message(rule, observed, now)
+        try:
+            sent = send_fn(rule["phone"], message)
+        except Exception as exc:  # noqa: BLE001 — 한 건 실패가 전체 평가를 멈추지 않는다
+            sent = {"ok": False, "error": str(exc)}
+        if isinstance(sent, bool):
+            sent = {"ok": sent, "sent": sent}
+        sent = sent if isinstance(sent, dict) else {"ok": False, "error": "발송 결과를 확인할 수 없습니다."}
+        ok = bool(sent.get("ok"))
+        if ok:
+            status = "sent" if sent.get("sent") else "test_mode"
+            db.mark_alert_rule_triggered(conn, int(rule["id"]), config.iso_kst(now))
+            if status == "sent":
+                result["sent"] += 1
+            else:
+                result["test_mode"] += 1
+        else:
+            status = "failed"
+            result["failed"] += 1
+        db.log_alert_delivery(
+            conn, int(rule["id"]), rule["phone"], metric, observed, message, status,
+            config.iso_kst(now),
+        )
+        result["triggers"].append({
+            "rule_id": rule["id"], "phone": rule["phone"], "metric": metric,
+            "observed": observed, "status": status, "message": message,
+        })
+    result["missing_metrics"] = sorted(missing)
+    log(
+        f"[비상벨] 활성 규칙 {len(rules)}개 · 판정 {result['checked']}개 · 조건 도달 {result['matched']}개 "
+        f"· 발송 {result['sent']}건(테스트 {result['test_mode']}) · 쿨다운 {result['skipped_cooldown']}건 "
+        f"· 실패 {result['failed']}건"
+    )
+    return result
+
+
 # ------------------------------------------------------------------ 글 저장
 
 
@@ -522,6 +675,19 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True,
         except Exception as exc:  # noqa: BLE001
             source_status["market"] = f"fail: {exc}"
             log(f"[시장 지표] 수집 실패: {exc}")
+        # 시세 수집 직후 타점 비상벨 판정. 알림 쪽 예외가 전체 수집을 멈추지 않게 따로 감싼다.
+        if market_payload:
+            try:
+                alert_result = evaluate_market_alerts(conn, market_payload)
+                source_status["alerts"] = (
+                    f"sent {alert_result['sent']} · test {alert_result['test_mode']} "
+                    f"· cooldown {alert_result['skipped_cooldown']} · fail {alert_result['failed']}"
+                )
+            except Exception as exc:  # noqa: BLE001
+                source_status["alerts"] = f"fail: {exc}"
+                log(f"[비상벨] 판정 실패: {exc}")
+        else:
+            source_status["alerts"] = "skip (시세 없음)"
 
     total = db.count_posts(conn)
     log("")
@@ -543,14 +709,40 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True,
     }
 
 
+def run_alerts_only() -> dict:
+    """시세만 조회해 타점 비상벨을 판정한다(글 수집·발행 없음).
+
+    비상벨을 1분 주기로 확인하려면 cron 에서 `python collector.py --alerts-only` 를 돌린다.
+    """
+    config.ensure_dirs()
+    db.init_db()
+    payload = None
+    try:
+        payload = collect_market()
+        save_market_cache(payload)
+    except Exception as exc:  # noqa: BLE001
+        log(f"[시장 지표] 수집 실패: {exc}")
+    conn = db.connect()
+    try:
+        result = evaluate_market_alerts(conn, payload or {})
+    finally:
+        conn.close()
+    return {"market": bool(payload), "alerts": result}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="ClareDEX v2 공식 원문 수집기")
     parser.add_argument("--fed-limit", type=int, default=5)
     parser.add_argument("--sec-limit", type=int, default=2)
     parser.add_argument("--no-market", action="store_true")
+    parser.add_argument("--alerts-only", action="store_true",
+                        help="시세만 조회해 타점 비상벨을 판정한다(비상벨 전용 cron 용)")
     parser.add_argument("--max-new", type=int, default=None,
                         help="한 번에 발행할 신규 글 수 (cron 은 1 → 하루 2회 → 2건/일)")
     args = parser.parse_args()
+    if args.alerts_only:
+        result = run_alerts_only()
+        return 0 if result["market"] else 1
     result = run(fed_limit=args.fed_limit, sec_limit=args.sec_limit,
                  collect_market_too=not args.no_market, max_new=args.max_new)
     return 0 if result["total"] else 1
