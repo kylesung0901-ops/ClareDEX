@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 콘솔 · 클레어덱스</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="same-origin">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css?v=20261125c">
+</head>
+<body>
+
+<!-- ============================================================ 로그인 게이트 -->
+<div class="login-view" id="loginView" hidden>
+  <div class="login-card">
+    <div class="login-brand">
+      <span class="login-mark" aria-hidden="true"></span>
+      <b>CLAREDEX</b>
+      <span>ADMIN CONSOLE</span>
+    </div>
+
+    <h1 id="gateTitle">운영자 로그인</h1>
+    <p class="lead" id="gateLead">관리자 콘솔입니다. 운영자 비밀번호를 입력해 주세요.</p>
+
+    <div class="login-notice" id="staticNotice" hidden>
+      <b>정적 프리뷰 화면입니다.</b><br>
+      보안을 위해 이 미리보기에서는 운영 데이터를 열지 않습니다. 실제 서버(<code>claredex.com/admin</code>)에서 로그인해 주세요.
+    </div>
+
+    <form id="loginForm" novalidate>
+      <div class="login-field">
+        <label for="password">운영자 비밀번호</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password"
+               placeholder="••••••••" required>
+      </div>
+      <div class="login-err" id="loginErr" role="alert"></div>
+      <button class="btn btn-signal btn-block" type="submit" id="loginBtn">로그인 →</button>
+    </form>
+
+    <p class="login-foot">
+      세션은 12시간 유지됩니다. 비밀번호는 서버에 PBKDF2 해시로 저장되며, 로그인 후 <b>보안 · 설정</b>에서 변경할 수 있습니다.
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================ 관리자 콘솔 -->
+<div class="side-scrim" id="sideScrim" hidden></div>
+<div class="app" id="appView" hidden>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">
+      <span class="side-mark" aria-hidden="true"></span>
+      <b>CLAREDEX</b>
+      <span>ADMIN</span>
+      <button class="side-close" type="button" id="sideClose" aria-label="메뉴 닫기">✕</button>
+    </div>
+
+    <nav class="side-nav" aria-label="관리자 메뉴">
+      <p class="nav-group">모니터링</p>
+      <a class="nav-item" href="#overview" data-nav="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        대시보드
+      </a>
+
+      <p class="nav-group">운영</p>
+      <a class="nav-item" href="#members" data-nav="members">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.4-3.1 2.7-5 5.5-5s5.1 1.9 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17.5 19c-.1-2.1-.7-3.7-1.9-4.8 2.5-.3 4.7 1.4 5 4.8"/></svg>
+        회원 관리
+        <span class="count" id="navUsers">—</span>
+      </a>
+      <a class="nav-item" href="#posts" data-nav="posts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h11l3 3v13H5z"/><path d="M8.5 9.5h7M8.5 13h7M8.5 16.5h4.5"/></svg>
+        콘텐츠 관리
+        <span class="count" id="navPosts">—</span>
+      </a>
+      <a class="nav-item" href="#blog" data-nav="blog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5.5h16v11H9l-5 3.5z"/><path d="M8 9.5h8M8 12.5h5"/></svg>
+        네이버 블로그 초안
+      </a>
+
+      <p class="nav-group">시스템</p>
+      <a class="nav-item" href="#system" data-nav="system">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5"/><path d="M12 7.5V12l3 2"/><path d="M20.5 3.5v4h-4"/></svg>
+        수집기 · 시스템
+        <span class="dot" id="navCollector"></span>
+      </a>
+      <a class="nav-item" href="#security" data-nav="security">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3.5 19 6v5.5c0 4.2-2.8 7.4-7 9-4.2-1.6-7-4.8-7-9V6z"/><path d="M9.3 12.1l1.9 1.9 3.6-3.7"/></svg>
+        보안 · 설정
+      </a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-who">
+        <span class="side-avatar" aria-hidden="true">C</span>
+        <div>
+          <b>운영자</b>
+          <small id="sideAuth">세션 확인 중…</small>
+        </div>
+      </div>
+      <button class="side-logout" type="button" id="logoutBtn">로그아웃</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" type="button" id="menuToggle" aria-label="메뉴 열기">☰</button>
+        <div class="crumb">
+          <span class="eyebrow" id="pageEyebrow">Overview</span>
+          <h1 id="pageTitle">대시보드</h1>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="clock"><b id="kstClock">--:--:--</b> KST</span>
+        <a class="btn btn-sm" href="/" target="_blank" rel="noopener" aria-label="사이트 열기" title="사이트 열기"><span class="lbl">사이트 열기</span> ↗</a>
+        <button class="btn btn-sm btn-primary" type="button" id="refreshBtn">새로고침</button>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ------------------------------------------------------------ 대시보드 -->
+      <section class="view" id="view-overview" hidden>
+        <div class="page-head">
+          <div>
+            <h2>운영 현황</h2>
+            <p id="overviewStamp">데이터를 불러오는 중입니다…</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge navy" id="overviewRange">최근 14일</span>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>일별 신규 가입</h3>
+              <span class="meta" id="chartMeta">최근 14일 · KST</span>
+            </div>
+            <div class="chart" id="signupChart"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3>카테고리 분포</h3>
+              <span class="meta">전체 글</span>
+            </div>
+            <div class="dist" id="categoryDist"></div>
+            <div class="panel-head sub">
+              <h3>출처 분포</h3>
+              <span class="meta">상위 8</span>
+            </div>
+            <div class="dist" id="sourceDist"></div>
+          </div>
+        </div>
+
+        <div class="grid-2-even">
+          <div class="panel table-panel">
+            <div class="panel-head" style="padding:16px 16px 0;margin-bottom:8px">
+              <h3>최근 가입</h3>
+              <a href="#members">회원 관리 →</a>
+            </div>
+            <div class="table-scroll">
+              <table class="data compact">
+                <thead><tr><th>이메일</th><th>관심자산</th><th>가입일</th></tr></thead>
+                <tbody id="recentUsers"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel table-panel">
+            <div class="panel-head" style="padding:16px 16px 0;margin-bottom:8px">
+              <h3>최근 수집 글</h3>
+              <a href="#posts">콘텐츠 관리 →</a>
+            </div>
+            <div class="table-scroll">
+              <table class="data compact">
+                <thead><tr><th>제목</th><th>카테고리</th><th>확인</th></tr></thead>
+                <tbody id="recentPosts"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ 회원 관리 -->
+      <section class="view" id="view-members" hidden>
+        <div class="page-head">
+          <div>
+            <h2>회원 관리</h2>
+            <p>회원가입 폼(<code>/signup.html</code>)으로 저장된 실제 회원 데이터입니다.</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-sm" type="button" id="exportCsv">CSV 내보내기</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input class="input" id="userSearch" type="search" placeholder="이메일 · 이름 · 연락처 · 관심자산 검색" autocomplete="off">
+          <select class="select" id="userProvider" aria-label="가입경로 필터">
+            <option value="all">가입경로 전체</option>
+          </select>
+          <select class="select" id="userStatus" aria-label="상태 필터">
+            <option value="all">상태 전체</option>
+            <option value="active">활성</option>
+            <option value="paused">정지</option>
+          </select>
+          <span class="result" id="userResult">—</span>
+        </div>
+
+        <div class="panel table-panel">
+          <div class="table-scroll">
+            <table class="data">
+              <thead>
+                <tr><th>이메일</th><th>이름</th><th>연락처</th><th>본인인증</th><th>마케팅 동의</th><th>관심자산</th><th>가입경로</th><th>가입일</th><th>상태</th></tr>
+              </thead>
+              <tbody id="userRows"><tr><td colspan="9" class="loading">회원 목록을 불러오는 중…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pager" id="userPager"></div>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ 콘텐츠 관리 -->
+      <section class="view" id="view-posts" hidden>
+        <div class="page-head">
+          <div>
+            <h2>콘텐츠 관리</h2>
+            <p>수집기가 저장한 속보·공시를 공개/숨김 처리하거나 삭제할 수 있습니다. 숨긴 글은 메인 화면과 공개 API에서 빠집니다.</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge muted" id="postStatsBadge">—</span>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input class="input" id="postSearch" type="search" placeholder="제목 · 요약 · 태그 검색" autocomplete="off">
+          <select class="select" id="postCategory" aria-label="카테고리 필터"><option value="all">카테고리 전체</option></select>
+          <select class="select" id="postSource" aria-label="출처 필터"><option value="">출처 전체</option></select>
+          <select class="select" id="postStatus" aria-label="상태 필터">
+            <option value="all">상태 전체</option>
+            <option value="published">공개</option>
+            <option value="hidden">숨김</option>
+          </select>
+          <span class="result" id="postResult">—</span>
+        </div>
+
+        <div class="panel table-panel">
+          <div class="table-scroll">
+            <table class="data">
+              <thead>
+                <tr><th>제목</th><th>카테고리</th><th>출처</th><th>상태</th><th>확인 시각</th><th style="text-align:right">관리</th></tr>
+              </thead>
+              <tbody id="postRows"><tr><td colspan="6" class="loading">글 목록을 불러오는 중…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pager" id="postPager"></div>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ 수집기 · 시스템 -->
+      <section class="view" id="view-system" hidden>
+        <div class="page-head">
+          <div>
+            <h2>수집기 · 시스템</h2>
+            <p>1차 공식 소스(연준 RSS · SEC EDGAR · OpenDART · 한국은행)에서 원문을 수집하고, 네이버 블로그 초안을 만든 뒤 실제 발행까지 이어집니다.</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge muted" id="collectorBadge">확인 중…</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>수집기 상태</h3>
+              <span class="meta" id="collectorStamp">—</span>
+            </div>
+            <div class="collect-stats" id="collectStats"></div>
+            <div class="panel-head sub" style="margin-top:4px"><h3>소스별 결과</h3><span class="meta">최근 실행</span></div>
+            <div class="source-grid" id="sourceGrid"></div>
+            <button class="btn btn-signal" type="button" id="runCollect" style="padding:11px 18px">지금 수집 실행</button>
+            <p class="hint">
+              버튼을 누르면 서버에서 <code>collector.py</code> → <code>naver_drafts.py</code> → <code>naver_publish.py</code> 가 순서대로 실행됩니다.
+              중복 글은 source_hash 로 걸러지며, 실행 중에는 다시 시작할 수 없습니다.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3>네이버 블로그 발행</h3>
+              <span class="meta" id="naverStamp">—</span>
+            </div>
+            <div class="collect-stats" id="naverStats"></div>
+            <div class="naver-session" id="naverSession" style="margin:12px 0 0"></div>
+            <p class="hint" style="margin-bottom:0">
+              발행에는 네이버 로그인 세션(<code>data/naver_state.json</code>)이 필요합니다.
+              세션이 없으면 초안만 쌓이고 발행은 시도하지 않습니다.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h3>시스템 정보</h3><span class="meta">read-only</span></div>
+            <dl class="dl" id="systemInfo"></dl>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>실행 로그</h3>
+            <span class="meta" id="logStamp">—</span>
+          </div>
+          <pre class="console" id="collectLog">아직 실행 기록이 없습니다. “지금 수집 실행”을 눌러 주세요.</pre>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ 네이버 블로그 -->
+      <section class="view" id="view-blog" hidden>
+        <div class="page-head">
+          <div>
+            <h2>네이버 블로그 초안</h2>
+            <p>글마다 SEO 제목·키워드·본문·이미지 링크·CTA가 자동 생성됩니다. 복사해서 네이버 블로그에 붙여넣기만 하면 됩니다.</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge muted" id="draftCountBadge">—</span>
+          </div>
+        </div>
+
+        <div class="panel" style="background:var(--gold-soft);border-color:#e6d6af;padding:12px 16px;margin-bottom:14px;color:#5e4a1b;font-size:12.5px;line-height:1.65">
+          <b>네이버는 공식 글쓰기 API를 제공하지 않습니다.</b> 자동 발행은 약관 위반·저품질 위험이 있어 이 도구는 “초안 생성 + 1클릭 복사”까지만 담당합니다.
+          붙여넣은 뒤 내용을 한 번 확인하고 직접 발행해 주세요. 본문 이미지는 클릭 시 <b>t.me/Clare_PerpDEX</b> 로 연결됩니다.
+        </div>
+
+        <div class="blog-grid">
+          <div class="draft-list">
+            <div class="draft-list-head"><span>Drafts</span><span id="draftMeta">최근순</span></div>
+            <div class="draft-items" id="draftItems">
+              <div class="loading">초안을 불러오는 중…</div>
+            </div>
+          </div>
+
+          <div class="draft-panel">
+            <div class="draft-panel-head">
+              <div class="draft-kws" id="draftSourceMeta"></div>
+              <h2 id="draftTitle">초안을 선택해 주세요</h2>
+              <div class="draft-kws" id="draftKeywords"></div>
+            </div>
+
+            <div class="copy-row">
+              <button class="copy-btn primary" data-copy="title" type="button">제목 복사</button>
+              <button class="copy-btn" data-copy="rich" type="button">본문 복사 (서식 유지)</button>
+              <button class="copy-btn" data-copy="html" type="button">HTML 복사</button>
+              <button class="copy-btn" data-copy="tags" type="button">태그 복사</button>
+              <button class="copy-btn" data-copy="image" type="button">이미지 링크 복사</button>
+              <a class="copy-btn" id="imageOpen" href="#" target="_blank" rel="noopener">이미지 열기 ↗</a>
+            </div>
+
+            <div class="draft-tabs" role="tablist">
+              <button class="tab" role="tab" aria-selected="true" data-tab="preview" type="button">미리보기</button>
+              <button class="tab" role="tab" aria-selected="false" data-tab="html" type="button">HTML</button>
+              <button class="tab" role="tab" aria-selected="false" data-tab="text" type="button">텍스트</button>
+            </div>
+
+            <div class="draft-body">
+              <div id="previewPane"><p class="empty-note">왼쪽에서 초안을 선택하면 본문이 표시됩니다.</p></div>
+              <pre id="htmlPane" class="code-view" hidden></pre>
+              <pre id="textPane" class="code-view" hidden></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ 보안 · 설정 -->
+      <section class="view" id="view-security" hidden>
+        <div class="page-head">
+          <div>
+            <h2>보안 · 설정</h2>
+            <p>운영자 비밀번호를 변경하고 현재 보안 상태를 확인합니다.</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge ok" id="securityBadge"><span class="pip"></span>보호됨</span>
+          </div>
+        </div>
+
+        <div class="grid-2-even">
+          <div class="panel">
+            <div class="panel-head"><h3>비밀번호 변경</h3><span class="meta">PBKDF2 해시 저장</span></div>
+
+            <form id="pwForm" novalidate>
+              <div class="pw-field">
+                <label for="curPw">현재 비밀번호</label>
+                <div class="input-wrap">
+                  <input class="input" id="curPw" type="password" autocomplete="current-password" required>
+                  <button class="pw-toggle" type="button" data-target="curPw">보기</button>
+                </div>
+              </div>
+
+              <div class="pw-field">
+                <label for="newPw">새 비밀번호 (10자 이상)</label>
+                <div class="input-wrap">
+                  <input class="input" id="newPw" type="password" autocomplete="new-password" required>
+                  <button class="pw-toggle" type="button" data-target="newPw">보기</button>
+                </div>
+                <div class="strength"><i id="pwStrengthBar"></i></div>
+                <div class="strength-label" id="pwStrengthLabel">영문·숫자·기호를 섞으면 더 안전합니다.</div>
+              </div>
+
+              <div class="pw-field">
+                <label for="confirmPw">새 비밀번호 확인</label>
+                <div class="input-wrap">
+                  <input class="input" id="confirmPw" type="password" autocomplete="new-password" required>
+                  <button class="pw-toggle" type="button" data-target="confirmPw">보기</button>
+                </div>
+              </div>
+
+              <div class="login-err" id="pwErr" role="alert"></div>
+              <button class="btn btn-primary" type="submit" id="pwSubmit" style="padding:10px 18px">비밀번호 변경</button>
+            </form>
+
+            <p class="hint">
+              변경한 비밀번호는 <code>data/admin_auth.json</code> 에 <b>PBKDF2-HMAC-SHA256 + salt</b> 해시로 저장되어
+              컨테이너를 재시작해도 유지됩니다. 변경 시 다른 기기의 운영자 세션은 모두 종료됩니다.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h3>보안 상태</h3><span class="meta" id="securityStamp">—</span></div>
+            <dl class="dl" id="securityInfo"></dl>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>최근 감사 로그</h3><span class="meta">최근 20건</span></div>
+          <div class="audit-list" id="auditList"><div class="empty-note">기록을 불러오는 중…</div></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h3 id="modalTitle">—</h3>
+      <button class="modal-close" type="button" id="modalClose" aria-label="닫기">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="app.js?v=20261125c"></script>
+</body>
+</html>

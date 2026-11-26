@@ -1,0 +1,44 @@
+name: claredex-v2
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: claredex-v2:20261125-mobile
+    container_name: claredex-v2
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Seoul
+    volumes:
+      # SQLite DB · 시장 캐시 · 일정 (컨테이너 재생성에도 유지)
+      - ./data:/app/data
+      # 수집기가 새로 만드는 썸네일 PNG (재배포해도 유지)
+      - ./public/images/posts:/app/public/images/posts
+    networks:
+      - proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "proxy"
+      # ---- 운영 도메인 (가비아 DNS 를 72.62.72.12 로 돌린 뒤 실제 트래픽)
+      traefik.http.routers.claredex-v2.entrypoints: "websecure"
+      traefik.http.routers.claredex-v2.rule: "Host(`claredex.com`) || Host(`www.claredex.com`)"
+      traefik.http.routers.claredex-v2.tls.certresolver: "letsencrypt"
+      traefik.http.routers.claredex-v2.service: "claredex-v2"
+      # ---- DNS 전환 전 검증용 임시 주소 (sslip.io 가 72.62.72.12 로 해석)
+      traefik.http.routers.claredex-v2-test.entrypoints: "websecure"
+      traefik.http.routers.claredex-v2-test.rule: "Host(`claredex-v2.72.62.72.12.sslip.io`)"
+      traefik.http.routers.claredex-v2-test.tls.certresolver: "letsencrypt"
+      traefik.http.routers.claredex-v2-test.service: "claredex-v2"
+      traefik.http.services.claredex-v2.loadbalancer.server.port: "8000"
+
+networks:
+  proxy:
+    external: true
