@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "today": {
+    "date": "2026-11-26",
+    "count": 9,
+    "total": 9,
+    "recent": null,
+    "last_verified_at": "2026-11-26T14:17:01+09:00"
+  },
+  "importance": {
+    "S": 1,
+    "A": 2,
+    "B": 6
+  },
+  "timezone": "Asia/Seoul"
+}
