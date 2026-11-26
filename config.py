@@ -43,7 +43,19 @@ HTTP_USER_AGENT = "ClareDEX/1.0 (AdminContact@claredex.com)"
 HTTP_TIMEOUT = 12
 
 # 관심자산 (회원 온보딩 / API 검증)
-WATCHLIST_ASSETS = ["BTC", "ETH", "나스닥", "코스피", "삼성전자", "NVDA"]
+WATCHLIST_ASSETS = ["BTC", "ETH", "나스닥", "코스피", "삼성전자", "NVDA", "AAPL", "연준·금리"]
+
+# 공식 일정 알림 신청(signup.html?watch=FOMC) → 관심자산 매핑.
+# 일정은 별도 구독 목록을 만들지 않고, 그 발표를 다루는 관심자산 알림으로 함께 설정한다.
+# (public/signup.html 의 EVENT_ALIAS 와 같은 규칙을 유지한다)
+EVENT_WATCH_ALIASES = {
+    "FOMC": "연준·금리",
+    "CPI": "연준·금리",
+    "PCE": "연준·금리",
+    "GDP": "연준·금리",
+    "고용보고서": "연준·금리",
+    "무역수지": "연준·금리",
+}
 
 CATEGORIES = {
     "coin": {"label": "코인", "color": "#B45309"},

@@ -82,6 +82,22 @@
       <p class="latest-meta" id="countLine">오늘 확인 <strong>0</strong>건</p>
     </div>
 
+    <!-- 관심자산 1초 미리보기: 로그인 없이 한 번 눌러 공식 원문만 보기 -->
+    <div class="watch-strip">
+      <p class="watch-strip-label">관심자산</p>
+      <div class="watch-chips" id="watchChips" role="group" aria-label="관심자산 빠른 보기">
+        <button class="watch-chip" type="button" data-watch="BTC" aria-pressed="false">BTC</button>
+        <button class="watch-chip" type="button" data-watch="NVDA" aria-pressed="false">NVDA</button>
+        <button class="watch-chip" type="button" data-watch="AAPL" aria-pressed="false">AAPL</button>
+        <button class="watch-chip" type="button" data-watch="연준·금리" aria-pressed="false">연준·금리</button>
+      </div>
+    </div>
+
+    <a class="convert-bar" id="convertBar" href="signup.html" hidden>
+      <span class="convert-main" id="convertText">선택하신 속보, 발표 즉시 휴대폰으로 받기 →</span>
+      <span class="convert-count" id="convertCount"></span>
+    </a>
+
     <div class="filters" role="group" aria-label="속보 필터">
       <button class="chip" type="button" data-category="all" aria-pressed="true">전체</button>
       <button class="chip chip-s" type="button" data-importance="S" aria-pressed="false">S 긴급</button>
@@ -106,6 +122,7 @@
         <p class="next-org" id="cdOrg">기관 공식 일정 확인 중</p>
         <p class="next-clock" id="cdClock">D-00 00:00:00</p>
       </div>
+      <p class="next-check" id="cdCheck" hidden><span id="cdCheckText"></span><a id="cdWatch" href="signup.html?watch=FOMC">이 일정 발표 알림 받기 →</a></p>
       <p class="next-sub"><span id="cdNote">공식 일정 원문에서 확인한 시각입니다.</span> <a id="cdLink" href="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm" target="_blank" rel="noopener">공식 일정 ↗</a></p>
     </div>
 
@@ -178,7 +195,7 @@
   "use strict";
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
-  const state = { category: "all", importance: null, posts: [], featured: null };
+  const state = { category: "all", importance: null, posts: [], featured: null, watch: null };
 
   /* 정적 호스팅(GitHub Pages) 대응: API 가 없으면 public/data/*.json 스냅샷으로 대체 */
   const API = { ticker: "/api/ticker", posts: "/api/posts?limit=60", calendar: "/api/calendar", stats: "/api/stats" };
@@ -205,15 +222,15 @@
   const imp = (p) => (p && IMP[p.importance] ? p.importance : "B");
   const catLabel = (p) => p.category_label || p.category || "";
 
-  function relTime(iso) {
-    const t = new Date(iso).getTime();
-    if (!t) return "확인";
-    const diff = Math.max(0, (Date.now() - t) / 1000);
-    if (diff < 60) return "방금 전";
-    if (diff < 3600) return Math.floor(diff / 60) + "분 전";
-    if (diff < 86400) return Math.floor(diff / 3600) + "시간 전";
-    return Math.floor(diff / 86400) + "일 전";
-  }
+  /* 관심자산 1초 미리보기 — 로그인 없이 원문 태그로 걸러본다. key 는 signup.html?watch= 값과 같다. */
+  const WATCHES = [
+    { key: "BTC", tags: ["BTC", "비트코인"] },
+    { key: "NVDA", tags: ["NVDA", "엔비디아"] },
+    { key: "AAPL", tags: ["AAPL", "애플"] },
+    { key: "연준·금리", tags: ["연준", "금리", "FOMC", "CPI", "PCE"] }
+  ];
+  const watchByKey = (key) => WATCHES.find((w) => w.key === key) || null;
+
   function absTime(iso) {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "";
@@ -292,7 +309,7 @@
     const recentS = state.posts.find((x) => imp(x) === "S" && (Date.now() - new Date(x.verified_at).getTime()) < 72 * 3600 * 1000);
     const p = recentS || state.posts[0];
     state.featured = p;
-    $("#featuredMeta").innerHTML = `오늘의 한 장 <span class="dot" aria-hidden="true">·</span> ${gradeTag(p)} <span class="dot" aria-hidden="true">·</span> ${esc(relTime(p.verified_at))}`;
+    $("#featuredMeta").innerHTML = `오늘의 한 장 <span class="dot" aria-hidden="true">·</span> ${gradeTag(p)} <span class="dot" aria-hidden="true">·</span> 출처 ${esc(p.source_name || "공식 원문")} <span class="dot" aria-hidden="true">·</span> ${esc(mdhm(p.verified_at))} KST`;
     $("#featuredTitle").textContent = p.title;
     $("#featuredBody").textContent = bodyText(p, 3);
     $("#featured").classList.toggle("is-s", imp(p) === "S");
@@ -323,7 +340,7 @@
         <p class="story-label">${labelLine(p)}</p>
         <h3><a href="${esc(p.source_url)}" target="_blank" rel="noopener">${esc(p.title)}</a></h3>
         <p class="story-excerpt">${esc(bodyText(p, 2))}</p>
-        <p class="story-time"><time datetime="${esc(p.verified_at)}" title="${esc(absTime(p.verified_at))} KST">${esc(relTime(p.verified_at))}</time></p>
+        <p class="story-time">출처 ${esc(p.source_name || "공식 원문")} <span class="dot" aria-hidden="true">·</span> <time datetime="${esc(p.verified_at)}" title="${esc(absTime(p.verified_at))} KST 확인">${esc(mdhm(p.verified_at))} KST</time></p>
       </article>`).join("");
     dots.innerHTML = slides.map((_, i) => `<button type="button" class="dot-btn${i === slideIndex ? " is-active" : ""}" role="tab" aria-selected="${i === slideIndex}" aria-label="${i + 1}번째 주요 속보" data-index="${i}"></button>`).join("");
     $$(".dot-btn", dots).forEach((b) => b.addEventListener("click", () => showSlide(Number(b.dataset.index))));
@@ -359,13 +376,70 @@
   function matches(post) {
     if (state.category !== "all" && post.category !== state.category) return false;
     if (state.importance && imp(post) !== state.importance) return false;
+    if (state.watch && !matchWatch(post, state.watch)) return false;
     return true;
   }
+
+  function matchWatch(post, key) {
+    const w = watchByKey(key);
+    if (!w) return true;
+    const tags = (post.tags || []).map((t) => String(t).toUpperCase());
+    return w.tags.some((t) => tags.includes(t.toUpperCase()));
+  }
+
+  function watchCount(key) {
+    return state.posts.filter((p) => matchWatch(p, key)).length;
+  }
+
+  /* 선택 → 피드 위 1줄 전환 버튼 (signup.html?watch=<자산>) */
+  function renderWatch() {
+    $$("#watchChips .watch-chip").forEach((chip) => {
+      chip.setAttribute("aria-pressed", String(chip.dataset.watch === state.watch));
+      const n = watchCount(chip.dataset.watch);
+      chip.classList.toggle("is-empty", !!state.posts.length && n === 0);
+      chip.title = n ? `공식 원문 ${n}건` : "아직 확인된 공식 원문이 없습니다";
+    });
+    const bar = $("#convertBar");
+    if (!state.watch) {
+      bar.hidden = true;
+      return;
+    }
+    const n = watchCount(state.watch);
+    bar.hidden = false;
+    bar.href = `signup.html?watch=${encodeURIComponent(state.watch)}`;
+    $("#convertText").innerHTML = `선택하신 <b>${esc(state.watch)}</b> 속보, 발표 즉시 휴대폰으로 받기 <span class="convert-arrow" aria-hidden="true">→</span>`;
+    $("#convertCount").textContent = n ? `공식 원문 ${n}건` : "발표 대기";
+  }
+
+  function setWatch(key) {
+    state.watch = key && watchByKey(key) ? key : null;
+    if (state.watch) {
+      state.category = "all";
+      state.importance = null;
+      $$(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.category === "all")));
+    }
+    renderWatch();
+    renderFeed();
+    try {
+      const url = new URL(location.href);
+      if (state.watch) url.searchParams.set("watch", state.watch);
+      else url.searchParams.delete("watch");
+      history.replaceState(null, "", url);
+    } catch (e) { /* file:// 등 주소를 못 바꾸는 환경은 그대로 둔다 */ }
+  }
+
+  $$("#watchChips .watch-chip").forEach((chip) => {
+    chip.addEventListener("click", () => setWatch(chip.dataset.watch === state.watch ? null : chip.dataset.watch));
+  });
 
   function renderFeed() {
     const feed = $("#feed");
     const list = state.posts.filter(matches);
     if (!list.length) {
+      if (state.watch) {
+        feed.innerHTML = `<div class="feed-empty">아직 확인된 ${esc(state.watch)} 공식 원문이 없습니다.<br>발표가 확인되는 즉시 휴대폰으로 받아보세요. <a href="signup.html?watch=${encodeURIComponent(state.watch)}">알림 신청 →</a></div>`;
+        return;
+      }
       feed.innerHTML = '<div class="feed-empty">조건에 맞는 속보가 없습니다. 다른 필터를 골라 보세요.</div>';
       return;
     }
@@ -376,7 +450,7 @@
         <p class="feed-body">${esc(bodyText(p, 3))}</p>
         ${p.market_impact ? `<p class="impact-line"><span>시장 영향</span> ${esc(p.market_impact)}</p>` : ""}
         <div class="feed-foot">
-          <time datetime="${esc(p.verified_at)}" title="${esc(absTime(p.verified_at))} KST">${esc(relTime(p.verified_at))}</time>
+          <span class="src-meta">출처 <b>${esc(p.source_name || "공식 원문")}</b> <span class="dot" aria-hidden="true">·</span> <time datetime="${esc(p.verified_at)}" title="${esc(absTime(p.verified_at))} KST 확인">${esc(mdhm(p.verified_at))} KST</time></span>
           <a class="source-link" href="${esc(p.source_url)}" target="_blank" rel="noopener">공식 원문 ↗</a>
         </div>
       </article>`).join("");
@@ -386,6 +460,7 @@
     try {
       const data = await getJSON(API.posts, SNAPSHOT.posts);
       state.posts = data.posts || [];
+      renderWatch();
       renderFeatured();
       renderCarousel();
       renderFeed();
@@ -435,6 +510,14 @@
     $("#cdNote").textContent = nextEvent.note || "공식 일정 원문에서 확인한 시각입니다.";
     const link = $("#cdLink");
     link.href = nextEvent.source_url;
+    const check = $("#cdCheck");
+    if (nextEvent.checkpoint) {
+      check.hidden = false;
+      $("#cdCheckText").textContent = nextEvent.checkpoint;
+      $("#cdWatch").href = `signup.html?watch=${encodeURIComponent(nextEvent.watch || nextEvent.id)}`;
+    } else {
+      check.hidden = true;
+    }
     tickClock();
   }
 
@@ -451,11 +534,18 @@
       const days = Math.max(0, Math.floor(diff / 86400000));
       const dday = days === 0 ? "D-DAY" : `D-${days}`;
       const when = mdhm(e.datetime_kst);
+      const watchKey = e.watch || e.id;
+      const check = e.checkpoint
+        ? `<p class="ev-check"><span>${esc(e.checkpoint)}</span><a href="signup.html?watch=${encodeURIComponent(watchKey)}">이 일정 발표 알림 받기 →</a></p>`
+        : "";
       return `<li class="event">
-        <span class="dday">${dday}</span>
-        <span class="ev-main"><b>${esc(e.title)}</b> <em>${esc(e.org)}</em></span>
-        <span class="ev-when">${esc(when)}</span>
-        ${eventGrade(e)}
+        <div class="ev-row">
+          <span class="dday">${dday}</span>
+          <span class="ev-main"><b>${esc(e.title)}</b> <em>${esc(e.org)}</em></span>
+          <span class="ev-when">${esc(when)}</span>
+          ${eventGrade(e)}
+        </div>
+        ${check}
       </li>`;
     }).join("");
   }
@@ -506,11 +596,15 @@
       chip.setAttribute("aria-pressed", "true");
       state.category = chip.dataset.category || "all";
       state.importance = chip.dataset.importance || null;
+      state.watch = null;
+      renderWatch();
       renderFeed();
     });
   });
 
   /* ------------------------------------------------ boot */
+  const initialWatch = new URLSearchParams(location.search).get("watch");
+  if (initialWatch && watchByKey(initialWatch)) state.watch = initialWatch;
   loadTicker();
   loadCalendar();
   loadPosts().then(loadStats);

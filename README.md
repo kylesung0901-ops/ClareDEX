@@ -112,9 +112,11 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 ## 화면
 
-- **메인** — TUPL 스타일 단일 컬럼(720px, 오프화이트 `#FAF8F4`). 상단 헤더(로고·실시간 속보·공식 일정·Pro 안내·`휴대폰 인증`/`무료 가입`) → 얇은 지표 티커 한 줄 → 히어로(`OFFICIAL BREAKING` → 한 줄 헤드라인 → 골드 구분선 → `오늘의 시장, 공식 원문 3초 결론`) → **다크 네이비 `오늘의 한 장` 카드 1장**(라벨·제목·2~3줄 요약·골드 CTA 1개 → `/signup`) → **주요 속보 캐러셀**(흰 카드 1장씩 + 점 인디케이터, 7초 자동 전환) → **최신 속보**(`오늘 확인 N건`, 전체·S 긴급·미국주식·국내주식·코인·매크로 칩, 카드마다 카테고리·등급 라벨 / 제목 / 요약+시장 영향 한 줄 / `N시간 전`+`공식 원문 ↗` 4요소) → **공식 일정**(다음 일정 D-day 카운트다운 + 1줄 행 목록) → **가입 안내**(무료 vs Pro 2열 카드) → 컴플라이언스 푸터. 사이드바·2단 대시보드·썸네일·해시태그 나열은 두지 않습니다.
+- **메인** — TUPL 스타일 단일 컬럼(720px, 오프화이트 `#FAF8F4`). 상단 헤더(로고·실시간 속보·공식 일정·Pro 안내·`휴대폰 인증`/`무료 가입`) → 얇은 지표 티커 한 줄 → 히어로(`OFFICIAL BREAKING` → 한 줄 헤드라인 → 골드 구분선 → `오늘의 시장, 공식 원문 3초 결론`) → **다크 네이비 `오늘의 한 장` 카드 1장**(라벨·제목·2~3줄 요약·골드 CTA 1개 → `/signup`) → **주요 속보 캐러셀**(흰 카드 1장씩 + 점 인디케이터, 7초 자동 전환) → **최신 속보**(`오늘 확인 N건`, **관심자산 1초 미리보기 칩**, 전체·S 긴급·미국주식·국내주식·코인·매크로 칩, 카드마다 카테고리·등급 라벨 / 제목 / 요약+시장 영향 한 줄 / `출처·확인 시각(KST)`+`공식 원문 ↗` 4요소) → **공식 일정**(다음 일정 D-day 카운트다운 + 체크포인트 1줄 + 1줄 행 목록) → **가입 안내**(무료 vs Pro 2열 카드) → 컴플라이언스 푸터. 사이드바·2단 대시보드·썸네일·해시태그 나열은 두지 않습니다.
+- **관심자산 1초 미리보기 (전환 퍼널)** — 메인 최신 속보 위 `관심자산` 줄에서 `BTC · NVDA · AAPL · 연준·금리` 를 로그인 없이 한 번 누르면, 그 자산의 공식 원문만 피드에 남습니다(글 `tags` 로 매칭). 선택하면 피드 바로 위에 한 줄 전환 바(`선택하신 NVDA 속보, 발표 즉시 휴대폰으로 받기 →`)가 뜨고 `signup.html?watch=NVDA` 로 이어집니다. `index.html?watch=NVDA` 로 들어와도 같은 상태로 열립니다.
+- **가입 화면의 `watch` 파라미터** — `/signup.html?watch=NVDA` 는 관심자산 단계에서 NVDA 를 미리 체크하고, `?watch=FOMC`(공식 일정의 `발표 알림 받기`)는 `FOMC 회의 결과` 알림 요청으로 읽어 `연준·금리` 속보와 함께 설정합니다(`config.EVENT_WATCH_ALIASES` = `public/signup.html` 의 `EVENT_ALIAS`).
 - **오늘 확인 건수** — `오늘 확인 N건` 은 **KST 자정 기준 오늘 `verified_at` 건수**만 셉니다. 오늘 0건이면 `오늘 확인 0건 · 최근 확인 N건 (M/D)` 로 최근 확인일을 함께 표시합니다.
-- **회원가입** — 같은 오프화이트 단일 컬럼(중앙 정렬 헤드 + 540px 폼 카드 + 혜택 목록). 휴대폰 번호 → 인증번호 6자리(5분 타이머) → 관심자산 6종 선택 → 완료. 이메일만으로 가입하는 경로도 남아 있습니다. SMS 키가 없으면 화면에 `개발/데모 모드` 와 테스트 인증번호를 표시합니다. 정적 프리뷰에서는 `정적 미리보기 모드` 로 브라우저에만 저장됩니다.
+- **회원가입** — 같은 오프화이트 단일 컬럼(중앙 정렬 헤드 + 540px 폼 카드 + 혜택 목록). 휴대폰 번호 → 인증번호 6자리(5분 타이머) → 관심자산 8종 선택(BTC·ETH·NVDA·AAPL·나스닥·코스피·삼성전자·연준·금리) → 완료. `?watch=` 로 들어오면 해당 자산을 미리 체크하고 맨 위에 1줄 안내를 띄웁니다. 이메일만으로 가입하는 경로도 남아 있습니다. SMS 키가 없으면 화면에 `개발/데모 모드` 와 테스트 인증번호를 표시합니다. 정적 프리뷰에서는 `정적 미리보기 모드` 로 브라우저에만 저장됩니다.
 - **운영자 페이지(/admin)** — 비밀번호 로그인 게이트 → 초안 목록, 제목/서식 유지 본문/HTML/태그/이미지 링크 복사, 미리보기·HTML·텍스트 탭, 로그아웃. 정적 프리뷰에서는 초안 대신 비공개 안내를 표시합니다.
 
 ## 공식 일정(카운트다운) 데이터
@@ -132,6 +134,8 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 | FOMC 결과 발표(2027년 1/26~27) | 2027-01-28 04:00 | A | `federalreserve.gov/monetarypolicy/fomccalendars.htm` |
 
 > 발표 시각은 해당 기관 일정 페이지의 ET 표기를 KST 로 환산한 값입니다. FOMC 성명은 통상 회의 둘째 날 14:00 ET 로, 원문 일정 페이지의 회의 날짜와 함께 표기했습니다.
+
+각 일정에는 **발표 전 체크포인트 1줄**(`checkpoint`)과 **알림 신청 키**(`watch`)가 함께 들어 있습니다. 체크포인트는 매수·매도 권유가 아닌 관전 포인트이며, `verify.py` 가 빈 값·80자 초과·금지 표현을 검사합니다. 화면에서는 일정 행 아래 둘째 줄에 체크포인트와 `이 일정 발표 알림 받기 →`(`signup.html?watch=FOMC` 등)가 붙습니다.
 
 ## 무료 회원 · Pro 플랜
 
@@ -155,11 +159,12 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 
 ## 검증 결과 (요약)
 
-`python3 verify.py` → **93/93 통과**
+`python3 verify.py` → **113/113 통과**
 - 3+1개 테이블·필수 컬럼(`importance`, `phone`, `phone_verified`, `plan`, `alerts_enabled`), `sha256(source_url)` 일치·중복 없음, 3줄 요약·태그·KST · 금지 표현 없음, 중요도 값 S/A/B·분류 규칙 7종, 오늘(KST) 건수 ≤ 전체 · 0건일 때 최근 확인일 · 다음 날 기준 재계산, 1200×630 PNG
 - 글 1건당 초안 1건, 키워드 5~8, 텔레그램/웹 링크·고지·이미지 링크 포함, CTA 최대 유사도 0.47
 - HTTP: `/`, `/signup.html`(휴대폰 인증 마크업), `/signup`, `/admin`·`/admin/`(로그인 게이트 200·`no-store`), `/assets/style.css`, `/images/posts/1.png`, `/api/ticker`, `/api/posts`(+category·q·중요도), `/api/stats`, `/api/plans`, `/api/calendar`(3건 이상·빈 값 없음·KST·정렬)
 - 긴급 속보 `바로 가입하기` 버튼: `signup.html` 링크 + `aria-disabled` 없음 / 중요도 배지·일정 목록·무료/Pro 안내 마크업
+- 차별화 기능: 관심자산 미리보기 칩 4종·1줄 전환 바(`signup.html?watch=`), 일정 체크포인트·발표 알림 링크, 카드 메타 `출처 + KST 확인 시각` 1줄, 가입 화면 `watch` 사전 선택, 일정 알림 키 → 관심자산 매핑, `watchlist` 에 `AAPL`·`연준·금리` 저장
 - 운영자 인증: 미로그인 401 → 틀린 비밀번호 401 → 로그인 200·`HttpOnly; SameSite=Lax` 쿠키 → 초안 목록 200 → 로그아웃 200 → 다시 401
 - 휴대폰 인증: 데모 인증번호 발급 → 잘못된 번호 400 → 틀린 인증번호 400 → 인증 200·토큰 → 토큰 없는 가입 400 → 가입 201(`phone_verified`, `plan:free`) → 토큰 재사용 401 → SQLite 저장 확인
 - 정적 프리뷰: `export_static.py` 가 `naver-drafts.json` 을 만들지 않음, `stats.json`·`calendar.json`·`posts.json(importance)` 생성, 메인·회원가입에 `admin-blog` 링크 없음, `public/admin-blog.html` 삭제 확인
@@ -172,15 +177,18 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 ```bash
 python3 export_static.py   # DB + calendar.json → public/data/{posts,ticker,calendar,stats}.json
 ./sync_docs.sh             # 내보내기 + public/ → docs/ 복사
-./deploy_pages.sh          # 위 둘 + 커밋 + push + 라이브 200 확인 (평소엔 이것만 실행)
+./deploy_pages.sh          # 위 둘 + 현재 브랜치 커밋·push + gh-pages 미러 + 라이브 확인
+./deploy_pages.sh --no-push  # 소스 push 없이 gh-pages 프리뷰만 갱신
 ```
+
+- `deploy_pages.sh` 는 **지금 체크아웃된 브랜치만** push 하고, 사이트는 `gh-pages` 미러로만 반영합니다. PR 베이스(`claredex-v2-preview`)나 `main` 으로 강제 push 하지 않습니다.
 
 - **라이브 URL**: https://kylesung0901-ops.github.io/ClareDEX/ (공개)
   - 회원가입: https://kylesung0901-ops.github.io/ClareDEX/signup.html
   - 운영자 페이지: https://kylesung0901-ops.github.io/ClareDEX/admin/ (정적 프리뷰에서는 초안을 비공개로 두고 안내만 표시)
 - 저장소: `kylesung0901-ops/ClareDEX` (public)
   - 사이트 서빙: **`gh-pages` 브랜치 루트** — GitHub Pages 소스. push 하면 자동 재빌드.
-  - 소스 보관: **`claredex-v2-preview` 브랜치** — 이 프로젝트 전체 + `docs/` 사본.
+  - 소스 보관: **`claredex-v2-preview` 브랜치** — PR #1 의 베이스. 이 배포 스크립트는 여기에 push 하지 않습니다.
   - `ClareDEX` 의 `main` 브랜치(기존 클레어덱스 사이트)는 건드리지 않습니다.
 - 화면은 API(`/api/...`)를 먼저 호출하고, 정적 호스팅에서 404/비-JSON 응답이 오면 `data/*.json` 스냅샷으로 자동 대체합니다(`index.html`).
 - **운영자 초안은 정적 호스팅에 내보내지 않습니다.** `/api/naver-drafts` 는 로그인 없이는 401 이고, `export_static.py` 는 `naver-drafts.json` 을 만들지 않으며(이전 배포본 파일도 삭제), `/admin` 은 서버가 없으면 “정적 프리뷰에서는 보안을 위해 내부 초안 데이터를 비공개로 둡니다. 실제 서버(claredex.com/admin)에서 로그인 후 이용하세요.” 안내를 표시합니다.

@@ -37,6 +37,7 @@
       <h1>내 관심자산 속보만, 가장 먼저</h1>
       <span class="hero-rule" aria-hidden="true"></span>
       <p class="lead">공식 원문을 확인한 시각과 중요도(S/A/B)를 그대로 남기고, 내 자산에 의미 있는 소식만 골라 전합니다.</p>
+      <p class="req-note" id="requestNote" hidden></p>
     </div>
 
     <section class="auth-card" aria-live="polite">
@@ -114,7 +115,7 @@
         <p>관심자산 속보를 이제 모아서 보실 수 있습니다.<br>발표 직후 알림은 텔레그램에서 가장 빠릅니다.</p>
         <div class="watch-summary" id="watchSummary"></div>
         <a class="btn btn-gold btn-block" href="https://t.me/Clare_PerpDEX" target="_blank" rel="noopener">텔레그램 채널 열기 ↗</a>
-        <a class="btn btn-ghost btn-block" href="./#breaking" style="margin-top:8px">내 관심자산 속보 보러가기 →</a>
+        <a class="btn btn-ghost btn-block" href="./#breaking" id="backToFeed" style="margin-top:8px">내 관심자산 속보 보러가기 →</a>
         <p class="auth-fine" id="successEmail" style="margin-top:16px"></p>
         <div class="demo-note" style="text-align:left;margin-top:18px">
           <b>PRO · 출시 준비 중</b> — 무지연 속보 · 공시 즉시 분석 · 무제한 관심자산 · 개인 텔레그램/알림톡. 가격과 출시 일정은 확정되는 대로 알려드립니다.
@@ -123,7 +124,7 @@
     </section>
 
     <ul class="auth-benefits">
-      <li><b>내 관심자산 실시간 알림</b> — BTC·ETH·나스닥·코스피·삼성전자·NVDA 중 고른 자산(최대 3개)의 공식 발표만 모아 알려드립니다.</li>
+      <li><b>내 관심자산 실시간 알림</b> — BTC·ETH·NVDA·AAPL·나스닥·코스피·삼성전자·연준·금리 중 고른 자산(최대 3개)의 공식 발표만 모아 알려드립니다.</li>
       <li><b>3초 요약 전문</b> — 제목만 보던 비회원과 달리, 3줄 요약과 시장 영향 문장을 가입 즉시 모두 읽습니다.</li>
       <li><b>S등급 긴급 속보 알림</b> — FOMC·CPI·고용·빅테크 실적처럼 파급력 큰 발표를 가장 먼저 확인합니다.</li>
       <li>휴대폰 번호는 본인 확인과 알림 발송에만 사용하며, 광고·스팸 발송이나 제3자 판매에 쓰지 않습니다.</li>
@@ -163,12 +164,36 @@
   const ASSETS = [
     { key: "BTC", sub: "비트코인" },
     { key: "ETH", sub: "이더리움" },
+    { key: "NVDA", sub: "엔비디아" },
+    { key: "AAPL", sub: "애플" },
     { key: "나스닥", sub: "미국 기술주" },
     { key: "코스피", sub: "국내 대형주" },
     { key: "삼성전자", sub: "국내 반도체" },
-    { key: "NVDA", sub: "엔비디아" }
+    { key: "연준·금리", sub: "FOMC·CPI" }
   ];
+  /* 공식 일정 알림(signup.html?watch=FOMC) → 관심자산 매핑 (config.EVENT_WATCH_ALIASES 와 같은 규칙) */
+  const EVENT_ALIAS = {
+    FOMC: { asset: "연준·금리", label: "FOMC 회의 결과" },
+    CPI: { asset: "연준·금리", label: "미 CPI" },
+    PCE: { asset: "연준·금리", label: "PCE 물가" },
+    GDP: { asset: "연준·금리", label: "GDP" },
+    "고용보고서": { asset: "연준·금리", label: "미 고용보고서" },
+    "무역수지": { asset: "연준·금리", label: "무역수지" }
+  };
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function resolveWatch(raw) {
+    const key = String(raw || "").trim();
+    if (!key) return null;
+    const ev = EVENT_ALIAS[key] || EVENT_ALIAS[key.toUpperCase()];
+    if (ev) return { asset: ev.asset, label: ev.label, request: key, kind: "event" };
+    const asset = ASSETS.find((a) => a.key.toUpperCase() === key.toUpperCase());
+    if (asset) return { asset: asset.key, label: asset.key, request: key, kind: "asset" };
+    return null;
+  }
+  const REQUEST = resolveWatch(new URLSearchParams(location.search).get("watch"));
   const selected = new Set();
+  if (REQUEST) selected.add(REQUEST.asset);
   let name = "";
   let email = "";
   let phone = "";
@@ -223,6 +248,20 @@
     box.innerHTML = text;
     box.hidden = false;
   }
+
+  /* 관심자산/일정에서 넘어온 watch 파라미터를 화면 맨 위에 1줄로 알린다 */
+  function renderRequest() {
+    const note = $("#requestNote");
+    if (!REQUEST) {
+      note.hidden = true;
+      return;
+    }
+    note.hidden = false;
+    note.innerHTML = REQUEST.kind === "event"
+      ? `요청하신 <b>${esc(REQUEST.label)}</b> 발표 알림 · <b>${esc(REQUEST.asset)}</b> 속보로 함께 받습니다`
+      : `요청하신 <b>${esc(REQUEST.label)}</b> 속보 알림 · 인증만 하면 바로 설정됩니다`;
+  }
+  renderRequest();
 
   function startTimer(seconds) {
     codeExpires = Date.now() + seconds * 1000;
@@ -440,6 +479,7 @@
     $("#watchSummary").innerHTML = list.length
       ? list.map((a) => `<span>★ ${a}</span>`).join("")
       : "<span>관심자산은 나중에 등록할 수 있어요</span>";
+    if (list.length === 1) $("#backToFeed").href = `./?watch=${encodeURIComponent(list[0])}`;
     const who = authMethod === "phone" ? maskPhone(phone) + " · 휴대폰 인증 완료" : email;
     $("#successEmail").textContent = previewMode
       ? who + " · 정적 미리보기라 서버 전송 없이 이 브라우저에만 저장되었습니다."

@@ -240,12 +240,37 @@ def server_checks(port: int) -> None:
               "무료 회원 혜택 · Pro 플랜 안내")
         check("id=\"countLine\"" in html and "오늘 확인" in html, "오늘 확인 건수 표기")
 
+        # --- 차별화 기능 1: 관심자산 1초 미리보기 → 휴대폰 인증 퍼널
+        check('id="watchChips"' in html and all(f'data-watch="{a}"' in html
+                                                for a in ("BTC", "NVDA", "AAPL", "연준·금리")),
+              "관심자산 1초 미리보기 칩 (BTC·NVDA·AAPL·연준·금리)")
+        check('id="convertBar"' in html and "선택하신" in html and "휴대폰으로 받기" in html
+              and "signup.html?watch=" in html and 'id="convertText"' in html,
+              "선택 시 1줄 전환 바 → signup.html?watch=<자산>")
+        check("matchWatch" in html and "WATCHES" in html and "URLSearchParams" in html,
+              "피드 필터: 태그 기반 관심자산 필터 + watch 파라미터 복원")
+
+        # --- 차별화 기능 2: 공식 일정 체크포인트 + 발표 알림 링크
+        check('id="cdCheck"' in html and "이 일정 발표 알림 받기" in html
+              and "ev-check" in html and 'id="cdWatch"' in html,
+              "공식 일정: 1줄 체크포인트 + 발표 알림 링크")
+
+        # --- 차별화 기능 3: 원문 출처 + 확인 시각(KST) 1줄 메타
+        check("src-meta" in html and "출처 " in html and "KST</time>" in html
+              and "story-time" in html,
+              "속보 카드 메타: 출처 + 확인 시각(KST) 1줄")
+
         status, headers, raw = http(base + "/signup.html")
         signup_html = raw.decode("utf-8", "replace")
         check(status == 200 and "휴대폰 인증" in signup_html and "인증번호 받기" in signup_html,
               "GET /signup.html → 200 (휴대폰 인증 흐름)", f"HTTP {status}")
         check('id="phone"' in signup_html and 'id="code"' in signup_html and "관심자산" in signup_html,
               "회원가입: 번호 입력 → 인증번호 → 관심자산 단계")
+        check('id="requestNote"' in signup_html and "URLSearchParams" in signup_html
+              and "resolveWatch" in signup_html and "FOMC" in signup_html,
+              "회원가입: watch 파라미터 → 관심자산 미리 체크 + 일정 알림 안내")
+        check(all(a in signup_html for a in ('"AAPL"', '"연준·금리"', '"NVDA"')),
+              "회원가입 관심자산: AAPL·연준·금리 포함")
         check('class="col"' in signup_html and "auth-card" in signup_html and 'class="layout"' not in signup_html,
               "회원가입도 오프화이트 단일 컬럼 (auth-card)")
         status, _, raw = http(base + "/signup")
@@ -365,6 +390,20 @@ def server_checks(port: int) -> None:
         check(not blank, "공식 일정 빈 값(—) 없음", str(blank) if blank else "모든 항목 채워짐")
         check(all("+09:00" in e["datetime_kst"] for e in evs), "공식 일정 KST 시각")
         check(evs == sorted(evs, key=lambda e: e["datetime_kst"]), "공식 일정 시간순 정렬")
+        check(all(str(e.get("checkpoint") or "").strip() for e in evs),
+              "공식 일정 '발표 전 체크포인트' 1줄",
+              ", ".join(e["id"] for e in evs if not str(e.get("checkpoint") or "").strip()) or "전체 기입")
+        check(all(len(str(e.get("checkpoint") or "")) <= 80 for e in evs),
+              "체크포인트 80자 이내 (1줄 유지)",
+              f"최대 {max((len(str(e.get('checkpoint') or '')) for e in evs), default=0)}자")
+        banned_cp = ("매수하세요", "매도하세요", "수익 보장", "반드시 오릅니다", "목표가")
+        dirty_cp = [e["id"] for e in evs if any(b in str(e.get("checkpoint") or "") for b in banned_cp)]
+        check(not dirty_cp, "체크포인트: 매수·매도 권유 표현 없음", f"위반 {dirty_cp}" if dirty_cp else "객관적 관전 포인트")
+        allowed_watch = set(config.WATCHLIST_ASSETS) | set(config.EVENT_WATCH_ALIASES)
+        unknown_watch = sorted({"".join(str(e.get("watch") or "").split()) for e in evs} - allowed_watch - {""})
+        check(all(str(e.get("watch") or "").strip() for e in evs) and not unknown_watch,
+              "일정 알림 키 → 가입 관심자산 매핑 가능",
+              f"모르는 키 {unknown_watch}" if unknown_watch else ", ".join(sorted({str(e.get("watch")) for e in evs})))
 
         email = f"verify-{int(time.time())}@claredex.test"
         status, _, raw = http(base + "/api/signup", "POST",
@@ -374,14 +413,14 @@ def server_checks(port: int) -> None:
               "POST /api/signup → 201", f"HTTP {status}")
 
         status, _, raw = http(base + "/api/watchlist", "POST",
-                              {"email": email, "watchlist": ["BTC", "ETH", "나스닥", "NVDA"]})
+                              {"email": email, "watchlist": ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"]})
         wl = json.loads(raw)
-        check(status == 200 and wl.get("ok") and len(wl["user"]["watchlist"]) == 4,
-              "POST /api/watchlist → 200 저장", f"HTTP {status}")
+        check(status == 200 and wl.get("ok") and len(wl["user"]["watchlist"]) == 6,
+              "POST /api/watchlist → 200 저장 (AAPL·연준·금리 포함)", f"HTTP {status}")
 
         status, _, raw = http(base + "/api/signup", "POST", {"email": email, "provider": "email", "watchlist": []})
         again = json.loads(raw)
-        check(status == 201 and len(again["user"]["watchlist"]) == 4,
+        check(status == 201 and len(again["user"]["watchlist"]) == 6,
               "같은 이메일 재가입 시 관심자산 보존", str(again["user"]["watchlist"]))
 
         with db.session() as conn:
@@ -389,7 +428,7 @@ def server_checks(port: int) -> None:
             stored = json.loads(row[0]) if row else None
             conn.execute("DELETE FROM users WHERE email = ?", (email,))
             conn.commit()
-        check(stored == ["BTC", "ETH", "나스닥", "NVDA"], "관심자산 SQLite 저장 확인", str(stored))
+        check(stored == ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"], "관심자산 SQLite 저장 확인", str(stored))
 
         # ---------------------------------------------------------- 휴대폰 인증 가입
         phone = "010" + str(int(time.time()))[-8:]
@@ -499,12 +538,22 @@ def static_checks() -> None:
                                                       for k in ("org", "local_time", "note", "source_url"))]
             check(len(evs) >= 3 and not blank, "calendar.json: 3건 이상 · 빈 값 없음",
                   f"{len(evs)}건" + (f" · 빈 값 {blank}" if blank else ""))
+            missing_cp = [e.get("id") for e in evs if not str(e.get("checkpoint") or "").strip()
+                          or not str(e.get("watch") or "").strip()]
+            check(not missing_cp, "calendar.json: 체크포인트·알림 키 포함",
+                  str(missing_cp) if missing_cp else f"{len(evs)}건")
 
     index_html = (config.PUBLIC_DIR / "index.html").read_text(encoding="utf-8")
     signup_html = (config.PUBLIC_DIR / "signup.html").read_text(encoding="utf-8")
     check("admin-blog" not in index_html and "admin-blog" not in signup_html,
           "메인·회원가입에 admin-blog 링크 없음")
     check(not (config.PUBLIC_DIR / "admin-blog.html").exists(), "public/admin-blog.html 삭제됨")
+    check('id="watchChips"' in index_html and 'id="convertBar"' in index_html
+          and "signup.html?watch=" in index_html,
+          "메인: 관심자산 미리보기·1줄 전환 바")
+    check('id="requestNote"' in signup_html and "URLSearchParams" in signup_html
+          and "EVENT_ALIAS" in signup_html,
+          "회원가입: watch 파라미터 사전 선택 마크업")
 
 
 def free_port(preferred: int = 8765) -> int:
