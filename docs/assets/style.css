@@ -355,7 +355,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .plan-col { padding: 28px 30px 26px; display: flex; flex-direction: column; }
 .plan-col.pro { background: #f7f4ec; border-left: 1px solid var(--line); }
 .plan-tag {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em;
   color: var(--gold-deep); text-transform: uppercase;
 }
 .plan-col h3 {
