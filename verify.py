@@ -76,9 +76,10 @@ def db_checks() -> None:
     if not config.DB_PATH.exists():
         check(False, "DB 파일", str(config.DB_PATH))
         return
+    db.init_db()  # 서버 기동과 같은 스키마·마이그레이션을 먼저 적용해 검사한다
     conn = db.connect()
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    for t in ("posts", "users", "naver_drafts", "auth_otp", "signup_verification", "naver_publish"):
+    for t in ("posts", "users", "naver_drafts", "auth_otp", "signup_verification", "phone_auth_state", "naver_publish"):
         check(t in tables, f"테이블 존재: {t}")
 
     post_cols = {r[1] for r in conn.execute("PRAGMA table_info(posts)")}
@@ -97,6 +98,13 @@ def db_checks() -> None:
     otp_cols = {r[1] for r in conn.execute("PRAGMA table_info(auth_otp)")}
     check({"channel", "target", "code_hash", "sent_at", "expires_at", "attempts", "consumed_at"} <= otp_cols,
           "auth_otp 컴럼 (코드 해시·만료·시도 횟수)")
+    email_info = [r for r in conn.execute("PRAGMA table_info(users)") if r[1] == "email"]
+    check(bool(email_info) and int(email_info[0][3]) == 0,
+          "users.email: 휴대폰 단독 가입용 NULL 허용 (UNIQUE 유지)",
+          f"notnull={email_info[0][3] if email_info else '?'}")
+    phone_cols = {r[1] for r in conn.execute("PRAGMA table_info(phone_auth_state)")}
+    check({"phone", "verified_at", "updated_at"} <= phone_cols,
+          "phone_auth_state 컴럼 (번호 기준 인증 상태)")
     publish_cols = {r[1] for r in conn.execute("PRAGMA table_info(naver_publish)")}
     check({"draft_id", "post_id", "status", "url", "published_at"} <= publish_cols,
           "naver_publish 컴럼 (발행 이력)")
@@ -273,17 +281,39 @@ def server_checks(port: int) -> None:
               f"ticker={ticker_pos} hero={hero_pos} featured={featured_pos} latest={latest_pos}")
         check("S 긴급" in html and 'imp(p) === "S"' in html,
               "긴급(S) 속보 우선 노출 (오늘의 한 장 선택 기준)")
+        check("내 종목 야간 S등급 비상벨 켜기" in html
+              and "고른 자산 S등급 급변 시 문자로 바로 받기 (광고 전화 0건)" in html
+              and "30초 만에 무료 비상벨 켜기" in html,
+              "메인 CTA 카피: 0-스팸·야간 비상벨 톤 (Featured·전환바·Free 카드)")
 
         status, headers, raw = http(base + "/signup.html")
         signup_html = raw.decode("utf-8", "replace")
-        check(status == 200 and "성함 또는 닉네임" in signup_html, "GET /signup.html → 200", f"HTTP {status}")
-        check("인증번호 발송" in signup_html and "이메일 인증번호 6자리" in signup_html
-              and "문자 인증번호 6자리" in signup_html,
-              "회원가입: 이메일·휴대폰 OTP 입력란")
+        check(status == 200 and "휴대폰 번호" in signup_html
+              and "id=\"smsCode\"" in signup_html and "인증번호 6자리" in signup_html,
+              "GET /signup.html → 200 · 휴대폰 번호 + 인증번호 6자리 한 단계", f"HTTP {status}")
+        check("data-social" not in signup_html and "준비 중" not in signup_html
+              and "카카오로 시작하기" not in signup_html and "Google로 시작하기" not in signup_html,
+              "가입 화면: 카카오·구글 (준비 중) 버튼 제거")
+        check("성함 또는 닉네임" not in signup_html and 'id="name"' not in signup_html,
+              "가입 화면: 성함/닉네임 필수 입력 제거")
+        check("이메일로도 받기 (선택)" in signup_html
+              and re.search(r'<details class="optional-email"(?![^>]*\bopen\b)', signup_html) is not None,
+              "이메일은 '이메일로도 받기(선택)' 접기로만 (기본 화면 비노출)")
+        check("가입 전 미리 보는 내 종목 3초 브리핑" in signup_html
+              and "/api/posts?limit=60" in signup_html and "/api/calendar" in signup_html,
+              "1단계: 관심자산 선택 → 최근 공시 · S등급 일정 즉시 미리보기 연동")
+        check("잠든 사이 내 종목 S등급 기습 공시" in signup_html and "3초 결론" in signup_html
+              and "리딩방·광고 전화 0건 보증" in signup_html and "원클릭 수신 해지" in signup_html,
+              "2단계: 야간 기습 공시 비상벨 카피 + 스팸 불안 제거 배지")
+        check("12월 S등급 일정" in signup_html and "고용보고서" in signup_html
+              and "FOMC 회의 결과 발표" in signup_html and "소비자물가지수(CPI)" in signup_html,
+              "가입 완료 화면: 내 관심자산 + 12월 S등급 일정(고용보고서·FOMC·CPI) 카드")
         endpoints = ("/api/auth/send-email-otp", "/api/auth/verify-email-otp",
-                     "/api/auth/send-sms-otp", "/api/auth/verify-sms-otp", "/api/signup", "/api/watchlist")
+                     "/api/auth/send-sms-otp", "/api/auth/verify-sms-otp", "/api/signup")
         missing = [e for e in endpoints if e not in signup_html]
-        check(not missing, "가입 화면이 실제 본인인증·가입 API 와 연동", ", ".join(missing) or "6개 엔드포인트")
+        check(not missing and "watchlist: Array.from(selected)" in signup_html,
+              "가입 화면이 실제 본인인증·가입 API 와 연동 (관심자산은 /api/signup 으로 동시 전송)",
+              ", ".join(missing) or "5개 엔드포인트 + watchlist")
         signup_assets = re.findall(r'\{ key: "([^"]+)", sub:', signup_html)
         check(len(signup_assets) == len(set(signup_assets))
               and set(signup_assets) == set(config.WATCHLIST_ASSETS),
@@ -307,7 +337,8 @@ def server_checks(port: int) -> None:
               and "동의 거부 권리" in signup_html and "보유 및 이용 기간" in signup_html,
               "동의 모달: 수집·이용·제3자 제공·보유기간·거부 권리 포함")
         status, _, raw = http(base + "/signup")
-        check(status == 200 and "카카오" in raw.decode("utf-8", "replace"), "GET /signup (기존 404 경로) → 200")
+        check(status == 200 and "야간 S등급 비상벨" in raw.decode("utf-8", "replace"),
+              "GET /signup (기존 404 경로) → 200 · 새 가입 퍼널 화면")
 
         status, headers, raw = http(base + "/admin")
         admin_html = raw.decode("utf-8", "replace")
@@ -597,8 +628,8 @@ def server_checks(port: int) -> None:
               "인증 없이 POST /api/signup → 403", f"HTTP {status}")
 
         status, _, raw = http(base + "/api/signup", "POST", {"email": email, "name": "", "phone": phone})
-        check(status == 400 and json.loads(raw).get("code") == "name_required",
-              "성함/닉네임 비어 있으면 400", f"HTTP {status}")
+        check(status == 403 and json.loads(raw).get("code") == "verification_required",
+              "성함/닉네임이 비어도 400으로 막지 않음 (인증만 확인)", f"HTTP {status}")
 
         status, _, raw = http(base + "/api/auth/send-email-otp", "POST", {"email": email})
         sent = json.loads(raw)
@@ -678,6 +709,65 @@ def server_checks(port: int) -> None:
             conn.commit()
         check(stored == ["BTC", "ETH", "나스닥", "NVDA", "AAPL", "연준·금리"], "관심자산 SQLite 저장 확인", str(stored))
         check(flags == (phone, 1, 1, 1), "본인인증·마케팅 동의 SQLite 저장 확인", str(flags))
+
+        # ---------------------------------------- 1단계 휴대폰 가입 (이메일·이름 없이)
+        solo_phone = "010-2222-3333"
+        status, _, raw = http(base + "/api/auth/send-sms-otp", "POST", {"phone": solo_phone})
+        solo_sms = json.loads(raw)
+        check(status == 200 and solo_sms.get("ok") and solo_sms.get("channel") == "sms",
+              "이메일 없이 POST /api/auth/send-sms-otp → 200", f"mode={solo_sms.get('delivery_mode')}")
+        solo_code = solo_sms.get("preview_code")
+        if solo_code:
+            status, _, raw = http(base + "/api/auth/verify-sms-otp", "POST",
+                                  {"phone": solo_phone, "code": solo_code})
+            solo_ok = json.loads(raw)
+            check(status == 200 and solo_ok.get("ok") and solo_ok.get("verified"),
+                  "이메일 없이 POST /api/auth/verify-sms-otp → 200", f"HTTP {status}")
+        else:
+            check(True, "실제 문자 발송 모드 — 인증번호 검증은 코드 미노출로 건너뜀")
+
+        solo_watch = ["BTC", "삼성전자", "SK하이닉스", "TSLA", "연준·금리"]
+        status, _, raw = http(base + "/api/signup", "POST",
+                              {"phone": solo_phone, "watchlist": solo_watch})
+        solo = json.loads(raw)
+        check(status == 201 and solo.get("ok"),
+              "이메일·이름 없이 POST /api/signup → 201", f"HTTP {status}")
+        solo_user = solo.get("user") or {}
+        check(not solo_user.get("email") and solo_user.get("phone") == solo_phone
+              and solo_user.get("phone_verified") and solo_user.get("provider") == "phone",
+              "휴대폰 단독 회원: 이메일 NULL · 휴대폰 인증 · provider=phone",
+              str((solo_user.get("email"), solo_user.get("phone"), solo_user.get("provider"))))
+        check(solo_user.get("watchlist") == solo_watch,
+              "가입과 동시에 관심자산 즉시 저장 (SK하이닉스·TSLA 포함)", str(solo_user.get("watchlist")))
+
+        status, _, raw = http(base + "/api/watchlist", "POST",
+                              {"phone": solo_phone, "watchlist": ["BTC", "NVDA"]})
+        solo_wl = json.loads(raw)
+        check(status == 200 and solo_wl.get("user", {}).get("watchlist") == ["BTC", "NVDA"],
+              "이메일 없는 회원도 POST /api/watchlist (휴대폰 기준) → 200", f"HTTP {status}")
+
+        status, _, raw = http(base + "/api/admin/users?q=" + urllib.parse.quote(solo_phone), cookie=admin_cookie)
+        found = json.loads(raw)
+        found_items = found.get("items") or []
+        check(status == 200 and found.get("total") == 1 and found_items
+              and found_items[0].get("phone") == solo_phone and found_items[0].get("email") is None,
+              "관리자 회원 목록: 이메일 없는 회원 검색·표시 (UNIQUE·목록 안 깨짐)",
+              f"HTTP {status} total={found.get('total')}")
+
+        with db.session() as conn:
+            solo_row = conn.execute(
+                "SELECT email, phone, provider, watchlist, phone_verified FROM users WHERE phone = ?",
+                (solo_phone,)).fetchone()
+            solo_stored = dict(solo_row) if solo_row else None
+            conn.execute("DELETE FROM users WHERE phone = ?", (solo_phone,))
+            conn.execute("DELETE FROM auth_otp WHERE target = ?", (solo_phone,))
+            conn.execute("DELETE FROM phone_auth_state WHERE phone = ?", (solo_phone,))
+            conn.commit()
+        check(solo_stored is not None and solo_stored["email"] is None
+              and json.loads(solo_stored["watchlist"]) == ["BTC", "NVDA"]
+              and solo_stored["phone_verified"] == 1,
+              "휴대폰 단독 회원 SQLite 저장 확인 (email NULL 허용)",
+              str({k: solo_stored[k] for k in ("email", "phone", "provider")}) if solo_stored else "행 없음")
 
         status, _, raw = http(base + "/api/signup", "POST", {"email": "not-an-email"})
         check(status == 400 and "이메일" in json.loads(raw).get("error", ""), "잘못된 이메일 → 400")

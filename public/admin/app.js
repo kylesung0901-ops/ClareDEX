@@ -12,7 +12,7 @@
   const BASE = location.pathname.replace(/admin(\/index\.html)?\/?$/i, "");
   const API = (path) => BASE + "api/" + path;
 
-  const PROVIDER_LABEL = { email: "이메일", kakao: "카카오", google: "구글" , naver: "네이버" };
+  const PROVIDER_LABEL = { email: "이메일", phone: "휴대폰", kakao: "카카오", google: "구글" , naver: "네이버" };
   const AUDIT_LABEL = {
     login: "로그인", login_fail: "로그인 실패", logout: "로그아웃",
     password_change: "비밀번호 변경", password_change_fail: "변경 실패",
@@ -383,8 +383,8 @@
     }
     body.innerHTML = items.map((u) => `
       <tr>
-        <td><span class="cell-title" title="${esc(u.email)}">${esc(u.email)}</span>
-            <span class="cell-sub">${esc(PROVIDER_LABEL[u.provider] || u.provider || "")}</span></td>
+        <td><span class="cell-title" title="${esc(u.email || u.phone)}">${u.email ? esc(u.email) : esc(u.phone || "휴대폰 가입")}</span>
+            <span class="cell-sub">${esc(PROVIDER_LABEL[u.provider] || u.provider || "")}${u.phone && u.email ? " · " + esc(u.phone) : ""}</span></td>
         <td><div class="tag-list">${(u.watchlist || []).slice(0, 3).map((t) => `<span class="tag">${esc(t)}</span>`).join("") || '<span class="cell-sub">—</span>'}${(u.watchlist || []).length > 3 ? `<span class="tag">+${u.watchlist.length - 3}</span>` : ""}</div></td>
         <td class="num">${esc(fmtDate(u.created_at))}</td>
       </tr>`).join("");
@@ -447,7 +447,7 @@
     } else {
       rows.innerHTML = p.items.map((u) => `
         <tr>
-          <td><span class="cell-title" title="${esc(u.email)}">${esc(u.email)}</span></td>
+          <td><span class="cell-title" title="${esc(u.email)}">${u.email ? esc(u.email) : '<span class="cell-sub">휴대폰 가입</span>'}</span></td>
           <td>${u.name ? esc(u.name) : '<span class="cell-sub">—</span>'}</td>
           <td>${u.phone ? `<span class="mono">${esc(u.phone)}</span>` : '<span class="cell-sub">—</span>'}</td>
           <td><div class="tag-list">

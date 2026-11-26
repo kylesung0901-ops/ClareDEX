@@ -6,7 +6,8 @@
   · 이메일은 SMTP 또는 Resend, 문자는 Solapi·Aligo·CoolSMS 를 .env 자격증명이 있을 때만 쓴다.
   · 자격증명이 없으면 "보냈다"고 말하지 않는다. delivery_mode="unconfigured" 와 함께
     화면에서 확인할 수 있는 테스트용 인증번호(preview_code)를 돌려주고 그 사실을 문구로 알린다.
-  · 이메일 인증과 휴대폰 인증을 모두 통과해야 /api/signup 이 회원을 만든다.
+  · 이메일은 선택이다. 휴대폰 번호 1개만 인증해도 /api/signup 이 회원을 만들고,
+    이메일을 함께 쓰는 기존 흐름(이메일+휴대폰 인증)도 그대로 동작한다.
 """
 from __future__ import annotations
 
@@ -353,14 +354,8 @@ def issue(channel: str, target: str, email: str | None = None) -> dict:
             return {"ok": False, "code": "bad_phone",
                     "error": "휴대폰 번호 형식을 확인해 주세요. 예) 010-1234-5678"}
         target = phone
-        bind_email = normalize_email(email)
-        if not bind_email:
-            return {"ok": False, "code": "email_required", "error": "이메일 인증을 먼저 진행해 주세요."}
-        with db.session() as conn:
-            state = verification_state(conn, bind_email)
-        if not state["email_verified"]:
-            return {"ok": False, "code": "email_required",
-                    "error": "이메일 본인인증을 먼저 완료해 주세요.", "email_verified": False}
+        # 이메일은 선택이다. 휴대폰 번호만으로 인증·가입할 수 있다(값이 있으면 기록만 해 둔다).
+        bind_email = normalize_email(email) or None
 
     with db.session() as conn:
         last = db.latest_otp(conn, channel, target)
@@ -438,9 +433,7 @@ def verify(channel: str, target: str, code: str, email: str | None = None) -> di
         if not phone:
             return {"ok": False, "code": "bad_phone", "error": "휴대폰 번호 형식을 확인해 주세요."}
         target = phone
-        bind_email = normalize_email(email)
-        if not bind_email:
-            return {"ok": False, "code": "email_required", "error": "이메일 인증을 먼저 진행해 주세요."}
+        bind_email = normalize_email(email) or None
 
     with db.session() as conn:
         row = db.latest_otp(conn, channel, target)
@@ -458,9 +451,12 @@ def verify(channel: str, target: str, code: str, email: str | None = None) -> di
                     "attempts_left": left}
         db.consume_otp(conn, row["id"], config.iso_kst())
         if channel == CHANNEL_EMAIL:
-            db.set_verification(conn, bind_email, email_ok=True)
+            db.set_verification(conn, bind_email or "", email_ok=True)
         else:
-            db.set_verification(conn, bind_email, phone=target, phone_ok=True)
+            # 휴대폰 단독 가입도 확인할 수 있게 번호 기준 인증 기록을 남긴다.
+            db.set_phone_verification(conn, target, config.iso_kst())
+            if bind_email:
+                db.set_verification(conn, bind_email, phone=target, phone_ok=True)
 
     return {
         "ok": True,
@@ -489,5 +485,23 @@ def verification_state(conn, email: str) -> dict:
         "email_verified_at": row.get("email_verified_at") if email_ok else None,
         "phone_verified_at": row.get("phone_verified_at") if phone_ok else None,
         "expires_in": max(0, VERIFICATION_TTL - int((now - oldest).total_seconds())) if oldest else 0,
+        "ttl": VERIFICATION_TTL,
+    }
+
+
+def phone_state(conn, phone: str | None) -> dict:
+    """휴대폰 번호 기준 인증 상태(이메일 없이 가입하는 1단계 퍼널용)."""
+    phone = normalize_phone(phone)
+    if not phone:
+        return {"phone": None, "phone_verified": False, "expires_in": 0, "ttl": VERIFICATION_TTL}
+    row = db.get_phone_verification(conn, phone) or {}
+    at = _parse(row.get("verified_at"))
+    now = _now()
+    ok = bool(at and (now - at).total_seconds() <= VERIFICATION_TTL)
+    return {
+        "phone": phone,
+        "phone_verified": ok,
+        "phone_verified_at": row.get("verified_at") if ok else None,
+        "expires_in": max(0, VERIFICATION_TTL - int((now - at).total_seconds())) if at else 0,
         "ttl": VERIFICATION_TTL,
     }

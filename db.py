@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_created  ON posts(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS users (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    email           TEXT NOT NULL UNIQUE,
+    email           TEXT UNIQUE,
     name            TEXT,
     provider        TEXT NOT NULL DEFAULT 'email',
     watchlist       TEXT NOT NULL DEFAULT '[]',
@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS users (
     marketing_agreed    INTEGER NOT NULL DEFAULT 0,
     marketing_agreed_at TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 
 -- 본인인증 OTP (이메일·휴대폰). 코드는 해시로만 저장한다.
 CREATE TABLE IF NOT EXISTS auth_otp (
@@ -68,13 +70,20 @@ CREATE TABLE IF NOT EXISTS auth_otp (
 
 CREATE INDEX IF NOT EXISTS idx_auth_otp_target ON auth_otp(channel, target, sent_at DESC);
 
--- 가입 직전 인증 상태 (이메일 1건당 1행)
+-- 가입 직전 인증 상태 (이메일 1건당 1행 · 이메일을 쓰지 않는 휴대폰 단독 가입에는 쓰지 않는다)
 CREATE TABLE IF NOT EXISTS signup_verification (
     email             TEXT PRIMARY KEY,
     phone             TEXT,
     email_verified_at TEXT,
     phone_verified_at TEXT,
     updated_at        TEXT NOT NULL
+);
+
+-- 휴대폰 단독 가입용 인증 상태 (휴대폰 번호 1건당 1행)
+CREATE TABLE IF NOT EXISTS phone_auth_state (
+    phone       TEXT PRIMARY KEY,
+    verified_at TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
 );
 
 -- 네이버 블로그 발행 이력
@@ -153,11 +162,51 @@ def init_db(conn: sqlite3.Connection | None = None) -> None:
         ):
             if column not in user_cols:
                 conn.execute(ddl)
+        # 휴대폰 단독 가입: email 이 없어도 회원을 만들 수 있게 UNIQUE 제약은 남기고 NOT NULL 만 푼다.
+        _make_users_email_nullable(conn)
         conn.commit()
         _backfill_importance(conn)
     finally:
         if own:
             conn.close()
+
+
+def _make_users_email_nullable(conn: sqlite3.Connection) -> None:
+    """기존 DB 의 users.email NOT NULL 제약을 풀어 휴대폰 단독 회원(email NULL)을 허용한다.
+
+    SQLite 는 컬럼 제약을 직접 바꾸지 못하므로 테이블을 새 스키마로 다시 만들고 값을 그대로 옮긴다.
+    기존 이메일+휴대폰 회원의 값·id·가입일은 그대로 보존된다.
+    """
+    cols = conn.execute("PRAGMA table_info(users)").fetchall()
+    email_col = next((c for c in cols if c[1] == "email"), None)
+    if not email_col or int(email_col[3]) == 0:  # 이미 NULL 허용
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)")
+        return
+    names = [c[1] for c in cols]
+    quoted = ", ".join(f'"{n}"' for n in names)
+    conn.execute("ALTER TABLE users RENAME TO users_legacy")
+    conn.execute(
+        """CREATE TABLE users (
+               id              INTEGER PRIMARY KEY AUTOINCREMENT,
+               email           TEXT UNIQUE,
+               name            TEXT,
+               provider        TEXT NOT NULL DEFAULT 'email',
+               watchlist       TEXT NOT NULL DEFAULT '[]',
+               created_at      TEXT NOT NULL,
+               status          TEXT NOT NULL DEFAULT 'active',
+               phone           TEXT,
+               email_verified  INTEGER NOT NULL DEFAULT 0,
+               phone_verified  INTEGER NOT NULL DEFAULT 0,
+               marketing_agreed    INTEGER NOT NULL DEFAULT 0,
+               marketing_agreed_at TEXT
+           )"""
+    )
+    conn.execute(f"INSERT INTO users ({quoted}) SELECT {quoted} FROM users_legacy")
+    conn.execute("DROP TABLE users_legacy")
+    # 빈 문자열 이메일은 '이메일 없음'과 같게 본다(UNIQUE 충돌로 회원이 막히지 않도록).
+    conn.execute("UPDATE users SET email = NULL WHERE TRIM(COALESCE(email, '')) = ''")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)")
+    conn.commit()
 
 
 def _backfill_importance(conn: sqlite3.Connection) -> None:
@@ -481,7 +530,7 @@ def list_drafts(conn: sqlite3.Connection, limit: int | None = None) -> list[dict
 
 def upsert_user(
     conn: sqlite3.Connection,
-    email: str,
+    email: str | None,
     name: str | None = None,
     provider: str = "email",
     watchlist: list[str] | None = None,
@@ -492,15 +541,34 @@ def upsert_user(
     marketing_agreed: bool | None = None,
     marketing_agreed_at: str | None = None,
 ) -> dict[str, Any]:
-    email = email.strip().lower()
+    """회원을 만들거나 갱신한다.
+
+    휴대폰 단독 가입을 위해 email 은 None 일 수 있다. 같은 이메일이 있으면 그 회원을,
+    이메일이 없으면 같은 휴대폰 번호의 회원을 갱신해 중복 회원을 만들지 않는다.
+    """
+    email = (email or "").strip().lower() or None
+    phone = (phone or "").strip() or None
     created_at = created_at or config.iso_kst()
     agreed_at = None
     if marketing_agreed:
         agreed_at = marketing_agreed_at or config.iso_kst()
-    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    row = None
+    if email:
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if row is None and phone:
+        row = conn.execute(
+            "SELECT * FROM users WHERE phone = ? ORDER BY id DESC LIMIT 1", (phone,)
+        ).fetchone()
     if row:
         sets: list[str] = []
         params: list[Any] = []
+        # 이메일 없이 가입한 회원이 나중에 이메일을 더하면 같은 회원에 붙인다.
+        if email and not (row["email"] or "").strip():
+            sets.append("email = ?")
+            params.append(email)
+            if email_verified is None:
+                sets.append("email_verified = ?")
+                params.append(0)
         if name:
             sets.append("name = ?")
             params.append(name)
@@ -529,30 +597,30 @@ def upsert_user(
             elif not marketing_agreed:
                 sets.append("marketing_agreed_at = NULL")
         if sets:
-            params.append(email)
-            conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE email = ?", params)
+            params.append(row["id"])
+            conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)
         conn.commit()
-    else:
-        conn.execute(
-            """INSERT INTO users
-                   (email, name, provider, watchlist, created_at,
-                    phone, email_verified, phone_verified, marketing_agreed, marketing_agreed_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (
-                email,
-                name,
-                provider,
-                json.dumps(watchlist or [], ensure_ascii=False),
-                created_at,
-                phone,
-                1 if email_verified else 0,
-                1 if phone_verified else 0,
-                1 if marketing_agreed else 0,
-                agreed_at,
-            ),
-        )
-        conn.commit()
-    return get_user(conn, email)  # type: ignore[return-value]
+        return get_user_by_id(conn, int(row["id"]))  # type: ignore[return-value]
+    cur = conn.execute(
+        """INSERT INTO users
+               (email, name, provider, watchlist, created_at,
+                phone, email_verified, phone_verified, marketing_agreed, marketing_agreed_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (
+            email,
+            name,
+            provider,
+            json.dumps(watchlist or [], ensure_ascii=False),
+            created_at,
+            phone,
+            1 if email_verified else 0,
+            1 if phone_verified else 0,
+            1 if marketing_agreed else 0,
+            agreed_at,
+        ),
+    )
+    conn.commit()
+    return get_user_by_id(conn, int(cur.lastrowid))  # type: ignore[return-value]
 
 
 def list_users(
@@ -566,7 +634,7 @@ def list_users(
     sql = "SELECT * FROM users WHERE 1=1"
     params: list[Any] = []
     if q:
-        sql += " AND (email LIKE ? OR name LIKE ? OR watchlist LIKE ? OR COALESCE(phone, '') LIKE ?)"
+        sql += " AND (COALESCE(email, '') LIKE ? OR COALESCE(name, '') LIKE ? OR watchlist LIKE ? OR COALESCE(phone, '') LIKE ?)"
         like = f"%{q}%"
         params.extend([like, like, like, like])
     if provider and provider != "all":
@@ -594,7 +662,7 @@ def count_users(
     sql = "SELECT COUNT(*) FROM users WHERE 1=1"
     params: list[Any] = []
     if q:
-        sql += " AND (email LIKE ? OR name LIKE ? OR watchlist LIKE ? OR COALESCE(phone, '') LIKE ?)"
+        sql += " AND (COALESCE(email, '') LIKE ? OR COALESCE(name, '') LIKE ? OR watchlist LIKE ? OR COALESCE(phone, '') LIKE ?)"
         like = f"%{q}%"
         params.extend([like, like, like, like])
     if provider and provider != "all":
@@ -660,9 +728,35 @@ def provider_counts(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return [{"key": r["key"], "count": int(r["n"])} for r in rows]
 
 
-def get_user(conn: sqlite3.Connection, email: str) -> dict[str, Any] | None:
+def get_user(conn: sqlite3.Connection, email: str | None) -> dict[str, Any] | None:
+    email = (email or "").strip().lower()
+    if not email:
+        return None
     row = conn.execute(
-        "SELECT * FROM users WHERE email = ?", (email.strip().lower(),)
+        "SELECT * FROM users WHERE email = ?", (email,)
+    ).fetchone()
+    if not row:
+        return None
+    user = dict(row)
+    user["watchlist"] = json.loads(user["watchlist"] or "[]")
+    return user
+
+
+def get_user_by_id(conn: sqlite3.Connection, user_id: int) -> dict[str, Any] | None:
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (int(user_id),)).fetchone()
+    if not row:
+        return None
+    user = dict(row)
+    user["watchlist"] = json.loads(user["watchlist"] or "[]")
+    return user
+
+
+def get_user_by_phone(conn: sqlite3.Connection, phone: str | None) -> dict[str, Any] | None:
+    phone = (phone or "").strip()
+    if not phone:
+        return None
+    row = conn.execute(
+        "SELECT * FROM users WHERE phone = ? ORDER BY id DESC LIMIT 1", (phone,)
     ).fetchone()
     if not row:
         return None
@@ -679,6 +773,16 @@ def set_watchlist(conn: sqlite3.Connection, email: str, watchlist: list[str]) ->
     )
     conn.commit()
     return get_user(conn, email)  # type: ignore[return-value]
+
+
+def set_watchlist_by_id(conn: sqlite3.Connection, user_id: int, watchlist: list[str]) -> dict[str, Any]:
+    """이메일 없이 가입한 회원(휴대폰 단독)의 관심자산도 저장한다."""
+    conn.execute(
+        "UPDATE users SET watchlist = ? WHERE id = ?",
+        (json.dumps(watchlist, ensure_ascii=False), int(user_id)),
+    )
+    conn.commit()
+    return get_user_by_id(conn, int(user_id))  # type: ignore[return-value]
 
 
 # ---------------------------------------------------------------- 본인인증 OTP
@@ -773,6 +877,34 @@ def set_verification(
 def get_verification(conn: sqlite3.Connection, email: str) -> dict[str, Any] | None:
     row = conn.execute(
         "SELECT * FROM signup_verification WHERE email = ?", (email.strip().lower(),)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def set_phone_verification(conn: sqlite3.Connection, phone: str, when: str | None = None) -> dict[str, Any]:
+    """휴대폰 단독 가입용 인증 기록. 같은 번호는 1행만 유지하고 인증 시각을 갱신한다."""
+    phone = (phone or "").strip()
+    when = when or config.iso_kst()
+    if not phone:
+        return {}
+    row = conn.execute("SELECT * FROM phone_auth_state WHERE phone = ?", (phone,)).fetchone()
+    if row:
+        conn.execute(
+            "UPDATE phone_auth_state SET verified_at = ?, updated_at = ? WHERE phone = ?",
+            (when, when, phone),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO phone_auth_state (phone, verified_at, updated_at) VALUES (?,?,?)",
+            (phone, when, when),
+        )
+    conn.commit()
+    return get_phone_verification(conn, phone) or {}
+
+
+def get_phone_verification(conn: sqlite3.Connection, phone: str) -> dict[str, Any] | None:
+    row = conn.execute(
+        "SELECT * FROM phone_auth_state WHERE phone = ?", ((phone or "").strip(),)
     ).fetchone()
     return dict(row) if row else None
 
