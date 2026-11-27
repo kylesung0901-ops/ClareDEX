@@ -58,7 +58,12 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 | 소스 | 용도 | 비고 |
 |---|---|---|
 | 미 연준 보도자료 RSS | 매크로 속보 | `federalreserve.gov/feeds/press_all.xml`, 최신 5건. 시장과 무관한 행사·수상 소식은 제외 |
-| SEC EDGAR submissions | 8-K·10-Q·10-K 공시 | `User-Agent: ClareDEX AdminContact@claredex.com` 필수, 애플·엔비디아 각 최신 2건 |
+| SEC EDGAR submissions | 8-K·10-Q·10-K 공시 | `User-Agent: ClareDEX AdminContact@claredex.com` 필수, 종목 10개(애플·엔비디아·테슬라·마이크로소프트·아마존·알파벳·메타·AMD·코인베이스·마이크로스트래티지) 각 최신 2건. CIK 는 `company_tickers.json`·`submissions/CIK*.json` 으로 확인한 값 |
+| 한국은행 보도자료 RSS | 국내 매크로 속보 | `bok.or.kr/portal/bbs/B0000552/news.rss`, 최신 5건. 채용·입찰·경제교육 항목은 제외 |
+| 미 BEA RSS | 미국 성장·물가 | `apps.bea.gov/rss/rss.xml`, 최신 5건. GDP·개인소득·PCE·무역수지 중심, 여가·문화·해외직접투자 통계는 제외 |
+| 미 노동부 RSS | 미국 고용·물가·실업수당 | `dol.gov/rss/releases.xml`, 최신 2건. 주간 실업수당·CPI·PPI·고용상황 등 지표만 받고 개별 사업장 단속 보도자료는 제외 |
+| 미 SEC 보도자료 RSS | 규제·단속 | `sec.gov/news/pressreleases.rss`, 최신 3건. 자문위원회·회의 공지 제외 |
+| 시장 급변 속보 | BTC·ETH ±3%, 김프 +3.0%/-0.5%, 공포탐욕 15/75 | `collect_market()` 관측값이 기준선을 넘으면 그 자리에서 속보 글 생성. 같은 날 같은 조건은 `source_hash`(일자·조건 키)로 1건만 |
 | 업비트 시세 API | BTC/ETH 원화 시세 | 김치프리미엄 계산의 원화 가격 |
 | Binance → Binance.US → Coinbase | BTC/USD | 이 환경에서는 Binance가 HTTP 451(지역 제한)로 막혀 **Binance.US로 자동 전환**되며, 응답의 `source`에 실제 사용한 소스가 표기됩니다 |
 | OKX 롱/숏 계정 비율 | BTC 롱숏 | Binance Futures가 차단되어 OKX로 대체. 계산식은 응답 `note`에 명시 |
@@ -134,7 +139,7 @@ python3 verify.py             # 4) 자체 검증 (임시 포트로 서버를 띄
 ## 네이버 블로그 자동화 범위
 
 네이버는 2020년 글쓰기 API를 종료해 자동 발행은 **Playwright + 저장된 로그인 세션(storage state)** 으로 처리합니다(`naver_publish.py`).
-호스트 cron 이 07:10·19:10 에 `collect.sh` 를 실행하면 `collector.py --max-new 1` → `naver_drafts.py` → `naver_publish.py --limit 1` 순서로 돌아 **하루 2건**이 사이트와 네이버 블로그에 함께 올라갑니다.
+호스트 cron 이 10~15분마다 `collect.sh` 를 실행하면 `collector.py --max-new 5` 가 새 공식 발표·공시·급변 속보를 5건까지 사이트에 올리고, 07:10·19:10 실행에서는 이어서 `naver_drafts.py` → `naver_publish.py --limit 1` 이 돌아 네이버 블로그에 1건이 함께 올라갑니다(10~15분 주기 실행은 `CLAREDEX_NAVER_ENABLED=0` 으로 네이버 단계를 건너뜁니다).
 세션 파일(`data/naver_state.json`)이 없으면 발행을 시도하지 않고 `status="no_session"` 으로 기록하며, `/admin` 수집기 탭에 그대로 표시됩니다. 세션 만드는 방법은 `naver_publish.py` 상단 주석 참고 (`python naver_publish.py --login` → `data/naver_state.json` 을 서버로 복사).
 초안에는
 - SEO 제목(50자 이내)과 키워드 5~8개,
