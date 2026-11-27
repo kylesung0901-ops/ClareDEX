@@ -84,8 +84,22 @@ docker exec claredex-v2 python verify.py
 
 | 시각 | 파일 | 내용 |
 |---|---|---|
-| 07:10 / 19:10 | `/etc/cron.d/claredex-v2-collect` → `/usr/local/bin/claredex-collect.sh` | `collector.py --max-new 1`(새 글 1건 발행) → `naver_drafts.py`(초안) → `naver_publish.py --limit 1`(네이버 발행) → **하루 2건** |
+| **매 10~15분** | `/etc/cron.d/claredex-v2-collect` → `/usr/local/bin/claredex-collect.sh` | `collector.py --max-new 5` — 공식 RSS(연준·한국은행·BEA·노동부·SEC)·SEC 공시·시장 급변 속보를 그때그때 발행. 네이버 단계는 `CLAREDEX_NAVER_ENABLED=0` 으로 건너뜀 |
+| 07:10 / 19:10 | 같은 스크립트 (네이버 단계 포함) | `collector.py --max-new 5` → `naver_drafts.py`(초안) → `naver_publish.py --limit 1`(네이버 발행 1건) |
 | 03:30 | `/etc/cron.d/claredex-v2-backup` → `/usr/local/bin/claredex-backup.sh` | SQLite 백업 → `/root/claredex-v2/backups/` (14일 보관, gzip) |
+
+`/etc/cron.d/claredex-v2-collect` 예시(서버 시간이 KST 일 때):
+
+```cron
+# 15분 주기 — 새 공시·속보를 밀리지 않고 바로 올린다(네이버 발행은 하지 않음)
+*/15 * * * * root CLAREDEX_MAX_NEW_PER_RUN=5 CLAREDEX_NAVER_ENABLED=0 /usr/local/bin/claredex-collect.sh >> /var/log/claredex-v2-collect.log 2>&1
+# 하루 2회 — 네이버 초안 생성 + 발행 1건까지
+10 7,19 * * * root CLAREDEX_MAX_NEW_PER_RUN=5 /usr/local/bin/claredex-collect.sh >> /var/log/claredex-v2-collect.log 2>&1
+```
+
+- 변수는 `collect.sh` 가 읽는 환경변수다. `CLAREDEX_MAX_NEW_PER_RUN`(기본 5) · `CLAREDEX_NAVER_PER_RUN`(기본 1) · `CLAREDEX_NAVER_ENABLED`(기본 1, 0이면 네이버 단계 생략).
+- 10분 주기로 돌리고 싶으면 `*/10` 으로 바꾸면 된다. 실행이 겹치면 `source_hash` 중복 검사로 같은 글은 한 번만 들어간다.
+- 유닛을 바꾼 뒤에는 `crontab`/`cron.d` 를 다시 읽히고(`systemctl reload cron`), 한 번 수동 실행해 `/admin` 수집기 탭의 `source_status` 에 `rss_bok`·`rss_bea`·`rss_dol`·`rss_sec_press`·`shock` 이 찍히는지 본다.
 
 로그: `/var/log/claredex-v2-collect.log` (logrotate 주간 8개 보관)
 

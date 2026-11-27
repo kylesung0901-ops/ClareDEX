@@ -1137,6 +1137,187 @@ def alert_engine_checks() -> None:
           str({k: probe.get(k) for k in ("mode", "sent", "test_mode")}))
 
 
+def realtime_source_checks() -> None:
+    print("\n── 6. 실시간 수집 확장 — SEC 종목·공식 RSS·급변 속보 ──────")
+    import content  # noqa: E402
+
+    # ---- SEC 감시 종목 (CIK 는 company_tickers.json·submissions 로 확인한 값)
+    tickers = {c["ticker"]: c for c in content.SEC_COMPANIES}
+    expected = {"AAPL", "NVDA", "TSLA", "MSFT", "AMZN", "GOOGL", "META", "AMD", "COIN", "MSTR"}
+    check(expected == set(tickers), "SEC 감시 종목 10개", ",".join(sorted(tickers)))
+    ciks = [c["cik"] for c in content.SEC_COMPANIES]
+    check(len(set(ciks)) == len(ciks) and all(re.fullmatch(r"\d{10}", c) for c in ciks),
+          "SEC CIK 10자리·중복 없음", f"{len(ciks)}개")
+    verified_ciks = {"TSLA": "0001318605", "MSFT": "0000789019", "AMZN": "0001018724",
+                     "GOOGL": "0001652044", "META": "0001326801", "AMD": "0000002488",
+                     "COIN": "0001679788", "MSTR": "0001050446"}
+    bad_cik = {t: tickers[t]["cik"] for t, cik in verified_ciks.items()
+               if t in tickers and tickers[t]["cik"] != cik}
+    check(not bad_cik, "CIK 가 SEC company_tickers.json 검증값과 일치",
+          str(bad_cik) if bad_cik else "신규 8종목 일치")
+    check(all(c.get("name_ko") and c.get("sector") and c.get("name") for c in content.SEC_COMPANIES),
+          "종목별 원문 회사명·한글명·섹터", "빈 값 없음")
+    check(content.company_label(tickers["AMD"]) == "AMD"
+          and content.company_label(tickers["MSTR"]) == "마이크로스트래티지(MSTR)",
+          "제목 표기: 티커 중복 괄호 없음", content.company_label(tickers["MSTR"]))
+
+    # ---- 공식 RSS 레지스트리
+    check(len(content.RSS_SOURCES) >= 4, "공식 RSS 소스 4종 이상", ",".join(content.RSS_SOURCES))
+    bad_src = [key for key, src in content.RSS_SOURCES.items()
+               if not str(src.get("url", "")).startswith("https://")
+               or not src.get("name") or src.get("category") not in config.CATEGORIES
+               or src.get("topic") not in content.TOPIC_HOOKS
+               or not src.get("detail") or not src.get("impact")]
+    check(not bad_src, "RSS 소스: https 원문·카테고리·토픽·설명 문구",
+          str(bad_src) if bad_src else f"{len(content.RSS_SOURCES)}개 정상")
+    used_urls = " ".join(str(s.get("url")) for s in content.RSS_SOURCES.values())
+    check(not any(host in used_urls for host in ("bls.gov", "treasury.gov", "fsc.go.kr")),
+          "실측에서 실패한 소스(BLS·Treasury·FSC) 미등록", "제외 확인")
+    check(all(src.get("topic") in content.TELEGRAM_CTA and src.get("topic") in content.WEB_CTA
+              for src in content.RSS_SOURCES.values()),
+          "RSS 토픽마다 텔레그램·웹 CTA 존재")
+
+    # ---- RSS 글 생성
+    from datetime import datetime
+
+    published = datetime(2026, 11, 27, 12, 0, tzinfo=config.KST)
+    bok_item = {"source": "bok", "title": "통화정책방향(2026.11.26)",
+                "link": "https://www.bok.or.kr/portal/bbs/P0000559/view.do?nttId=11067084",
+                "published_kst": published}
+    bok_post = content.rss_post("bok", bok_item, config.iso_kst())
+    check(bok_post["source_hash"] == hashlib.sha256(bok_item["link"].encode("utf-8")).hexdigest()
+          and bok_post["title"] == "한국은행, 통화정책방향(2026.11.26)"
+          and bok_post["published_at"].startswith("2026-11-27T12:00")
+          and bok_post["importance"] == "S",
+          "RSS 글: 원문 해시·제목·발표 시각·S등급(통화정책방향)",
+          f"{bok_post['title']} / {bok_post['importance']}")
+    check(len(bok_post["summary_lines"]) == 3 and "한국은행이" in bok_post["summary_lines"][0]
+          and bok_post["summary_lines"][1].startswith("원문 제목:")
+          and bok_post["topic"] == "kr-macro" and bok_post["tags"],
+          "RSS 글: 3줄 요약(기관·원문 제목·확인 포인트)·토픽", )
+    bea_item = {"title": "GDP, (Second Estimate) and Corporate Profits, 3rd Quarter 2026",
+                "link": "https://www.bea.gov/news/2026/verify-gdp", "published_kst": published}
+    bea_post = content.rss_post("bea", bea_item, config.iso_kst())
+    check(bea_post["title"] == "미 경제분석국(BEA), GDP 발표 (2026년 3분기)"
+          and bea_post["importance"] == "S",
+          "BEA 글: 한국어 라벨·분기 표기·S등급", bea_post["title"])
+    check(content.rss_skip("dol", "OSHA cites powder coating company for willful violations") is True
+          and content.rss_skip("dol", "Unemployment Insurance Weekly Claims Report") is False,
+          "노동부 피드: 지표만 통과(개별 단속 보도자료 제외)")
+    check(content.rss_skip("sec_press", "SEC Investor Advisory Committee to Host Dec. 3 Virtual Meeting") is True,
+          "SEC 보도자료: 자문위원회·회의 공지 제외")
+
+    # ---- 급변 속보 신호 → 글
+    def market(btc_delta: float = -0.5, eth_delta: float = 0.4,
+               kimp: float = 1.2, fng: int = 50) -> dict:
+        return {
+            "values": {"btc_krw": 123456000.0, "btc_usd": 92000.0, "usdkrw": 1380.0,
+                       "kimchi_premium": kimp, "fear_greed": fng},
+            "items": [
+                {"key": "btc_krw", "label": "BTC/KRW", "value": 123456000.0,
+                 "display": "123,456,000원", "delta": btc_delta, "source": "업비트",
+                 "as_of": "2026-11-27T16:40:00+09:00",
+                 "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH"},
+                {"key": "eth_krw", "label": "ETH/KRW", "value": 4567000.0,
+                 "display": "4,567,000원", "delta": eth_delta, "source": "업비트",
+                 "as_of": "2026-11-27T16:40:00+09:00",
+                 "source_url": "https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH"},
+                {"key": "kimchi_premium", "label": "김치프리미엄", "value": kimp,
+                 "display": f"{kimp:+.2f}%", "source": "업비트·Coinbase·USD/KRW",
+                 "as_of": "2026-11-27T16:40:00+09:00", "source_url": "https://www.claredex.com/",
+                 "note": "업비트 BTC 원화가 ÷ (BTC/USD × USD/KRW) − 1"},
+                {"key": "fear_greed", "label": "공포탐욕", "value": fng, "display": f"{fng} · 중립",
+                 "source": "Alternative.me", "as_of": "2026-11-27T09:00:00+09:00",
+                 "source_url": "https://api.alternative.me/fng/?limit=1"},
+            ],
+        }
+
+    check(content.market_shock_signals(market()) == [], "기준선 안쪽이면 속보를 만들지 않음")
+    hit = content.market_shock_signals(market(btc_delta=-3.42, kimp=3.24, fng=12))
+    check(sorted(s["rule"]["id"] for s in hit) == ["btc_drop", "fng_fear", "kimp_high"],
+          "기준선을 넘은 조건만 신호 생성 (BTC -3.42%·김프 +3.24%·공포탐욕 12)",
+          ",".join(s["rule"]["id"] for s in hit))
+    check(sorted(s["rule"]["id"] for s in content.market_shock_signals(market(kimp=-0.6, fng=80)))
+          == ["fng_greed", "kimp_low"],
+          "역프리미엄(-0.5% 이하)·탐욕(75 이상)도 신호")
+    check(content.market_shock_signals({"values": {}, "items": []}) == [],
+          "시세가 없으면 급변 속보 없음")
+
+    btc_sig = next(s for s in hit if s["rule"]["id"] == "btc_drop")
+    day1 = content.market_shock_post(btc_sig, "2026-11-27T16:45:00+09:00")
+    day1_later = content.market_shock_post(btc_sig, "2026-11-27T22:10:00+09:00")
+    day2 = content.market_shock_post(btc_sig, "2026-11-28T00:10:00+09:00")
+    check(day1["source_hash"] == day1_later["source_hash"] and day1["source_hash"] != day2["source_hash"],
+          "같은 날 같은 조건은 1건 · 날이 바뀌면 새 속보")
+    check(day1["source_hash"] == hashlib.sha256(day1["source_url"].encode("utf-8")).hexdigest()
+          and "#claredex-shock-2026-11-27-btc_drop" in day1["source_url"],
+          "속보 source_url = 실제 출처 + 일자·조건 키(해시 일치)", day1["source_url"])
+    check(len(day1["summary_lines"]) == 3 and "-3.42%" in " ".join(day1["summary_lines"])
+          and "123,456,000원" in " ".join(day1["summary_lines"]),
+          "속보 3줄 요약에 실제 관측값·시세 표기", day1["title"])
+    payload_tokens = set(re.findall(r"\d[\d,]*\.?\d*",
+                                    json.dumps(market(btc_delta=-3.42, kimp=3.24, fng=12),
+                                               ensure_ascii=False)))
+    summary_tokens = set(re.findall(r"\d[\d,]*\.?\d*", " ".join(day1["summary_lines"])))
+    stray = {t for t in summary_tokens if t not in payload_tokens} - {"24", "3.0"}
+    check(not stray, "속보 요약 숫자는 수집값·기준값 밖에서 만들지 않음", str(stray) if stray else "관측값만 사용")
+    kimp_sig = next(s for s in hit if s["rule"]["id"] == "kimp_high")
+    kimp_post = content.market_shock_post(kimp_sig, "2026-11-27T16:45:00+09:00")
+    check("+3.24%" in kimp_post["title"] and "BTC/USD" in " ".join(kimp_post["summary_lines"]),
+          "김프 속보: 관측 프리미엄과 구성 가격 표기", kimp_post["title"])
+    fng_post = content.market_shock_post(next(s for s in hit if s["rule"]["id"] == "fng_fear"),
+                                         "2026-11-27T16:45:00+09:00")
+    check("12" in fng_post["title"] and fng_post["category"] == "coin"
+          and fng_post["source_grade"] == config.SOURCE_GRADES["market"],
+          "공포탐욕 속보: 관측 지수·코인 카테고리·시장 데이터 등급", fng_post["title"])
+
+    # ---- DB 중복 방지 (같은 날 같은 조건은 1건만) — 운영 DB 를 건드리지 않도록 임시 DB 사용
+    saved_db_path = config.DB_PATH
+    config.DB_PATH = VERIFY_TMP / "realtime_check.db"
+    post: dict | None = None
+    try:
+        db.init_db()
+        conn = db.connect()
+        try:
+            post = content.market_shock_post(btc_sig, config.iso_kst())
+            post["created_at"] = config.iso_kst()
+            post["is_member_early"] = False
+            first_id, first_created = db.insert_post(conn, post)
+            second_id, second_created = db.insert_post(conn, post)
+            check(first_created and not second_created,
+                  "같은 날 같은 조건 속보는 DB 에 1건만 저장",
+                  f"첫 저장 #{first_id} · 재시도 {second_id} created={second_created}")
+            stored = db.get_post(conn, int(first_id)) if first_id else None
+            check(bool(stored) and stored["source_hash"] == post["source_hash"]
+                  and len(stored["summary_lines"]) == 3,
+                  "속보 글 저장·재조회 (해시·3줄 요약)", f"#{first_id}")
+        finally:
+            conn.close()
+    finally:
+        config.DB_PATH = saved_db_path
+        for path in (VERIFY_TMP / "realtime_check.db", VERIFY_TMP / "realtime_check.db-wal",
+                     VERIFY_TMP / "realtime_check.db-shm"):
+            try:
+                path.unlink()
+            except OSError:
+                pass
+
+    # ---- 실행 스크립트·문서
+    sh_text = (config.BASE_DIR / "collect.sh").read_text(encoding="utf-8")
+    check("CLAREDEX_MAX_NEW_PER_RUN:-5" in sh_text, "collect.sh: 기본 발행 상한 5건")
+    check("CLAREDEX_NAVER_PER_RUN:-1" in sh_text, "collect.sh: 네이버 발행은 1건 유지")
+    check("CLAREDEX_NAVER_ENABLED" in sh_text and "SKIP naver" in sh_text,
+          "collect.sh: 10~15분 주기 실행에서 네이버 단계 스킵")
+    check("rss_limit=5" in sh_text, "collect.sh: RSS 피드당 5건 수집")
+    deploy_path = config.BASE_DIR / "DEPLOY.md"
+    if deploy_path.exists():  # 컨테이너 이미지에는 문서를 넣지 않는다(Dockerfile)
+        deploy_text = deploy_path.read_text(encoding="utf-8")
+        check("*/15 * * * *" in deploy_text and "CLAREDEX_NAVER_ENABLED=0" in deploy_text,
+              "DEPLOY.md: 10~15분 주기 cron 예시")
+    else:
+        check(True, "DEPLOY.md: 호스트 문서(이미지 미포함)", str(deploy_path))
+
+
 def naver_publish_checks() -> None:
     print("\n── 4. 네이버 블로그 발행 파이프라인 ───────────────────────")
     import naver_publish  # noqa: E402  (네트워크·브라우저 없이 상태 로직만 검사)
@@ -1170,8 +1351,8 @@ def naver_publish_checks() -> None:
     order = [text.find("collector.py"), text.find("naver_drafts.py"), text.find("naver_publish.py")]
     check(all(i > 0 for i in order) and order == sorted(order),
           "collect.sh: collector.py → naver_drafts.py → naver_publish.py 순서")
-    check("max_new" in text and "CLAREDEX_MAX_NEW_PER_RUN" in text,
-          "collect.sh: 실행당 발행 수 제한 (하루 2회 × 1건 = 2건/일)")
+    check("max_new" in text and "CLAREDEX_MAX_NEW_PER_RUN:-5" in text,
+          "collect.sh: 실행당 발행 수 5건 상한 (CLAREDEX_MAX_NEW_PER_RUN)")
     check("collector_state.json" in text,
           "collect.sh: cron 실행도 collector_state.json 에 기록 (/admin 수집기 탭)")
 
@@ -1328,6 +1509,37 @@ def static_checks() -> None:
     js_syntax_check(index_html, "index.html")
 
 
+def live_source_checks() -> None:
+    """실제 네트워크로 신규 소스가 살아 있는지 확인한다(기본 검증에는 포함하지 않음)."""
+    print("\n── 7. 실시간 소스 라이브 점검 (--live-sources) ────────────")
+    import content  # noqa: E402
+    import collector  # noqa: E402
+
+    for key in content.RSS_SOURCES:
+        try:
+            items = collector.fetch_rss(key, limit=3)
+            first = items[0]["title"][:60] if items else ""
+            check(len(items) > 0, f"RSS 라이브: {key}", f"{len(items)}건 · {first}")
+        except Exception as exc:  # noqa: BLE001
+            check(False, f"RSS 라이브: {key}", str(exc)[:140])
+    try:
+        sec_items = collector.fetch_sec(limit_per_company=1)
+        got = {company["ticker"] for company, _ in sec_items}
+        check(got >= {c["ticker"] for c in content.SEC_COMPANIES},
+              "SEC 라이브: 감시 종목 제출 확인", ",".join(sorted(got)))
+    except Exception as exc:  # noqa: BLE001
+        check(False, "SEC 라이브: 감시 종목 제출 확인", str(exc)[:140])
+    try:
+        payload = collector.collect_market()
+        signals = content.market_shock_signals(payload)
+        check(len(payload.get("items") or []) >= 3,
+              "시세 라이브: 지표 수집", ",".join(sorted(i["key"] for i in payload["items"])))
+        check(isinstance(signals, list), "시세 라이브: 급변 판정 동작",
+              ",".join(s["rule"]["id"] for s in signals) or "기준선 안쪽")
+    except Exception as exc:  # noqa: BLE001
+        check(False, "시세 라이브: 지표 수집", str(exc)[:140])
+
+
 def free_port(preferred: int = 8765) -> int:
     for port in (preferred, 8766, 8767, 8799, 0):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -1342,6 +1554,8 @@ def free_port(preferred: int = 8765) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--live-sources", action="store_true",
+                        help="신규 RSS·SEC·시세 소스를 실제 네트워크로 점검한다")
     args = parser.parse_args()
 
     db_checks()
@@ -1349,6 +1563,9 @@ def main() -> int:
     server_checks(port)
     collector_job_checks()
     alert_engine_checks()
+    realtime_source_checks()
+    if args.live_sources:
+        live_source_checks()
     naver_publish_checks()
     static_checks()
 

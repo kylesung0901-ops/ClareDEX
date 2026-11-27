@@ -11,6 +11,12 @@
   - OpenDART / 한국은행 ECOS      .env 에 키가 있을 때만 동작
 
 원칙: 원문에 없는 숫자를 만들지 않는다. 모든 글은 source_url 과 KST verified_at 을 남긴다.
+
+추가 소스(2026-11-27)
+  - 공식 거시·경제 RSS 4종: 한국은행 보도자료, 미 BEA, 미 노동부, 미 SEC 보도자료
+    (content.RSS_SOURCES — 실측으로 HTTP 200·XML 파싱·최신 항목이 확인된 피드만 등록)
+  - 시장 급변 속보: collect_market() 의 관측값이 기준선을 넘으면 그 자리에서 속보 글 생성
+    (BTC/ETH 전일 종가 대비 ±3%, 김프 +3.0% 이상·-0.5% 이하, 공포탐욕 15 이하·75 이상)
 """
 from __future__ import annotations
 
@@ -146,6 +152,37 @@ def fetch_sec(limit_per_company: int = 2, forms: tuple[str, ...] = ("8-K", "10-Q
         log(f"[SEC] {company['name']} ({company['ticker']}) 최근 {taken}건 수신")
         time.sleep(0.2)  # SEC 권장 초당 10회 이하
     return out
+
+
+# ------------------------------------------------------------------ 공식 거시·경제 RSS
+
+
+def fetch_rss(source_key: str, limit: int = 5) -> list[dict]:
+    """content.RSS_SOURCES 의 피드 1개를 읽어 최신 항목만 돌려준다. 비시장성 항목은 버린다."""
+    src = content.RSS_SOURCES[source_key]
+    limit = int(src.get("limit") or limit)   # 피드별 상한(예: SEC 보도자료 3건)
+    raw = http_get(src["url"])
+    root = ET.fromstring(raw.decode("utf-8-sig", errors="replace"))
+    items: list[dict] = []
+    skipped = 0
+    for node in root.findall(".//item"):
+        title = (node.findtext("title") or "").strip()
+        link = (node.findtext("link") or "").strip()
+        pub = (node.findtext("pubDate") or "").strip()
+        if not title or not link:
+            continue
+        if content.rss_skip(source_key, title):
+            skipped += 1
+            continue
+        try:
+            published = config.kst_from_utc_string(pub) if pub else None
+        except Exception:
+            published = None
+        items.append({"source": source_key, "title": title, "link": link, "published_kst": published})
+    items.sort(key=lambda x: x["published_kst"] or datetime.min.replace(tzinfo=config.KST), reverse=True)
+    log(f"[RSS:{source_key}] {src['name']} RSS {len(items)}건 수신 · 최신 {min(limit, len(items))}건 사용"
+        + (f" · 비시장성 {skipped}건 제외" if skipped else ""))
+    return items[:limit]
 
 
 # ------------------------------------------------------------------ OpenDART / ECOS (키 필요)
@@ -618,7 +655,7 @@ def store_posts(conn, posts: list[dict], max_new: int | None = None) -> tuple[li
 
 
 def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True,
-        max_new: int | None = None) -> dict:
+        max_new: int | None = None, rss_limit: int = 5) -> dict:
     config.ensure_dirs()
     db.init_db()
     verified_at = config.iso_kst()
@@ -659,13 +696,20 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True,
     except Exception as exc:  # noqa: BLE001
         source_status["ecos"] = f"fail: {exc}"
 
-    # 최신순 정렬 후 저장 (오래된 것부터 넣어 id 가 시간순이 되도록)
-    # max_new 가 있으면 "가장 최근에 나온 새 글"부터 그 수만큼만 발행한다.
-    posts.sort(key=lambda p: p.get("published_at") or p["verified_at"])
-    if max_new is not None:
-        posts = list(reversed(posts))
-    new_posts, duplicates, deferred = store_posts(conn, posts, max_new=max_new)
+    # 공식 거시·경제 RSS 4종 — 피드 하나가 실패해도 나머지는 그대로 수집한다.
+    for source_key in content.RSS_SOURCES:
+        status_key = f"rss_{source_key}"
+        try:
+            rss_items = fetch_rss(source_key, limit=rss_limit)
+            for item in rss_items:
+                posts.append(content.rss_post(source_key, item, verified_at))
+            source_status[status_key] = f"ok ({len(rss_items)})"
+        except Exception as exc:  # noqa: BLE001
+            source_status[status_key] = f"fail: {exc}"
+            log(f"[RSS:{source_key}] 수집 실패: {exc}")
 
+    # 시장 지표를 먼저 모아 급변 속보까지 글 목록에 넣은 뒤에 저장한다.
+    # (속보·공시가 한 실행의 발행 상한(max_new) 안에서 가장 최근 글로 먼저 나가도록)
     market_payload = None
     if collect_market_too:
         try:
@@ -675,6 +719,34 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True,
         except Exception as exc:  # noqa: BLE001
             source_status["market"] = f"fail: {exc}"
             log(f"[시장 지표] 수집 실패: {exc}")
+        if market_payload:
+            try:
+                shock_signals = content.market_shock_signals(market_payload)
+                for signal in shock_signals:
+                    posts.append(content.market_shock_post(signal, verified_at))
+                source_status["shock"] = (
+                    "ok (" + ", ".join(s["rule"]["id"] for s in shock_signals) + ")"
+                    if shock_signals else "none"
+                )
+                if shock_signals:
+                    log("[급변 속보] " + ", ".join(
+                        f"{s['rule']['id']}={s['observed']:+.2f}" for s in shock_signals))
+            except Exception as exc:  # noqa: BLE001
+                source_status["shock"] = f"fail: {exc}"
+                log(f"[급변 속보] 생성 실패: {exc}")
+        else:
+            source_status["shock"] = "skip (시세 없음)"
+    else:
+        source_status["shock"] = "skip (--no-market)"
+
+    # 최신순 정렬 후 저장 (오래된 것부터 넣어 id 가 시간순이 되도록)
+    # max_new 가 있으면 "가장 최근에 나온 새 글"부터 그 수만큼만 발행한다.
+    posts.sort(key=lambda p: p.get("published_at") or p["verified_at"])
+    if max_new is not None:
+        posts = list(reversed(posts))
+    new_posts, duplicates, deferred = store_posts(conn, posts, max_new=max_new)
+
+    if collect_market_too:
         # 시세 수집 직후 타점 비상벨 판정. 알림 쪽 예외가 전체 수집을 멈추지 않게 따로 감싼다.
         if market_payload:
             try:
@@ -695,7 +767,7 @@ def run(fed_limit: int = 5, sec_limit: int = 2, collect_market_too: bool = True,
     log(f"수집 완료 · 신규 {len(new_posts)}건 · 중복/기존 {duplicates}건 · DB 전체 {total}건"
         + (f" · 다음 실행으로 {deferred}건 미룸" if deferred else ""))
     for key, status in source_status.items():
-        log(f"  - {key:<8} {status}")
+        log(f"  - {key:<12} {status}")
     log("=" * 72)
     conn.close()
     return {
@@ -734,17 +806,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="ClareDEX v2 공식 원문 수집기")
     parser.add_argument("--fed-limit", type=int, default=5)
     parser.add_argument("--sec-limit", type=int, default=2)
+    parser.add_argument("--rss-limit", type=int, default=5,
+                        help="공식 RSS 피드당 한 번에 가져올 최신 항목 수")
     parser.add_argument("--no-market", action="store_true")
     parser.add_argument("--alerts-only", action="store_true",
                         help="시세만 조회해 타점 비상벨을 판정한다(비상벨 전용 cron 용)")
     parser.add_argument("--max-new", type=int, default=None,
-                        help="한 번에 발행할 신규 글 수 (cron 은 1 → 하루 2회 → 2건/일)")
+                        help="한 번에 발행할 신규 글 수 (10~15분 주기 cron 은 5)")
     args = parser.parse_args()
     if args.alerts_only:
         result = run_alerts_only()
         return 0 if result["market"] else 1
     result = run(fed_limit=args.fed_limit, sec_limit=args.sec_limit,
-                 collect_market_too=not args.no_market, max_new=args.max_new)
+                 collect_market_too=not args.no_market, max_new=args.max_new,
+                 rss_limit=args.rss_limit)
     return 0 if result["total"] else 1
 
 

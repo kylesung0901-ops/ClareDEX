@@ -46,6 +46,18 @@ def subject_particle(name: str) -> str:
     return "은" if last.isdigit() or last.isalpha() else "는"
 
 
+def josa_iga(name: str) -> str:
+    """한글 이름 뒤 주격 보조사(이/가)를 받침 여부로 고른다."""
+    text = _clean(name)
+    if not text:
+        return "가"
+    last = text[-1]
+    if "가" <= last <= "힣":
+        return "이" if (ord(last) - 0xAC00) % 28 else "가"
+    # 한글이 아닌 글자로 끝나면 기관 약어·괄호로 보고 '이'를 쓴다.
+    return "이"
+
+
 # 연준 보도자료 URL 의 경로 접두어는 발표 유형을 그대로 보여준다(추측이 아니라 원문 주소 기반).
 FED_URL_KINDS = {
     "bcreg": "은행 규제",
@@ -320,9 +332,21 @@ def _fed_tags(topic: str) -> list[str]:
 
 # ---------------------------------------------------------------- SEC EDGAR
 
+# 감시 종목 — CIK·회사명은 2026-11-27 에 아래 두 원문을 실제로 조회해 확인했다.
+#   https://www.sec.gov/files/company_tickers.json (ticker → CIK)
+#   https://data.sec.gov/submissions/CIK{cik}.json (name·tickers·최근 제출 서식)
+# name 은 SEC 가 돌려주는 표기 그대로 둔다(사명 변경 포함: MSTR = Strategy Inc).
 SEC_COMPANIES = [
     {"cik": "0000320193", "name": "Apple Inc.", "name_ko": "애플", "ticker": "AAPL", "exchange": "Nasdaq", "sector": "미국주식"},
-    {"cik": "0001045810", "name": "NVIDIA Corporation", "name_ko": "엔비디아", "ticker": "NVDA", "exchange": "Nasdaq", "sector": "반도체"},
+    {"cik": "0001045810", "name": "NVIDIA CORP", "name_ko": "엔비디아", "ticker": "NVDA", "exchange": "Nasdaq", "sector": "반도체"},
+    {"cik": "0001318605", "name": "Tesla, Inc.", "name_ko": "테슬라", "ticker": "TSLA", "exchange": "Nasdaq", "sector": "미국주식"},
+    {"cik": "0000789019", "name": "MICROSOFT CORP", "name_ko": "마이크로소프트", "ticker": "MSFT", "exchange": "Nasdaq", "sector": "미국주식"},
+    {"cik": "0001018724", "name": "AMAZON COM INC", "name_ko": "아마존", "ticker": "AMZN", "exchange": "Nasdaq", "sector": "미국주식"},
+    {"cik": "0001652044", "name": "Alphabet Inc.", "name_ko": "알파벳", "ticker": "GOOGL", "exchange": "Nasdaq", "sector": "미국주식"},
+    {"cik": "0001326801", "name": "Meta Platforms, Inc.", "name_ko": "메타", "ticker": "META", "exchange": "Nasdaq", "sector": "미국주식"},
+    {"cik": "0000002488", "name": "ADVANCED MICRO DEVICES INC", "name_ko": "AMD", "ticker": "AMD", "exchange": "Nasdaq", "sector": "반도체"},
+    {"cik": "0001679788", "name": "Coinbase Global, Inc.", "name_ko": "코인베이스", "ticker": "COIN", "exchange": "Nasdaq", "sector": "크립토"},
+    {"cik": "0001050446", "name": "Strategy Inc", "name_ko": "마이크로스트래티지", "ticker": "MSTR", "exchange": "Nasdaq", "sector": "크립토"},
 ]
 
 MONTH_KO = {
@@ -391,6 +415,13 @@ def sec_index_url(cik: str, accession: str) -> str:
     return f"https://www.sec.gov/Archives/edgar/data/{cik_int}/{nodash}/{accession}-index.htm"
 
 
+def company_label(company: dict) -> str:
+    """제목용 표기 — 한글명이 티커와 같으면(AMD) 괄호를 두 번 쓰지 않는다."""
+    name_ko = company.get("name_ko") or company["name"]
+    ticker = company.get("ticker") or ""
+    return name_ko if name_ko.strip().upper() == ticker.upper() else f"{name_ko}({ticker})"
+
+
 def sec_post(company: dict, filing: dict, verified_at: str) -> dict:
     form = filing["form"]
     form_ko, form_desc = FORM_META.get(form, ("공시", "미 SEC에 제출된 공시 서류입니다."))
@@ -424,7 +455,7 @@ def sec_post(company: dict, filing: dict, verified_at: str) -> dict:
         SEC_DETAIL.get(impact_key) or SEC_DETAIL.get(form) or SEC_DETAIL["8-K"],
     ]
     return {
-        "title": f"{name_ko}({company['ticker']}), {form} {form_ko} 제출 ({filing_date})",
+        "title": f"{company_label(company)}, {form} {form_ko} 제출 ({filing_date})",
         "category": "us-stock",
         "source_name": "미 SEC EDGAR",
         "source_grade": config.SOURCE_GRADES["filing"],
@@ -493,6 +524,364 @@ def dart_post(row: dict, verified_at: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------- 공식 거시·경제 RSS
+
+# 2026-11-27 실측(HTTP 200 + XML 파싱 + 최신 항목 확인)으로 "지금 새 글이 올라오는" 피드만 등록한다.
+#  - 접속 실패: 미 재무부(Treasury) RSS — 25초 타임아웃, 바이트 0 응답
+#  - 새 항목 없음: 미 노동통계국(BLS) — 개별 보도자료 피드가 전부 0건, bls_latest.rss 는 고정 링크 1건
+#  - RSS 미제공: 금융위원회(FSC) — /rss 경로가 404·HTML 오류 페이지
+RSS_SOURCES: dict[str, dict] = {
+    "bok": {
+        "name": "한국은행",
+        "url": "https://www.bok.or.kr/portal/bbs/B0000552/news.rss?menuNo=200690",
+        "category": "macro",
+        "topic": "kr-macro",
+        "prefix": "한국은행",
+        "verb": "공개했습니다",
+        "tags": ["매크로", "한국은행", "한국금리", "원화"],
+        "detail": (
+            "한국은행 보도자료는 기준금리·물가·금융안정에 대한 공식 판단과 통계를 담습니다. "
+            "발표문의 핵심 문장과 수치, 적용 시점이 원문에서 확인할 항목입니다."
+        ),
+        "impact": (
+            "한국은행 공식 발표로, 원화 환율·국고채 금리·코스피와 국내 크립토 시장 심리에 "
+            "영향을 줄 수 있습니다. 금리·물가 판단 문구의 변화가 확인 포인트입니다."
+        ),
+        "skip": ("채용", "입찰", "공모전", "경제교육", "언론보도해명"),
+        "s_grade": ("통화정책방향", "기준금리", "금융통화위원회"),
+    },
+    "bea": {
+        "name": "미 상무부 경제분석국",
+        "url": "https://apps.bea.gov/rss/rss.xml",
+        "category": "macro",
+        "topic": "us-macro",
+        "prefix": "미 경제분석국(BEA)",
+        "verb": "발표했습니다",
+        "tags": ["매크로", "미국경제", "GDP", "PCE"],
+        "detail": (
+            "BEA 발표는 GDP·개인소득·개인소비지출(PCE) 등 미국 성장과 물가 지표를 담습니다. "
+            "직전 발표 대비 수정 폭과 기준 기간이 원문에서 확인할 항목입니다."
+        ),
+        "impact": (
+            "미국 성장·물가 지표로, 달러·미 국채금리·나스닥 성장주의 할인율 가정과 비트코인 수급에 "
+            "영향을 줄 수 있습니다. 직전 발표 대비 수정 방향이 확인 포인트입니다."
+        ),
+        "skip": ("outdoor recreation", "arts and cultural", "marine economy", "travel and tourism",
+                 "multinational enterprises", "direct investment", "international transactions"),
+        "s_grade": ("gross domestic product", "gdp", "personal income and outlays",
+                    "personal consumption expenditures"),
+    },
+    "dol": {
+        "name": "미 노동부",
+        "url": "https://www.dol.gov/rss/releases.xml",
+        "category": "macro",
+        "topic": "us-macro",
+        "prefix": "미 노동부",
+        "verb": "발표했습니다",
+        "tags": ["매크로", "미국경제", "고용", "물가"],
+        "detail": (
+            "미 노동부 발표는 고용·물가·실업수당 청구 등 미국 노동시장 지표를 담습니다. "
+            "직전 발표 대비 변화와 기준 기간이 원문에서 확인할 항목입니다."
+        ),
+        "impact": (
+            "미국 노동시장 지표로, 연준 금리 경로 기대와 달러·나스닥·비트코인 수급에 "
+            "영향을 줄 수 있습니다. 직전 발표 대비 방향이 확인 포인트입니다."
+        ),
+        "skip": (),
+        # 노동부 피드는 고용·물가·실업수당 지표만 받는다(나머지는 개별 사업장 단속 보도자료).
+        "allow": ("unemployment insurance weekly claims", "consumer price index", "producer price index",
+                  "employment situation", "job openings", "real earnings"),
+        "s_grade": ("consumer price index", "employment situation"),
+    },
+    "sec_press": {
+        "name": "미 증권거래위원회",
+        "url": "https://www.sec.gov/news/pressreleases.rss",
+        "category": "us-stock",
+        "topic": "regulation",
+        "prefix": "미 SEC",
+        "verb": "공개했습니다",
+        "tags": ["미국주식", "규제", "SEC", "크립토"],
+        "detail": (
+            "미 SEC 보도자료는 규제·단속·제도 변경 발표를 담습니다. "
+            "적용 대상과 시행 시점, 제안 단계인지 최종규칙인지가 원문에서 확인할 항목입니다."
+        ),
+        "impact": (
+            "미 SEC의 규제·단속 발표로, 미국 증시와 크립토(가상자산) 업권의 규제 비용 인식에 "
+            "영향을 줄 수 있습니다. 적용 대상과 시행 시점이 확인 포인트입니다."
+        ),
+        "skip": ("advisory committee", "sunshine act", "roundtable"),
+        "limit": 3,   # 영문 제목 그대로 싣는 피드라 한 번에 많이 올리지 않는다
+        "s_grade": ("final rule", "adopts", "approves"),
+    },
+}
+
+# 원문 제목을 한국어로 확신할 수 있는 반복 지표만 한국어 라벨로 바꾼다(나머지는 원문 제목 유지).
+RSS_TITLE_KO: dict[str, tuple[tuple[re.Pattern[str], str], ...]] = {
+    "bea": (
+        (re.compile(r"gross domestic product|^gdp"), "GDP 발표"),
+        (re.compile(r"personal income and outlays"), "개인소득·소비지출(PCE) 발표"),
+        (re.compile(r"personal consumption expenditures"), "PCE 물가 발표"),
+        (re.compile(r"international trade in goods and services"), "무역수지(국제무역) 발표"),
+    ),
+    "dol": (
+        (re.compile(r"unemployment insurance weekly claims"), "주간 실업수당 청구 건수"),
+        (re.compile(r"consumer price index"), "소비자물가지수(CPI)"),
+        (re.compile(r"producer price index"), "생산자물가지수(PPI)"),
+        (re.compile(r"employment situation"), "고용상황 보고서"),
+        (re.compile(r"job openings and labor turnover"), "JOLTS(구인·이직) 보고서"),
+        (re.compile(r"real earnings"), "실질임금"),
+    ),
+}
+
+QUARTER_WORDS = {"first": "1", "second": "2", "third": "3", "fourth": "4"}
+
+
+def rss_period_ko(title: str) -> str:
+    """원문 제목에 적힌 기간(분기·월)을 그대로 한국어 표기로 옮긴다. 없으면 빈 문자열."""
+    text = title or ""
+    m = re.search(r"(first|second|third|fourth|[1-4](?:st|nd|rd|th))\s+Quarter\s+(\d{4})", text, re.I)
+    if m:
+        quarter = QUARTER_WORDS.get(m.group(1).lower(), m.group(1)[0])
+        return f"{m.group(2)}년 {quarter}분기"
+    m = re.search(r"\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b", text)
+    if m:
+        return f"{m.group(2)}년 {MONTH_KO.get(m.group(1))}월"
+    return ""
+
+
+def rss_skip(source_key: str, title: str) -> bool:
+    """allow 가 있으면 그것부터 통과해야 하고, skip 에 걸리면 버린다."""
+    src = RSS_SOURCES.get(source_key) or {}
+    lowered = (title or "").lower()
+    allow = src.get("allow") or ()
+    if allow and not any(str(keyword).lower() in lowered for keyword in allow):
+        return True
+    return any(str(keyword).lower() in lowered for keyword in src.get("skip") or ())
+
+
+def rss_importance(source_key: str, title: str) -> str:
+    """금리 결정·CPI·GDP 처럼 시장 전체가 보는 발표만 S, 나머지 공식 발표는 A."""
+    src = RSS_SOURCES.get(source_key) or {}
+    lowered = (title or "").lower()
+    return "S" if any(str(keyword).lower() in lowered for keyword in src.get("s_grade") or ()) else "A"
+
+
+def rss_title(source_key: str, source: dict, raw_title: str) -> str:
+    lowered = (raw_title or "").lower()
+    for pattern, label in RSS_TITLE_KO.get(source_key, ()):
+        if pattern.search(lowered):
+            period = rss_period_ko(raw_title)
+            return f"{source['prefix']}, {label}" + (f" ({period})" if period else "")
+    text = _clean(raw_title)
+    # 원문 제목이 이미 기관명으로 시작하면(SEC …) 그대로 인용한다.
+    if source_key == "sec_press" and re.match(r"^sec\b", text, re.I):
+        return _short(text, 110)
+    if source_key == "dol":
+        stripped = re.sub(r"^(the\s+)?(u\.?s\.?\s+)?department of labor\s*[-–—:]?\s*", "", text, flags=re.I)
+        text = stripped or text
+    return f"{source['prefix']}, {_short(text, 100)}"
+
+
+def rss_post(source_key: str, item: dict, verified_at: str) -> dict:
+    """공식 보도자료 RSS 항목 1건 → 글. 제목·시각·링크는 원문 그대로 쓰고 숫자를 만들지 않는다."""
+    src = RSS_SOURCES[source_key]
+    raw_title = _clean(item.get("title"))
+    link = (item.get("link") or "").strip()
+    published = item.get("published_kst")
+    published_iso = config.iso_kst(published) if published else None
+    published_label = config.fmt_kst(published, "%Y-%m-%d %H:%M") if published else "확인 불가"
+    if published:
+        opener = f"{src['name']}{josa_iga(src['name'])} {published_label} KST에 보도자료를 {src['verb']}."
+    else:
+        opener = f"{src['name']}{josa_iga(src['name'])} 공식 보도자료를 {src['verb']}(발표 시각은 원문에서 확인 필요)."
+    return {
+        "title": rss_title(source_key, src, raw_title),
+        "category": src["category"],
+        "source_name": src["name"],
+        "source_grade": config.SOURCE_GRADES["primary"],
+        "source_url": link,
+        "source_hash": sha256_url(link),
+        "verified_at": verified_at,
+        "summary_lines": [opener, f"원문 제목: {_short(raw_title, 160)}", src["detail"]],
+        "market_impact": src["impact"],
+        "tags": list(dict.fromkeys(src["tags"])),
+        "published_at": published_iso,
+        "topic": src["topic"],
+        "importance": rss_importance(source_key, raw_title),
+    }
+
+
+# ---------------------------------------------------------------- 시장 급변 속보
+
+# collect_market() 이 이미 긁어 온 실시간 수치가 기준선을 넘으면 그 자리에서 속보를 만든다.
+# 숫자는 관측값만 쓰고, 같은 날 같은 조건은 1건으로 묶는다(market_shock_key).
+SHOCK_PRICE_CHANGE_PCT = 3.0   # BTC·ETH 전일 종가 대비 변동률
+SHOCK_KIMP_HIGH = 3.0          # 김치프리미엄 +3.0% 이상
+SHOCK_KIMP_LOW = -0.5          # 김치프리미엄 -0.5% 이하(역프리미엄)
+SHOCK_FNG_LOW = 15             # 공포탐욕 15 이하
+SHOCK_FNG_HIGH = 75            # 공포탐욕 75 이상
+
+SHOCK_RULES: tuple[dict, ...] = (
+    {"id": "btc_drop", "kind": "price", "item": "btc_krw", "field": "delta", "op": "<=",
+     "threshold": -SHOCK_PRICE_CHANGE_PCT, "symbol": "BTC", "move": "급락"},
+    {"id": "btc_surge", "kind": "price", "item": "btc_krw", "field": "delta", "op": ">=",
+     "threshold": SHOCK_PRICE_CHANGE_PCT, "symbol": "BTC", "move": "급등"},
+    {"id": "eth_drop", "kind": "price", "item": "eth_krw", "field": "delta", "op": "<=",
+     "threshold": -SHOCK_PRICE_CHANGE_PCT, "symbol": "ETH", "move": "급락"},
+    {"id": "eth_surge", "kind": "price", "item": "eth_krw", "field": "delta", "op": ">=",
+     "threshold": SHOCK_PRICE_CHANGE_PCT, "symbol": "ETH", "move": "급등"},
+    {"id": "kimp_high", "kind": "kimp", "item": "kimchi_premium", "field": "value", "op": ">=",
+     "threshold": SHOCK_KIMP_HIGH},
+    {"id": "kimp_low", "kind": "kimp", "item": "kimchi_premium", "field": "value", "op": "<=",
+     "threshold": SHOCK_KIMP_LOW},
+    {"id": "fng_fear", "kind": "fng", "item": "fear_greed", "field": "value", "op": "<=",
+     "threshold": SHOCK_FNG_LOW},
+    {"id": "fng_greed", "kind": "fng", "item": "fear_greed", "field": "value", "op": ">=",
+     "threshold": SHOCK_FNG_HIGH},
+)
+
+
+def _as_of_label(value: str | None) -> str:
+    if not value:
+        return "확인 불가"
+    try:
+        return config.fmt_kst(config.parse_kst(str(value)), "%m-%d %H:%M")
+    except Exception:  # noqa: BLE001 — 형식이 낯설면 원문 문자열을 그대로 보여준다
+        return str(value)
+
+
+def market_shock_signals(payload: dict | None) -> list[dict]:
+    """collect_market() 결과에서 기준선을 넘은 지표만 골라 돌려준다(관측값·출처·시각 포함)."""
+    items = {i.get("key"): i for i in (payload or {}).get("items") or []
+             if isinstance(i, dict) and i.get("key")}
+    values = (payload or {}).get("values") or {}
+    signals: list[dict] = []
+    for rule in SHOCK_RULES:
+        item = items.get(rule["item"])
+        if not item:
+            continue
+        raw = item.get(rule.get("field", "value"))
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            continue
+        observed = float(raw)
+        if rule["op"] == ">=" and observed < rule["threshold"]:
+            continue
+        if rule["op"] == "<=" and observed > rule["threshold"]:
+            continue
+        signals.append({"rule": rule, "item": item, "observed": observed, "values": values})
+    return signals
+
+
+def market_shock_key(rule_id: str, verified_at: str) -> str:
+    """같은 날 같은 조건은 1건만 — 일자·조건으로 만든 고유 키."""
+    day = config.parse_kst(verified_at).strftime("%Y-%m-%d")
+    return f"claredex-shock-{day}-{rule_id}"
+
+
+def shock_importance(rule: dict, observed: float) -> str:
+    """기준선을 크게 넘은 경우만 S, 기준선을 막 넘은 경우는 A."""
+    if rule["kind"] == "price":
+        return "S" if abs(observed) >= 5.0 else "A"
+    if rule["kind"] == "kimp":
+        return "S" if (observed >= 5.0 or observed <= -2.0) else "A"
+    if rule["kind"] == "fng":
+        return "S" if (observed <= 10 or observed >= 90) else "A"
+    return "A"
+
+
+def market_shock_post(signal: dict, verified_at: str) -> dict:
+    """급변 신호 1건 → 속보 글. source_url 은 실제 관측 출처에 일자·조건 키를 프래그먼트로 붙인다."""
+    rule = signal["rule"]
+    item = signal["item"]
+    observed = float(signal["observed"])
+    key = market_shock_key(rule["id"], verified_at)
+    base_url = (item.get("source_url") or config.WEB_URL).split("#")[0]
+    source_url = f"{base_url}#{key}"
+    as_of_label = _as_of_label(item.get("as_of"))
+    bound = "이하" if rule["op"] == "<=" else "이상"
+
+    if rule["kind"] == "price":
+        symbol = rule["symbol"]
+        display = item.get("display") or config.fmt_krw(float(item.get("value") or 0))
+        title = f"{symbol}, 전일 종가 대비 {observed:+.2f}% {rule['move']} ({display})"
+        summary = [
+            f"업비트 {symbol}/KRW 현재 {display} · 전일 종가 대비 {observed:+.2f}% (관측 {as_of_label} KST)",
+            f"속보 기준: 전일 종가 대비 {rule['threshold']:+.1f}% {bound} · 관측값 {observed:+.2f}%",
+            ("급락은 레버리지 청산과 위험자산 회피 심리를 함께 움직입니다. 직전 24시간 거래량, 호가 잔량, "
+             "김치프리미엄 변화가 원문 시세에서 확인할 항목입니다." if rule["move"] == "급락" else
+             "급등은 숏 포지션 청산과 추격 매수 심리를 함께 움직입니다. 직전 24시간 거래량, 호가 잔량, "
+             "김치프리미엄 변화가 원문 시세에서 확인할 항목입니다."),
+        ]
+        impact = (
+            f"{symbol} {rule['move']}은 국내 크립토 시장과 나스닥 성장주 심리에 동시에 닿을 수 있습니다. "
+            "알트코인 낙폭·상승 폭과 김치프리미엄 변화가 확인 포인트입니다."
+        )
+        tags = [symbol, rule["move"], "코인", "시세"]
+    elif rule["kind"] == "kimp":
+        values = signal.get("values") or {}
+        display = item.get("display") or f"{observed:+.2f}%"
+        basis_parts: list[str] = []
+        if isinstance(values.get("btc_krw"), (int, float)):
+            basis_parts.append(f"업비트 BTC {config.fmt_krw(float(values['btc_krw']))}")
+        if isinstance(values.get("btc_usd"), (int, float)):
+            basis_parts.append(f"BTC/USD ${float(values['btc_usd']):,.0f}")
+        if isinstance(values.get("usdkrw"), (int, float)):
+            basis_parts.append(f"USD/KRW {float(values['usdkrw']):,.1f}원")
+        basis = " · ".join(basis_parts)
+        note = item.get("note") or "업비트 BTC 원화가 ÷ (BTC/USD × USD/KRW) − 1"
+        title = (f"김치프리미엄 {display}" +
+                 (" — 국내가가 해외보다 낮은 역프리미엄" if observed < 0 else " — 국내가 프리미엄 확대"))
+        summary = [
+            (f"{basis} 기준 김치프리미엄 {display} (관측 {as_of_label} KST)" if basis
+             else f"김치프리미엄 {display} (관측 {as_of_label} KST)"),
+            f"속보 기준: {rule['threshold']:+.1f}% {bound} · 관측값 {observed:+.2f}% · "
+            f"구성: {item.get('source') or '업비트·해외 거래소·USD/KRW'}",
+            f"김치프리미엄은 '{note}' 로 계산한 국내외 가격 차이입니다. "
+            "업비트·해외 거래소 가격과 환율이 원문에서 확인할 항목입니다.",
+        ]
+        impact = (
+            "국내외 가격 차이가 벌어지면 원화 수급과 차익거래(역송금) 움직임이 함께 나타날 수 있습니다. "
+            "업비트·해외 거래소 가격과 환율 변화가 확인 포인트입니다."
+        )
+        tags = ["김치프리미엄", "BTC", "코인"] + (["역프리미엄"] if observed < 0 else [])
+    else:  # 공포탐욕지수
+        display = item.get("display") or str(int(observed))
+        title = f"공포탐욕지수 {display} — {int(rule['threshold'])} {bound} 진입"
+        summary = [
+            f"Alternative.me 공포탐욕지수 {display} (관측 {as_of_label} KST)",
+            f"속보 기준: {int(rule['threshold'])} {bound} · 관측값 {int(observed)}",
+            "공포탐욕지수는 크립토 시장 심리를 0~100으로 보여주는 지표입니다. "
+            "산정 방식과 최근 추세는 원문(Alternative.me)에서 확인할 항목입니다.",
+        ]
+        impact = (
+            "시장 심리가 한쪽으로 쏠리면 변동성과 수급이 함께 커질 수 있습니다. "
+            "공포탐욕지수의 산정 방식과 최근 추세, 김치프리미엄 변화가 확인 포인트입니다."
+        )
+        tags = ["공포탐욕지수", "코인", "심리"]
+
+    published = None
+    try:
+        published = config.parse_kst(str(item.get("as_of") or ""))
+    except Exception:  # noqa: BLE001
+        published = None
+
+    return {
+        "title": title,
+        "category": "coin",
+        "source_name": item.get("source") or "클레어덱스 시세",
+        "source_grade": config.SOURCE_GRADES["market"],
+        "source_url": source_url,
+        "source_hash": sha256_url(source_url),
+        "verified_at": verified_at,
+        "summary_lines": summary,
+        "market_impact": impact,
+        "tags": tags,
+        "published_at": config.iso_kst(published) if published else verified_at,
+        "topic": "market-shock",
+        "importance": shock_importance(rule, observed),
+    }
+
+
 # ---------------------------------------------------------------- 네이버 초안용
 
 TOPIC_HOOKS = {
@@ -503,6 +892,9 @@ TOPIC_HOOKS = {
     "payments": ("결제 업권 영향", ["연준", "지급결제", "수수료", "핀테크", "은행"]),
     "regulation": ("규제 변화 체크", ["연준", "금융규제", "자본규제", "은행주", "리스크"]),
     "general-macro": ("매크로 참고", ["연준", "매크로", "미국경제", "금리", "시장"]),
+    "kr-macro": ("한국은행 3줄 요약", ["한국은행", "기준금리", "금융통화위원회", "원화", "코스피", "국고채"]),
+    "us-macro": ("미국 지표 3줄 요약", ["미국경제", "GDP", "PCE", "고용지표", "나스닥", "금리"]),
+    "market-shock": ("급변 3줄 요약", ["비트코인", "김치프리미엄", "공포탐욕지수", "급등락", "시세", "코인"]),
     "earnings": ("실적 공시 3줄", ["실적", "공시", "미국주식", "SEC", "8-K", "어닝"]),
     "filing": ("공시 원문 3줄", ["공시", "SEC", "미국주식", "기업분석", "원문"]),
 }
@@ -601,6 +993,22 @@ TELEGRAM_CTA = {
         "시장에 영향을 줄 수 있는 공식 자료를 빠르게 받아보시려면 텔레그램 채널을 구독해 주세요.",
         "발표 원문과 확인 시각을 함께 담아 텔레그램으로 전해드립니다.",
     ],
+    "kr-macro": [
+        "한국은행 발표는 원화·국고채·코스피에 바로 닿습니다. 확인 즉시 3줄로 정리해 텔레그램에 올립니다.",
+        "기준금리와 물가 판단 문구의 변화는 텔레그램 채널에서 가장 먼저 받아보실 수 있습니다.",
+        "국내 매크로 공식 발표를 놓치지 않으려면 텔레그램 알림을 켜두세요.",
+    ],
+    "us-macro": [
+        "미국 GDP·물가·고용 지표는 발표 직후 달러와 나스닥을 움직입니다. 핵심만 텔레그램으로 보내드립니다.",
+        "발표 시각에 맞춰 원문과 확인 시각을 함께 정리해 텔레그램에 올립니다.",
+        "미국 지표 발표일에는 알림을 켜두는 것이 가장 빠릅니다. 클레어덱스 텔레그램에서 받아보세요.",
+    ],
+    "market-shock": [
+        "급등락은 몇 분 안에 끝나는 경우가 많습니다. 기준선을 넘은 순간 텔레그램으로 먼저 알려드립니다.",
+        "김프·공포탐욕·시세 급변은 관측 수치와 시각까지 함께 텔레그램에 올립니다.",
+        "내가 정한 기준선을 넘으면 문자와 텔레그램으로 알려드립니다. 클레어덱스에서 비상벨을 켜두세요.",
+        "시세 급변 속보는 확인 즉시 한 줄로 정리해 텔레그램 채널에 올립니다.",
+    ],
     "earnings": [
         "실적 공시는 숫자보다 먼저 확인한 사람이 유리합니다. 원문 확인 직후 핵심을 텔레그램으로 보내드립니다.",
         "분기 실적이 나오는 날에는 알림 속도가 중요합니다. 클레어덱스 텔레그램에서 실시간으로 받아보세요.",
@@ -654,6 +1062,21 @@ WEB_CTA = {
         "매크로 지표와 공식 일정은 클레어덱스 웹에서 한 화면에 정리해 볼 수 있습니다.",
         "더 깊은 해설과 지난 발표 아카이브는 클레어덱스 인사이트에서 확인하세요.",
         "관심 자산을 등록하면 관련 속보만 모아 클레어덱스 웹에서 받아보실 수 있습니다.",
+    ],
+    "kr-macro": [
+        "한국은행 발표와 국내 금리·물가 지표는 클레어덱스 웹에서 함께 볼 수 있습니다.",
+        "관심 자산을 등록하면 원화·코스피 관련 속보만 모아 받아보실 수 있습니다.",
+        "지난 한국은행 발표 아카이브는 클레어덱스 웹에서 시계열로 확인하세요.",
+    ],
+    "us-macro": [
+        "미국 지표 발표 일정은 클레어덱스 웹의 공식 일정에서 미리 확인하실 수 있습니다.",
+        "지표 발표 뒤 시장 해석은 클레어덱스 인사이트에서 더 자세히 다룹니다.",
+        "관심 자산을 등록하면 나스닥·비트코인 관련 지표 속보만 모아 볼 수 있습니다.",
+    ],
+    "market-shock": [
+        "김프·공포탐욕·롱숏 수치는 클레어덱스 웹 상단 지표에서 실시간으로 확인하실 수 있습니다.",
+        "내 기준선을 넘을 때 문자로 받으려면 클레어덱스에서 비상벨을 설정해 보세요.",
+        "급등락 이후 흐름은 클레어덱스 웹의 시세·지표 화면에서 이어서 볼 수 있습니다.",
     ],
     "earnings": [
         "실적 발표의 세부 수치와 비교는 클레어덱스 웹의 공시 아카이브에서 확인하실 수 있습니다.",
