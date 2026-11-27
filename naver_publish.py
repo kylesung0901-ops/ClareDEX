@@ -117,9 +117,19 @@ PUBLISH_LABEL = "발행"
 PUBLISH_BLOCKLIST = ("예약 발행", "예약발행")
 
 EDITOR_POPUP_TEXT = "작성 중인 글"  # 임시저장 복구 팝업: "작성 중인 글이 있습니다"
+# 2026-11-27 라이브 진단: 팝업 제목은 STRONG.se-popup-title, 버튼은 .se-popup-container 안의 '취소'.
+# 같은 문구가 숨은 템플릿에도 여러 벌 있어 is_visible() 로 보이는 것만 누른다.
+EDITOR_POPUP_MARKERS = (
+    ".se-popup-button-cancel",
+    ".se-popup-title",
+    "[class*='popup'] [class*='popup-title']",
+)
 EDITOR_POPUP_CANCEL = (
     ".se-popup-button-cancel",
+    ".se-popup-container button:has-text('취소')",
+    ".se-popup-container :text-is('취소')",
     "[class*='popup'] button:text-is('취소')",
+    "[class*='popup'] button:has-text('취소')",
     "[class*='dialog'] button:text-is('취소')",
     "button:text-is('취소')",
 )
@@ -127,6 +137,29 @@ HELP_PANEL_CLOSE = (
     ".se-help-panel-close-button",
     "[class*='help_panel'] [class*='close']",
     "[class*='help-panel'] [class*='close']",
+    "[class*='help'] button[class*='close']",
+    ".se-help-panel [class*='close']",
+)
+# 에디터 본체가 그려졌는지 판단하는 신호 (제목란·편집 가능 영역)
+EDITOR_READY_SELECTORS = (
+    ".se-title-text",
+    "[data-placeholder*='제목']",
+    ".se-component.se-documentTitle",
+    "[contenteditable='true']",
+)
+# 제목란 후보 — 라이브 DOM 은 DIV.se-module.se-title-text 자체가 편집 영역이다.
+TITLE_SELECTORS = (
+    ".se-title-text .se-text-paragraph",
+    ".se-title-text",
+    "[data-placeholder*='제목']",
+    ".se-component.se-documentTitle [contenteditable='true']",
+)
+# 본문 후보 — 제목란을 제외하고 고른다.
+BODY_SELECTORS = (
+    ".se-component.se-text .se-text-paragraph",
+    ".se-main-container .se-text-paragraph",
+    ".se-content [contenteditable='true']",
+    "[contenteditable='true']",
 )
 
 
@@ -205,46 +238,266 @@ def _pick_publish_button(page, *, last: bool = False, exclude_box: dict | None =
     return None, None
 
 
-def _dismiss_popups(page) -> list[str]:
-    """에디터 진입을 막는 임시저장 복구 팝업·도움말 패널을 닫는다. 없으면 조용히 넘어간다."""
-    closed: list[str] = []
-    has_notice = False
+def _visible_elements(page, selector: str, limit: int = 5) -> list:
+    """선택자에 걸린 요소 중 지금 화면에 보이는 것만 돌려준다(숨은 템플릿 제외)."""
+    out = []
     try:
-        notice = page.locator(f"text={EDITOR_POPUP_TEXT}").first
-        has_notice = notice.count() > 0 and notice.is_visible()
+        loc = page.locator(selector)
+        total = min(loc.count(), limit)
     except Exception:  # noqa: BLE001
-        has_notice = False
-    popup_cancel = False
-    try:
-        btn = page.locator(EDITOR_POPUP_CANCEL[0]).first
-        popup_cancel = btn.count() > 0 and btn.is_visible()
-    except Exception:  # noqa: BLE001
-        popup_cancel = False
-    if has_notice or popup_cancel:
-        # '취소' 는 복구하지 않고 새 글로 시작한다는 뜻 — 자동 발행에는 빈 에디터가 필요하다.
-        for selector in EDITOR_POPUP_CANCEL:
-            try:
-                btn = page.locator(selector).first
-                if btn.count() and btn.is_visible():
-                    btn.click(timeout=4000)
-                    page.wait_for_timeout(900)
-                    closed.append(f"임시저장 팝업 닫기({selector})")
-                    break
-            except Exception:  # noqa: BLE001
-                continue
-    for selector in HELP_PANEL_CLOSE:
+        return out
+    for index in range(total):
         try:
-            btn = page.locator(selector).first
-            if btn.count() and btn.is_visible():
-                btn.click(timeout=4000)
-                page.wait_for_timeout(400)
-                closed.append(f"도움말 패널 닫기({selector})")
-                break
+            el = loc.nth(index)
+            if el.is_visible():
+                out.append(el)
         except Exception:  # noqa: BLE001
             continue
+    return out
+
+
+def _robust_click(el, timeout: int = 4000) -> str:
+    """일반 클릭 → force 클릭 → JS 클릭 순서로 시도하고 쓴 방법을 돌려준다. 다 막히면 빈 문자열."""
+    try:
+        el.click(timeout=timeout)
+        return "click"
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        el.click(timeout=timeout, force=True)
+        return "force"
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        el.evaluate("(e) => e.click()")
+        return "js"
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _dom_focus_end(el) -> bool:
+    """DOM focus 로 커서를 요소 끝에 둔다.
+
+    오버레이·도움말 패널은 마우스 클릭만 막고 DOM focus 는 막지 못한다 → 클릭이 계속 막힐 때의 확실한 수단.
+    """
+    try:
+        return bool(el.evaluate(
+            """(e) => {
+                const doc = e.ownerDocument || document;
+                let target = e;
+                if (!target.isContentEditable) {
+                    target = e.querySelector(
+                        "[contenteditable='true'], [contenteditable=''], .se-text-paragraph, p"
+                    ) || e;
+                }
+                try { target.focus(); } catch (err) {}
+                try {
+                    const range = doc.createRange();
+                    range.selectNodeContents(target);
+                    range.collapse(false);
+                    const sel = doc.defaultView.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                } catch (err) {}
+                const active = doc.activeElement;
+                return active === target || target.contains(active) || (active && active.contains(target));
+            }"""
+        ))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _same_or_inside(el, other) -> bool:
+    """두 요소가 같거나 한쪽이 다른 쪽을 품고 있는지(제목란을 본문 후보에서 빼기 위한 검사).
+
+    ElementHandle 을 JS 인자로 넘기면 직렬화되어 비교가 실패했다 → page 쪽에 표시를 남기고
+    후보 요소에서 그 표시와의 관계를 본다(요소 속성은 건드리지 않는다).
+    """
+    try:
+        other.evaluate("(e) => { window.__pickleExclude = e; }")
+        return bool(el.evaluate(
+            """(e) => {
+                const t = window.__pickleExclude;
+                return !!t && (e === t || e.contains(t) || t.contains(e));
+            }"""
+        ))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _has_text(el, text: str) -> bool:
+    probe = (text or "").strip()[:24]
+    if not probe:
+        return True
+    try:
+        return probe in (el.inner_text(timeout=2000) or "")
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _focused_editable(page) -> bool:
+    """지금 키보드 포커스가 편집 가능한 요소에 있는지. 클릭이 오버레이에 먹혔는지 판별한다."""
+    try:
+        return bool(page.evaluate(
+            """() => {
+                const a = document.activeElement;
+                return !!(a && (a.isContentEditable ||
+                    (a.getAttribute && a.getAttribute('contenteditable') !== null)));
+            }"""
+        ))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _page_text_len(page) -> int:
+    try:
+        return int(page.evaluate("() => ((document.body && document.body.innerText) || '').length"))
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def _popup_visible(page) -> bool:
+    """임시저장 복구 팝업이 아직 떠 있는지.
+
+    아무 팝업(.se-popup-container)이나 잡으면 발행 설정 레이어의 '취소'를 눌러 버릴 수 있어,
+    복구 팝업에만 있는 신호(제목 문구·취소 버튼 클래스)로 판단한다.
+    """
+    for selector in EDITOR_POPUP_MARKERS:
+        if _visible_elements(page, selector, limit=3):
+            return True
+    return bool(_visible_elements(page, f"text={EDITOR_POPUP_TEXT}", limit=3))
+
+
+def _dismiss_popups(page) -> list[str]:
+    """에디터 진입을 막는 임시저장 복구 팝업·도움말 패널을 닫는다. 없으면 조용히 넘어간다.
+
+    '취소' 는 복구하지 않고 새 글로 시작한다는 뜻 — 자동 발행에는 빈 에디터가 필요하다.
+    클릭이 오버레이에 막히면 force 클릭·JS 클릭까지 쓰고, 그래도 남으면 Esc 로 닫는다.
+    """
+    closed: list[str] = []
+
+    def _cancel_candidates() -> list[tuple[str, object]]:
+        found: list[tuple[str, object]] = []
+        for selector in EDITOR_POPUP_CANCEL:
+            for el in _visible_elements(page, selector, limit=4):
+                found.append((selector, el))
+        try:
+            role_btn = page.get_by_role("button", name="취소", exact=True)
+            for index in range(min(role_btn.count(), 4)):
+                el = role_btn.nth(index)
+                if el.is_visible():
+                    found.append(("role=button[취소]", el))
+        except Exception:  # noqa: BLE001
+            pass
+        return found
+
+    for _attempt in range(3):
+        if not _popup_visible(page):
+            break
+        acted = False
+        for selector, el in _cancel_candidates():
+            how = _robust_click(el, 3000)
+            if how:
+                page.wait_for_timeout(900)
+                closed.append(f"임시저장 팝업 취소({selector} · {how})")
+                acted = True
+                break
+        if not acted:
+            break
+
+    if _popup_visible(page):
+        try:
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(700)
+            closed.append("임시저장 팝업 Esc")
+        except Exception:  # noqa: BLE001
+            pass
+
+    # 도움말 패널: 제목란 위를 덮고 있으면 클릭이 막힌다.
+    for selector in HELP_PANEL_CLOSE:
+        visible = _visible_elements(page, selector, limit=3)
+        if not visible:
+            continue
+        how = _robust_click(visible[0], 3000)
+        if how:
+            page.wait_for_timeout(500)
+            closed.append(f"도움말 패널 닫기({selector} · {how})")
+            break
+
+    if _popup_visible(page):
+        log("[naver] 임시저장 팝업이 아직 남아 있습니다 → 제목란은 DOM focus 로 잡습니다.")
     if closed:
         log("[naver] 에디터 팝업 정리 · " + ", ".join(closed))
     return closed
+
+
+def _wait_editor_ready(page, timeout_ms: int = 20000) -> bool:
+    """에디터 본체(제목란·편집 영역)가 그려질 때까지 잠깐 기다린다."""
+    deadline = time.time() + timeout_ms / 1000
+    while True:
+        for selector in EDITOR_READY_SELECTORS:
+            if _visible_elements(page, selector, limit=3):
+                return True
+        if time.time() >= deadline:
+            return False
+        page.wait_for_timeout(400)
+
+
+def _find_title(page, timeout_ms: int = 15000):
+    """제목란 요소와 그 선택자를 돌려준다. 없으면 (None, '')."""
+    deadline = time.time() + timeout_ms / 1000
+    while True:
+        for selector in TITLE_SELECTORS:
+            visible = _visible_elements(page, selector, limit=5)
+            if visible:
+                return visible[0], selector
+        if time.time() >= deadline:
+            return None, ""
+        page.wait_for_timeout(500)
+
+
+def _find_body(page, exclude=None, timeout_ms: int = 10000):
+    """본문 입력란(제목란 제외)과 그 선택자를 돌려준다. 없으면 (None, '')."""
+    deadline = time.time() + timeout_ms / 1000
+    while True:
+        for selector in BODY_SELECTORS:
+            visible = _visible_elements(page, selector, limit=25)
+            if exclude is not None:
+                visible = [el for el in visible if not _same_or_inside(el, exclude)]
+            if visible:
+                return visible[-1], selector
+        if time.time() >= deadline:
+            return None, ""
+        page.wait_for_timeout(500)
+
+
+def _type_into(page, el, text: str, *, allow_force: bool = True) -> str:
+    """제목란에 글자를 넣는다: 일반 클릭 → force 클릭 → DOM focus 순서.
+
+    클릭이 오버레이에 먹히면 포커스가 엉뚱한 곳으로 가므로, 클릭 뒤 포커스가 편집 영역인지
+    먼저 확인한 뒤에만 입력한다(팝업의 '확인' 등을 잘못 누르지 않게).
+    """
+    modes = [("click", False)]
+    if allow_force:
+        modes.append(("force", True))
+    for mode, force in modes:
+        try:
+            el.click(timeout=6000, force=force)
+        except Exception:  # noqa: BLE001
+            continue
+        page.wait_for_timeout(300)
+        if not _focused_editable(page):
+            continue
+        page.keyboard.insert_text(text)
+        page.wait_for_timeout(400)
+        if _has_text(el, text):
+            return mode
+    if _dom_focus_end(el):
+        page.keyboard.insert_text(text)
+        page.wait_for_timeout(400)
+        if _has_text(el, text):
+            return "dom-focus"
+    return ""
 
 
 def _click_publish(page) -> str:
@@ -299,76 +552,112 @@ def _click_publish(page) -> str:
     return "ok"
 
 
+def _paste_body(page, el, html: str, text: str) -> str:
+    """본문 입력란을 잡고 HTML 을 클립보드로 붙여넣는다. 본문이 비면 일반 텍스트로 대체한다."""
+    how = _robust_click(el, 6000)
+    focused = _focused_editable(page)
+    if not how or not focused:
+        if _dom_focus_end(el):
+            how = f"{how}+dom-focus" if how else "dom-focus"
+    page.wait_for_timeout(300)
+
+    before = _page_text_len(page)
+    want = max(8, min(len(text or ""), 4000) * 0.4)
+    if html:
+        try:
+            page.evaluate(
+                """async (payload) => {
+                    const item = new ClipboardItem({
+                        'text/html': new Blob([payload.html], {type: 'text/html'}),
+                        'text/plain': new Blob([payload.text], {type: 'text/plain'})
+                    });
+                    await navigator.clipboard.write([item]);
+                }""",
+                {"html": html, "text": text},
+            )
+            page.keyboard.press("Control+V")
+            page.wait_for_timeout(2500)
+            if _page_text_len(page) - before >= want:
+                return f"{how}+clipboard"
+            log("[naver] 클립보드 붙여넣기 후 본문이 비어 있음 → 일반 텍스트로 대체")
+        except Exception as exc:  # noqa: BLE001
+            log(f"[naver] HTML 붙여넣기 실패 → 일반 텍스트로 대체: {exc}")
+
+    if not _focused_editable(page):
+        _dom_focus_end(el)
+    if not _focused_editable(page):
+        # 붙여넣기 과정에서 문단이 다시 그려졌을 수 있어 본문 입력란을 한 번 더 찾아 포커스를 준다.
+        refound, _ref_sel = _find_body(page, None, timeout_ms=4000)
+        if refound is not None:
+            _dom_focus_end(refound)
+    page.keyboard.insert_text((text or "")[:4000])
+    page.wait_for_timeout(1200)
+    return f"{how}+text"
+
+
+def _set_title_value(el, title: str) -> None:
+    """마지막 수단: 에디터에 직접 값과 input 이벤트를 넣는다(클릭이 계속 막힐 때)."""
+    el.evaluate(
+        """(e, value) => {
+            let target = e;
+            if (!target.isContentEditable) {
+                target = e.querySelector(
+                    "[contenteditable='true'], [contenteditable=''], .se-text-paragraph, p"
+                ) || e;
+            }
+            try { target.focus(); } catch (err) {}
+            target.textContent = value;
+            target.dispatchEvent(new InputEvent('input', {
+                bubbles: true, inputType: 'insertText', data: value
+            }));
+        }""",
+        title,
+    )
+
+
 def _fill_editor(page, draft: dict) -> None:
     title = (draft.get("seo_title") or draft.get("post_title") or "").strip()[:100]
     html = draft.get("body_html") or ""
     text = draft.get("body_text") or ""
 
-    # 임시저장 복구 팝업이나 도움말 패널이 떠 있으면 제목·본문 클릭이 막힌다 → 먼저 닫는다(없으면 무시).
-    _dismiss_popups(page)
+    # 1) 본체가 그려지기 전에 팝업을 건드리면 아무것도 못 닫는다 → 제목란이 보일 때까지 잠깐 기다린다.
+    if not _wait_editor_ready(page, timeout_ms=20000):
+        log("[naver] 에디터 제목란이 늦게 뜹니다 → 팝업 정리 후 다시 확인")
 
-    # 제목
-    title_selectors = (
-        ".se-title-text .se-text-paragraph",
-        ".se-title-text",
-        "[data-placeholder*='제목']",
-        ".se-component.se-documentTitle [contenteditable='true']",
-    )
-    filled = False
-    for selector in title_selectors:
-        try:
-            el = page.locator(selector).first
-            if el.count():
-                el.click(timeout=6000)
-                page.keyboard.insert_text(title)
-                filled = True
-                break
-        except Exception:  # noqa: BLE001
-            continue
-    if not filled:
+    # 2) 임시저장 복구 팝업·도움말 패널이 떠 있으면 제목·본문 클릭이 막힌다 → 먼저 확실히 닫는다.
+    _dismiss_popups(page)
+    if not _wait_editor_ready(page, timeout_ms=15000):
+        raise RuntimeError("네이버 에디터가 열리지 않았습니다(제목란 없음).")
+
+    # 3) 제목 — 팝업이 남아 있으면 force 클릭은 팝업 버튼을 눌러 버릴 수 있으니 DOM focus 로 잡는다.
+    title_el, title_selector = _find_title(page, timeout_ms=15000)
+    if title_el is None:
         raise RuntimeError("제목 입력란을 찾지 못했습니다.")
+    how = _type_into(page, title_el, title, allow_force=not _popup_visible(page))
+    if how:
+        log(f"[naver] 제목 입력 · {title_selector} · {how}")
+    else:
+        try:
+            _set_title_value(title_el, title)
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"제목 입력란 클릭 실패({title_selector}): {exc}") from exc
+        page.wait_for_timeout(400)
+        log(f"[naver] 제목 입력 · {title_selector} · js-value")
 
     page.wait_for_timeout(500)
 
-    # 본문: HTML 을 클립보드로 붙여넣어 서식(문단·링크·이미지)을 살린다.
-    body_selectors = (
-        ".se-component.se-text .se-text-paragraph",
-        ".se-content [contenteditable='true']",
-        "[contenteditable='true']",
-    )
-    body_el = None
-    for selector in body_selectors:
-        try:
-            el = page.locator(selector).last
-            if el.count():
-                body_el = el
-                break
-        except Exception:  # noqa: BLE001
-            continue
+    # 4) 본문 — 제목란과 겹치지 않는 편집 영역을 고른다. 없으면 제목에서 Enter 로 첫 문단을 만든다.
+    body_el, body_selector = _find_body(page, title_el, timeout_ms=8000)
+    if body_el is None:
+        _dom_focus_end(title_el)
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(1400)
+        body_el, body_selector = _find_body(page, title_el, timeout_ms=14000)
     if body_el is None:
         raise RuntimeError("본문 입력란을 찾지 못했습니다.")
 
-    body_el.click(timeout=6000)
-    pasted = False
-    try:
-        page.evaluate(
-            """async (payload) => {
-                const item = new ClipboardItem({
-                    'text/html': new Blob([payload.html], {type: 'text/html'}),
-                    'text/plain': new Blob([payload.text], {type: 'text/plain'})
-                });
-                await navigator.clipboard.write([item]);
-            }""",
-            {"html": html, "text": text},
-        )
-        page.keyboard.press("Control+V")
-        page.wait_for_timeout(2500)
-        pasted = True
-    except Exception as exc:  # noqa: BLE001
-        log(f"[naver] HTML 붙여넣기 실패 → 일반 텍스트로 대체: {exc}")
-    if not pasted:
-        page.keyboard.insert_text(text[:4000])
-        page.wait_for_timeout(1200)
+    how = _paste_body(page, body_el, html, text)
+    log(f"[naver] 본문 입력 · {body_selector} · {how} · {len(text)}자")
 
 
 def publish_draft(draft: dict, headless: bool = True) -> dict:
