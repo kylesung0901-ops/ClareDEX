@@ -69,7 +69,7 @@ def build(W, H, path, t, s, k, pad_x, pad_y, with_chart=True):
     rr = max(4, t // 13)
     d.ellipse([end + 8, cy - rr, end + 8 + 2 * rr, cy + rr], fill=EMERALD)
     y += int(t * 1.36)
-    d.text((x0, y), "공식 원문 기반 실시간 속보 · 매크로·공시 인사이트", font=f_sub, fill=(216, 221, 230))
+    d.text((x0, y), "공식 원문 기반 실시간 속보 · 경제·공시 인사이트", font=f_sub, fill=(216, 221, 230))
 
     d.line([(x0, H - pad_y), (W - pad_x, H - pad_y)], fill=(44, 54, 74), width=1)
     txt = "claredex.com"
