@@ -200,6 +200,7 @@ def init_db(conn: sqlite3.Connection | None = None) -> None:
         _make_users_email_nullable(conn)
         conn.commit()
         _backfill_importance(conn)
+        _backfill_tags(conn)
     finally:
         if own:
             conn.close()
@@ -261,6 +262,29 @@ def _backfill_importance(conn: sqlite3.Connection) -> None:
             post["summary_lines"] = []
         level = content.classify_post_importance(post)
         conn.execute("UPDATE posts SET importance = ? WHERE id = ?", (level, post["id"]))
+    conn.commit()
+
+
+def _backfill_tags(conn: sqlite3.Connection) -> None:
+    """예전 저장분의 태그 표기를 현재 노출 용어로 맞춘다.
+
+    2026-11-27: '매크로' → '경제'. 저장된 태그는 네이버 키워드·관심자산 매칭에 쓰이므로
+    과거 글도 같은 표기를 쓰게 한다(여러 번 돌아도 결과가 같다).
+    """
+    renames = {"매크로": "경제"}
+    rows = conn.execute("SELECT id, tags FROM posts WHERE tags LIKE '%매크로%'").fetchall()
+    for row in rows:
+        try:
+            tags = json.loads(row["tags"] or "[]")
+        except Exception:  # noqa: BLE001
+            continue
+        if not isinstance(tags, list) or not renames.keys() & set(tags):
+            continue
+        fixed = list(dict.fromkeys(renames.get(tag, tag) for tag in tags))
+        conn.execute(
+            "UPDATE posts SET tags = ? WHERE id = ?",
+            (json.dumps(fixed, ensure_ascii=False), row["id"]),
+        )
     conn.commit()
 
 

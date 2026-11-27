@@ -86,7 +86,7 @@ CATEGORIES = {
     "coin": {"label": "코인", "color": "#B45309"},
     "kr-stock": {"label": "국내주식", "color": "#14532D"},
     "us-stock": {"label": "미국주식", "color": "#1E3A5F"},
-    "macro": {"label": "매크로·공시", "color": "#8A1C1C"},
+    "macro": {"label": "경제·공시", "color": "#8A1C1C"},
     "disclosure": {"label": "공시", "color": "#3F3F46"},
 }
 
