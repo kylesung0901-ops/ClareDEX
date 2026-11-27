@@ -1441,6 +1441,24 @@ def naver_publish_checks() -> None:
     check("작성 중인 글" in src and ".se-popup-button-cancel" in src,
           "임시저장 복구 팝업('작성 중인 글') 닫기 처리")
 
+    # 2026-11-27 라이브 진단: 팝업 + 도움말 패널이 제목란 클릭을 가로막아 '제목 입력란을 찾지 못했습니다'.
+    # → 대기 → 팝업 정리 → 제목/본문 후보 순서 → 클릭이 막히면 force·DOM focus 순으로 보강했다.
+    check(naver_publish.TITLE_SELECTORS[:2] == (".se-title-text .se-text-paragraph", ".se-title-text")
+          and "[data-placeholder*='제목']" in naver_publish.TITLE_SELECTORS,
+          "제목란 후보 우선순위", " → ".join(naver_publish.TITLE_SELECTORS))
+    check(naver_publish.BODY_SELECTORS[:2] == (".se-component.se-text .se-text-paragraph",
+                                               ".se-main-container .se-text-paragraph")
+          and naver_publish.BODY_SELECTORS[-1] == "[contenteditable='true']",
+          "본문 후보 우선순위", " → ".join(naver_publish.BODY_SELECTORS))
+    check("force=True" in src and "Escape" in src and "def _dom_focus_end" in src,
+          "클릭이 오버레이에 막혀도: force 클릭 · Esc · DOM focus 대체")
+    check(".se-help-panel-close-button" in src and ".se-popup-container button:has-text('취소')" in src,
+          "도움말 패널·임시저장 팝업('취소') 닫기 선택자")
+    check("def _same_or_inside" in src and "_find_body(page, title_el" in src,
+          "본문 후보에서 제목란 제외 (제목에 본문이 섞이지 않게)")
+    check("def _wait_editor_ready" in src and "_wait_editor_ready(page" in src,
+          "팝업을 건드리기 전 에디터 본체 대기")
+
     script = config.BASE_DIR / "collect.sh"
     check(script.exists(), "collect.sh 존재", str(script))
     text = script.read_text(encoding="utf-8") if script.exists() else ""
