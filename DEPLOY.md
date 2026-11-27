@@ -103,6 +103,12 @@ docker exec claredex-v2 python verify.py
 
 로그: `/var/log/claredex-v2-collect.log` (logrotate 주간 8개 보관)
 
+> `collect.sh` 를 고쳤을 때는 cron 이 부르는 호스트 람퍼도 함께 맞춘다.
+> `/usr/local/bin/claredex-collect.sh` 가 **사본**이면 `cp /root/claredex-v2/collect.sh /usr/local/bin/claredex-collect.sh && chmod 755 /usr/local/bin/claredex-collect.sh`,
+> **심볼릭 링크**면 그대로 둔다(`ls -l /usr/local/bin/claredex-collect.sh` 로 확인).
+> 사본·링크가 아니고 `collect.sh` 를 직접 호출하는 cron 이라면 손릴 것이 없다.
+> 바꾼 뒤 `systemctl reload cron` → 수동 1회 실행으로 `/admin` 수집기 탭에 `rss_*`·`shock` 항목이 보이는지 확인.
+
 ### 3-1. 네이버 블로그 자동 발행 (blog.naver.com/cryptobrothers)
 
 - 발행 스크립트: 컨테이너 안 `naver_publish.py` (Playwright + Chromium, 이미지에 포함)
