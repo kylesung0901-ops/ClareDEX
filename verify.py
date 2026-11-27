@@ -1345,6 +1345,102 @@ def naver_publish_checks() -> None:
           f"published {before['published']} → {after['published']}")
     check(naver_publish.RESULT_PATH.exists(), "data/naver_publish_state.json 기록")
 
+    # 발행 버튼 선택 회귀 테스트 — 2026-11-27 라이브 진단:
+    # 상단 버튼 목록이 ['예약 발행 0건', '저장', '1', '발행'] 이라 '발행' 부분 일치는 '예약 발행 0건' 을 먼저 집었다.
+    # 브라우저 없이, 가짜 페이지로 선택 로직만 검사한다.
+    class _FakeButton:
+        def __init__(self, text: str, classes: str = "", click_area: str = ""):
+            self.text = text
+            self.classes = classes
+            self.click_area = click_area
+
+        def is_visible(self) -> bool:
+            return True
+
+        def inner_text(self, timeout: int = 0) -> str:
+            return self.text
+
+        def bounding_box(self) -> dict:
+            return {"x": 0.0, "y": 0.0, "width": 10.0, "height": 10.0}
+
+    class _FakeLocator:
+        def __init__(self, items: list):
+            self.items = items
+
+        def count(self) -> int:
+            return len(self.items)
+
+        def nth(self, index: int):
+            return self.items[index]
+
+    class _FakePage:
+        def __init__(self, buttons: list):
+            self.buttons = buttons
+
+        def get_by_role(self, role: str, name: str | None = None, exact: bool = False):
+            if role != "button" or name is None:
+                return _FakeLocator([])
+            if exact:
+                return _FakeLocator([b for b in self.buttons if b.text.strip() == name])
+            return _FakeLocator([b for b in self.buttons if name in b.text])
+
+        def locator(self, selector: str):
+            if selector.startswith("button:text-is("):
+                label = selector[len("button:text-is("):].rstrip(")").strip("'\"")
+                return _FakeLocator([b for b in self.buttons if b.text.strip() == label])
+            if selector.startswith("button[class*="):
+                needle = selector.split("class*=", 1)[1].rstrip("]").strip("'\"")
+                return _FakeLocator([b for b in self.buttons if needle in b.classes])
+            if selector.startswith("button[data-click-area="):
+                needle = selector.split("=", 1)[1].rstrip("]").strip("'\"")
+                return _FakeLocator([b for b in self.buttons if b.click_area == needle])
+            return _FakeLocator([])
+
+    live_top = _FakePage([
+        _FakeButton("예약 발행 0건"),
+        _FakeButton("저장"),
+        _FakeButton("1"),
+        _FakeButton("발행", classes="se-publish-btn"),
+    ])
+    picked_name, picked = naver_publish._pick_publish_button(live_top)
+    check(picked is not None and picked.text == "발행",
+          "발행 버튼 정확 일치 선택 ('예약 발행 0건' 오클릭 방지)",
+          f"{picked.text if picked else None} · {picked_name}")
+
+    only_reserve = _FakePage([_FakeButton("예약 발행 0건"), _FakeButton("저장")])
+    _, none_picked = naver_publish._pick_publish_button(only_reserve)
+    check(none_picked is None, "발행 버튼이 없으면 '예약 발행' 을 누르지 않고 실패 처리")
+
+    with_layer = _FakePage([
+        _FakeButton("예약 발행 0건"),
+        _FakeButton("저장"),
+        _FakeButton("발행", classes="se-publish-btn"),
+        _FakeButton("예약 발행", classes="se-schedule-btn"),
+        _FakeButton("발행", classes="se-confirm-btn"),
+    ])
+    _, top_btn = naver_publish._pick_publish_button(with_layer)
+    _, confirm_btn = naver_publish._pick_publish_button(with_layer, last=True)
+    check(top_btn is not None and top_btn.classes == "se-publish-btn",
+          "1차 클릭: 상단 '발행' (첫 정확 일치)",
+          getattr(top_btn, "classes", None))
+    check(confirm_btn is not None and confirm_btn.classes == "se-confirm-btn",
+          "2차 클릭: 발행 설정 레이어의 최종 '발행' (마지막 정확 일치)",
+          getattr(confirm_btn, "classes", None))
+
+    icon_layer = _FakePage([
+        _FakeButton("예약 발행 0건"),
+        _FakeButton("발행", classes="se-publish-btn"),
+        _FakeButton("", classes="se-confirm_btn"),
+    ])
+    _, icon_confirm = naver_publish._pick_publish_button(icon_layer, last=True)
+    check(icon_confirm is not None and icon_confirm.classes == "se-confirm_btn",
+          "2차 클릭: 글자 없는 confirm 클래스 버튼도 인식",
+          getattr(icon_confirm, "classes", None))
+
+    src = (config.BASE_DIR / "naver_publish.py").read_text(encoding="utf-8")
+    check("작성 중인 글" in src and ".se-popup-button-cancel" in src,
+          "임시저장 복구 팝업('작성 중인 글') 닫기 처리")
+
     script = config.BASE_DIR / "collect.sh"
     check(script.exists(), "collect.sh 존재", str(script))
     text = script.read_text(encoding="utf-8") if script.exists() else ""

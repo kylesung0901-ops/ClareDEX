@@ -110,53 +110,202 @@ def _screenshot(page, name: str) -> str | None:
         return None
 
 
-def _click_publish(page) -> str:
-    """스마트에디터 ONE 의 '발행' 버튼 → 발행 설정 레이어의 최종 '발행' 까지 누른다."""
-    clicked = 0
+PUBLISH_LABEL = "발행"
+# 라이브 진단(2026-11-27) 상단 버튼 목록: ['예약 발행 0건', '저장', '1', '발행', ...]
+# `button:has-text('발행')` 부분 일치는 이 목록의 첫 버튼 '예약 발행 0건' 을 먼저 집어 발행에 실패했다.
+# → '발행' 과 정확히 일치하는 버튼만 고르고, '예약 발행' 이 들어간 버튼은 후보에서 뺀다.
+PUBLISH_BLOCKLIST = ("예약 발행", "예약발행")
+
+EDITOR_POPUP_TEXT = "작성 중인 글"  # 임시저장 복구 팝업: "작성 중인 글이 있습니다"
+EDITOR_POPUP_CANCEL = (
+    ".se-popup-button-cancel",
+    "[class*='popup'] button:text-is('취소')",
+    "[class*='dialog'] button:text-is('취소')",
+    "button:text-is('취소')",
+)
+HELP_PANEL_CLOSE = (
+    ".se-help-panel-close-button",
+    "[class*='help_panel'] [class*='close']",
+    "[class*='help-panel'] [class*='close']",
+)
+
+
+def _label_of(el) -> str:
+    """버튼의 눈에 보이는 글자. 읽지 못하면 빈 문자열."""
+    try:
+        return (el.inner_text(timeout=1500) or "").replace("\n", " ").strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _pick_publish_button(page, *, last: bool = False, exclude_box: dict | None = None):
+    """'발행' 과 정확히 일치하는 보이는 버튼 하나를 고른다. '예약 발행' 은 절대 고르지 않는다.
+
+    last=False: 상단 '발행' — 정확 일치 → 클래스 → data-click-area 순서의 첫 버튼.
+    last=True : 발행 설정 레이어의 최종 '발행' — confirm 클래스/레이어 한정 선택자를 먼저 보고,
+                없으면 정확 일치 버튼 중 마지막을 고른다.
+    exclude_box 를 주면 같은 자리에 있는 버튼(이미 누른 상단 '발행')은 건너뛴다.
+    """
+    blocked = list(PUBLISH_BLOCKLIST) + (["취소", "닫기"] if last else [])
+    candidates: list[tuple[str, object]] = []
+    if last:
+        for selector in (
+            "button[class*='confirm_btn']",
+            "button[class*='confirm-btn']",
+            "[class*='layer'] button:text-is('발행')",
+            "[class*='publish_layer'] button:text-is('발행')",
+        ):
+            try:
+                candidates.append((selector, page.locator(selector)))
+            except Exception:  # noqa: BLE001
+                continue
+    try:
+        candidates.append(("role=button[name=발행,exact]",
+                           page.get_by_role("button", name=PUBLISH_LABEL, exact=True)))
+    except Exception:  # noqa: BLE001
+        pass
     for selector in (
-        "button:has-text('발행')",
-        "[class*='publish_btn'] button",
-        "button[class*='publish']",
+        "button:text-is('발행')",
+        "button[class*='publish_btn']",
+        "button[class*='publish-btn']",
+        "button[data-click-area='tpb.publish']",
     ):
+        try:
+            candidates.append((selector, page.locator(selector)))
+        except Exception:  # noqa: BLE001
+            continue
+
+    for name, locator in candidates:
+        try:
+            total = locator.count()
+        except Exception:  # noqa: BLE001
+            continue
+        chosen = None
+        for index in range(min(total, 25)):
+            el = locator.nth(index)
+            try:
+                if not el.is_visible():
+                    continue
+            except Exception:  # noqa: BLE001
+                continue
+            if any(bad in _label_of(el) for bad in blocked):
+                continue
+            if exclude_box is not None:
+                try:
+                    box = el.bounding_box()
+                except Exception:  # noqa: BLE001
+                    box = None
+                if box and all(abs(box[k] - exclude_box[k]) < 1 for k in ("x", "y", "width", "height")):
+                    continue
+            chosen = el
+            if not last:
+                break
+        if chosen is not None:
+            return name, chosen
+    return None, None
+
+
+def _dismiss_popups(page) -> list[str]:
+    """에디터 진입을 막는 임시저장 복구 팝업·도움말 패널을 닫는다. 없으면 조용히 넘어간다."""
+    closed: list[str] = []
+    has_notice = False
+    try:
+        notice = page.locator(f"text={EDITOR_POPUP_TEXT}").first
+        has_notice = notice.count() > 0 and notice.is_visible()
+    except Exception:  # noqa: BLE001
+        has_notice = False
+    popup_cancel = False
+    try:
+        btn = page.locator(EDITOR_POPUP_CANCEL[0]).first
+        popup_cancel = btn.count() > 0 and btn.is_visible()
+    except Exception:  # noqa: BLE001
+        popup_cancel = False
+    if has_notice or popup_cancel:
+        # '취소' 는 복구하지 않고 새 글로 시작한다는 뜻 — 자동 발행에는 빈 에디터가 필요하다.
+        for selector in EDITOR_POPUP_CANCEL:
+            try:
+                btn = page.locator(selector).first
+                if btn.count() and btn.is_visible():
+                    btn.click(timeout=4000)
+                    page.wait_for_timeout(900)
+                    closed.append(f"임시저장 팝업 닫기({selector})")
+                    break
+            except Exception:  # noqa: BLE001
+                continue
+    for selector in HELP_PANEL_CLOSE:
         try:
             btn = page.locator(selector).first
             if btn.count() and btn.is_visible():
-                btn.click(timeout=8000)
-                clicked += 1
-                page.wait_for_timeout(1800)
+                btn.click(timeout=4000)
+                page.wait_for_timeout(400)
+                closed.append(f"도움말 패널 닫기({selector})")
                 break
         except Exception:  # noqa: BLE001
             continue
-    if not clicked:
+    if closed:
+        log("[naver] 에디터 팝업 정리 · " + ", ".join(closed))
+    return closed
+
+
+def _click_publish(page) -> str:
+    """스마트에디터 ONE 의 '발행' 버튼 → 발행 설정 레이어의 최종 '발행' 까지 누른다."""
+    _dismiss_popups(page)
+    name, btn = _pick_publish_button(page)
+    if btn is None:
+        # 도움말 패널·팝업이 버튼을 가리고 있을 수 있어 한 번 더 정리하고 재시도한다.
+        _dismiss_popups(page)
+        name, btn = _pick_publish_button(page)
+    if btn is None:
         raise RuntimeError("발행 버튼을 찾지 못했습니다. 네이버 에디터 구조가 바뀌었을 수 있습니다.")
+    try:
+        top_box = btn.bounding_box()
+    except Exception:  # noqa: BLE001
+        top_box = None
+    log(f"[naver] 발행 버튼 클릭 · {name} · '{_label_of(btn)}'")
+    try:
+        btn.click(timeout=8000)
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"발행 버튼 클릭 실패({name}): {exc}") from exc
+    page.wait_for_timeout(1800)
+
     # 발행 설정 레이어: 공개 범위(전체 공개) 확인 후 최종 발행
     try:
         for label in ("전체 공개", "공개"):
-            opt = page.locator(f"text={label}").first
+            opt = page.get_by_text(label, exact=True).first
             if opt.count() and opt.is_visible():
                 opt.click(timeout=4000)
                 break
     except Exception:  # noqa: BLE001
         pass
-    for selector in (
-        "button:has-text('발행'):visible",
-        "[class*='confirm'] button:has-text('발행')",
-    ):
-        try:
-            btn = page.locator(selector).last
-            if btn.count() and btn.is_visible():
-                btn.click(timeout=8000)
-                page.wait_for_timeout(2500)
-                return "ok"
-        except Exception:  # noqa: BLE001
-            continue
-    return "second_click_missing"
+
+    # 최종 발행 버튼: 정확 일치 우선. 레이어가 늦게 뜨는 경우를 대비해 최대 8초 기다린다.
+    confirm = None
+    confirm_name = ""
+    deadline = time.time() + 8
+    while True:
+        confirm_name, confirm = _pick_publish_button(page, last=True, exclude_box=top_box)
+        if confirm is not None or time.time() >= deadline:
+            break
+        page.wait_for_timeout(500)
+    if confirm is None:
+        return "second_click_missing"
+    log(f"[naver] 최종 발행 버튼 클릭 · {confirm_name} · '{_label_of(confirm)}'")
+    try:
+        confirm.click(timeout=8000)
+    except Exception as exc:  # noqa: BLE001
+        log(f"[naver] 최종 발행 버튼 클릭 실패 · {exc}")
+        return "second_click_missing"
+    page.wait_for_timeout(2500)
+    return "ok"
 
 
 def _fill_editor(page, draft: dict) -> None:
     title = (draft.get("seo_title") or draft.get("post_title") or "").strip()[:100]
     html = draft.get("body_html") or ""
     text = draft.get("body_text") or ""
+
+    # 임시저장 복구 팝업이나 도움말 패널이 떠 있으면 제목·본문 클릭이 막힌다 → 먼저 닫는다(없으면 무시).
+    _dismiss_popups(page)
 
     # 제목
     title_selectors = (
